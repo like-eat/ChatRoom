@@ -1,9 +1,11 @@
 package redis
 
 import (
+	"apylee_chat_server/config"
 	"apylee_chat_server/pkg/log"
 	"context"
 	"github.com/go-redis/redis/v8"
+	"strconv"
 	"time"
 )
 
@@ -12,10 +14,17 @@ var ctx = context.Background()
 
 func createClient() *redis.Client {
 	if redisClient == nil {
+		conf := config.GetConfig()
+		host := conf.RedisConfig.Host
+		port := conf.RedisConfig.Port
+		password := conf.RedisConfig.Password
+		db := conf.Db
+		addr := host + ":" + strconv.Itoa(port)
+
 		redisClient = redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
-			Password: "dancernumber1",
-			DB:       0,
+			Addr:     addr,
+			Password: password,
+			DB:       db,
 		})
 	}
 	return redisClient

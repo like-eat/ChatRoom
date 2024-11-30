@@ -1,6 +1,7 @@
-package local
+package sms
 
 import (
+	"apylee_chat_server/config"
 	"apylee_chat_server/internal/service/redis"
 	"apylee_chat_server/pkg/log"
 	"apylee_chat_server/pkg/util/random"
@@ -14,18 +15,22 @@ import (
 	"time"
 )
 
-const (
-	accessKeyID     = "your accessKeyID in alibaba cloud"
-	accessKeySecret = "your accessKeySecret in alibaba cloud"
-)
-
 var smsClient *dysmsapi20170525.Client
+var accessKeyID string
+var accessKeySecret string
+var signName string
+var templateCode string
 
 // createClient 使用AK&SK初始化账号Client
 func createClient() (result *dysmsapi20170525.Client, err error) {
 	// 工程代码泄露可能会导致 AccessKey 泄露，并威胁账号下所有资源的安全性。以下代码示例仅供参考。
 	// 建议使用更安全的 STS 方式，更多鉴权访问方式请参见：https://help.aliyun.com/document_detail/378661.html。
 	if smsClient == nil {
+		conf := config.GetConfig()
+		accessKeyID = conf.AccessKeyID
+		accessKeySecret = conf.AccessKeySecret
+		signName = conf.SignName
+		templateCode = conf.TemplateCode
 		config := &openapi.Config{
 			// 必填，请确保代码运行环境设置了环境变量 ALIBABA_CLOUD_ACCESS_KEY_ID。
 			AccessKeyId: tea.String(accessKeyID),
@@ -58,8 +63,8 @@ func VerificationCode(telephone string) error {
 		return err
 	}
 	sendSmsRequest := &dysmsapi20170525.SendSmsRequest{
-		SignName:      tea.String("阿里云短信测试"),
-		TemplateCode:  tea.String("SMS_154950909"), // 短信模板
+		SignName:      tea.String(signName),
+		TemplateCode:  tea.String(templateCode), // 短信模板
 		PhoneNumbers:  tea.String(telephone),
 		TemplateParam: tea.String("{\"code\":\"" + code + "\"}"),
 	}

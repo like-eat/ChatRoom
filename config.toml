@@ -1,3 +1,25 @@
-appName = "apylee_chat_server"
+[mainConfig]
+appName = "your app name"
+host = "127.0.0.1"
+port = 8080
 
-[mysql]
+[mysqlConfig]
+host = "127.0.0.1"
+port = 3306
+user = "root"
+password = "123456"
+databaseName = "your database name"
+
+[redisConfig]
+host = "127.0.0.1"
+port = 6379
+password = "123456"
+db = 0
+
+[authCodeConfig]
+accessKeyID = "your accessKeyID in alibaba cloud"
+accessKeySecret = "your accessKeySecret in alibaba cloud"
+signName = "阿里云短信测试"
+templateCode = "SMS_154950909"
+
+
