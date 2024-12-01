@@ -9,6 +9,7 @@ import (
 	"errors"
 	"gorm.io/gorm"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -21,7 +22,22 @@ var UserInfoService = new(userInfoService)
 // dao层加不了校验，在service层加
 // checkTelephoneValid 检验电话是否有效
 func (u *userInfoService) checkTelephoneValid(telephone string) bool {
-	return len(telephone) == 11
+	pattern := `^1([38][0-9]|14[579]|5[^4]|16[6]|7[1-35-8]|9[189])\d{8}$`
+	match, err := regexp.MatchString(pattern, telephone)
+	if err != nil {
+		zlog.Fatal(err.Error())
+	}
+	return match
+}
+
+// checkEmailValid 校验邮箱是否有效
+func (u *userInfoService) checkEmailValid(email string) bool {
+	pattern := `^[\w\.-]+@[\w-]+\.[\w{2,3}(\.\w{2})?]$`
+	match, err := regexp.MatchString(pattern, email)
+	if err != nil {
+		zlog.Fatal(err.Error())
+	}
+	return match
 }
 
 // TODO
