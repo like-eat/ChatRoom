@@ -22,4 +22,7 @@ accessKeySecret = "your accessKeySecret in alibaba cloud"
 signName = "阿里云短信测试"
 templateCode = "SMS_154950909"
 
+[logConfig]
+logPath = "your log path"
+
 

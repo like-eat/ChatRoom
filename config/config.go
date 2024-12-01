@@ -1,8 +1,8 @@
 package config
 
 import (
-	"apylee_chat_server/pkg/log"
 	"github.com/BurntSushi/toml"
+	"log"
 )
 
 type MainConfig struct {
@@ -33,18 +33,23 @@ type AuthCodeConfig struct {
 	TemplateCode    string `toml:"templateCode"`
 }
 
+type LogConfig struct {
+	LogPath string `toml:"logPath"`
+}
+
 type Config struct {
 	MainConfig     `toml:"mainConfig"`
 	MysqlConfig    `toml:"mysqlConfig"`
 	RedisConfig    `toml:"redisConfig"`
 	AuthCodeConfig `toml:"authCodeConfig"`
+	LogConfig      `toml:"logConfig"`
 }
 
 var config *Config
 
 func LoadConfig() error {
-	if _, err := toml.DecodeFile("F:\\go\\apylee-chat-server\\config.toml", config); err != nil {
-		log.GetZapLogger().Fatal(err.Error())
+	if _, err := toml.DecodeFile("F:\\go\\apylee-chat-server\\config_local.toml", config); err != nil {
+		log.Fatal(err.Error())
 		return err
 	}
 	return nil
