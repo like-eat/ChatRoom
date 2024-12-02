@@ -14,7 +14,7 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	message, err := gorm.UserInfoService.Register(registerReq)
+	message, err := gorm.UserInfoService.Register(c, registerReq)
 	if message != "" && err == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": message})
 		return
@@ -32,7 +32,7 @@ func Login(c *gin.Context) {
 	if err := c.BindJSON(&loginReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
-	message, err := gorm.UserInfoService.Login(loginReq)
+	message, err := gorm.UserInfoService.Login(c, loginReq)
 	if message != "" && err == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": message})
 		return

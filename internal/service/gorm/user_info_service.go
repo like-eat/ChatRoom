@@ -4,13 +4,14 @@ import (
 	"apylee_chat_server/internal/dao"
 	"apylee_chat_server/internal/dto/request"
 	"apylee_chat_server/internal/model"
+	"apylee_chat_server/internal/service/chat"
 	"apylee_chat_server/internal/service/sms"
+	"apylee_chat_server/pkg/util/random"
 	"apylee_chat_server/pkg/zlog"
 	"errors"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"math/rand"
 	"regexp"
-	"strconv"
 	"time"
 )
 
@@ -46,7 +47,7 @@ func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) bool {
 }
 
 // Login 登录
-func (u *userInfoService) Login(loginReq request.LoginRequest) (string, error) {
+func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, error) {
 	password := loginReq.Password
 	var user model.UserInfo
 	res := dao.GormDB.First(&user, "telephone = ?", loginReq.Telephone)
@@ -65,16 +66,19 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, error) {
 		return message, nil
 	}
 	// 手机号验证，最后一步才调用api，省钱hhh
-	err := sms.VerificationCode(loginReq.Telephone)
-	if err != nil {
+	if err := sms.VerificationCode(loginReq.Telephone); err != nil {
 		zlog.Error(err.Error())
+		return "", err
+	}
+	// 登录成功，chat client建立
+	if err := chat.NewClientInit(c, user.Uuid); err != nil {
 		return "", err
 	}
 	return "", nil
 }
 
 // Register 注册
-func (u *userInfoService) Register(registerReq request.RegisterRequest) (string, error) {
+func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, error) {
 	// 校验手机号是否有效
 	if !u.checkTelephoneValid(registerReq.Telephone) {
 		message := "telephone invalid"
@@ -96,11 +100,7 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 		}
 		// 可以继续注册
 	}
-	// 100000000000 - 99999999999 11位随机数
-	tmpInt1 := rand.Intn(10000000000)
-	tmpInt2 := (rand.Intn(9) + 1) * 10000000000
-	tmpInt := tmpInt1 + tmpInt2
-	newUser.Uuid = "U" + strconv.Itoa(tmpInt)
+	newUser.Uuid = "U" + random.GetNowAndLenRandomString(11)
 	newUser.TelePhone = registerReq.Telephone
 	newUser.Password = registerReq.Password
 	newUser.NickName = registerReq.NickName
@@ -116,6 +116,10 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 	if res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return "", res.Error
+	}
+	// 注册成功，chat client建立
+	if err := chat.NewClientInit(c, newUser.Uuid); err != nil {
+		return "", err
 	}
 	return "", nil
 }

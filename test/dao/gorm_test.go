@@ -19,5 +19,5 @@ func TestCreate(t *testing.T) {
 		CreatedAt: time.Now(),
 		IsAdmin:   true,
 	}
-	dao.GormDB.Create(userInfo)
+	_ = dao.GormDB.Create(userInfo)
 }
