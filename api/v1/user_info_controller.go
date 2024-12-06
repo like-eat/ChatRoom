@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
@@ -33,7 +32,6 @@ func Login(c *gin.Context) {
 	if err := c.BindJSON(&loginReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
-	fmt.Println(loginReq)
 	message, err := gorm.UserInfoService.Login(c, loginReq)
 	if message != "" && err == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": message})
