@@ -48,6 +48,24 @@
       <div class="go-register-button-container">
         <button class="go-register-btn" @click="handleRegister">注册</button>
       </div>
+      <el-alert
+        v-if="showError"
+        title="Error alert"
+        type="error"
+        :description="errorMessage"
+        show-icon
+        closable
+        @close="handleAlertClose"
+      />
+      <el-alert
+        v-if="showSuccess"
+        title="Success"
+        type="success"
+        :description="successMessage"
+        show-icon
+        closable
+        @close="handleAlertClose"
+      />
     </div>
   </div>
 </template>
@@ -55,39 +73,80 @@
 <script>
 import { reactive, toRefs } from "vue";
 import axios from "axios";
-import { useRouter } from 'vue-router';
+import { useRouter } from "vue-router";
 export default {
-  name: "login",
+  name: "Login",
   setup() {
     const data = reactive({
       loginData: {
         telephone: "",
         password: "",
       },
+      showError: false,
+      errorMessage: "",
+      showSuccess: false,
+      successMessage: "",
     });
     const router = useRouter();
     const handleLogin = async () => {
       try {
+        if (data.showError || data.showSuccess) {
+          console.log(
+            "Alert is showing, not sending request. please close it first."
+          );
+          return;
+        }
+        if (!data.loginData.telephone || !data.loginData.password) {
+          data.showError = true;
+          data.errorMessage = "请填写完整登录信息。";
+          return;
+        }
+        if (!checkTelephoneValid()) {
+          data.showError = true;
+          data.errorMessage = "请输入有效的手机号码。";
+          return;
+        }
         const response = await axios.post(
           "http://127.0.0.1:8000/login",
           data.loginData
-        ); // 发送POST请求
-        console.log("响应数据:", response.data); // 处理响应数据
-        // 这里可以添加登录成功的逻辑，比如跳转到另一个页面或显示成功消息
+        );
+        console.log(response);
+        if (response.data.code == 200) {
+          data.showSuccess = true;
+          data.successMessage = "登录成功！";
+          console.log(response.data.message);
+          sessionStorage.setItem("userInfo", response.data.data);
+          router.push("/chat");
+        } else {
+          data.showError = true;
+          data.errorMessage = "登录失败！请重试！";
+          console.log(response.data.error);
+        }
       } catch (error) {
-        console.error("登录失败:", error); // 处理错误
-        // 这里可以添加登录失败的逻辑，比如显示错误消息
+        data.showError = true;
+        data.errorMessage = "登录失败！请重试！";
       }
     };
+    const handleAlertClose = () => {
+      data.showError = false;
+      data.errorMessage = "";
+      data.showSuccess = false;
+      data.successMessage = "";
+    };
+    const checkTelephoneValid = () => {
+      const regex = /^1([38][0-9]|14[579]|5[^4]|16[6]|7[1-35-8]|9[189])\d{8}$/;
+      return regex.test(data.loginData.telephone);
+    };
     const handleRegister = () => {
-      router.push("/register")
-    }
-
+      router.push("/register");
+    };
 
     return {
       ...toRefs(data),
+      router,
       handleLogin,
       handleRegister,
+      handleAlertClose,
     };
   },
 };
@@ -113,7 +172,6 @@ export default {
   /*opacity: 0.7;*/
 }
 
-
 .login-item {
   text-align: center;
   margin-bottom: 20px;
@@ -127,17 +185,17 @@ export default {
   width: 100%;
 }
 
-.login-btn, .login-btn:hover {
+.login-btn,
+.login-btn:hover {
   background-color: rgb(229, 132, 132);
   border: none;
-  color:#ffffff;
+  color: #ffffff;
   font-weight: bold;
 }
 
 .go-register-button-container {
   display: flex;
   flex-direction: row-reverse;
-  
 }
 
 .go-register-btn {
@@ -147,8 +205,10 @@ export default {
   color: #d65b54;
   font-weight: bold;
   text-decoration: underline;
-  text-underline-offset: 0.2em; 
+  text-underline-offset: 0.2em;
 }
 
-
+.el-alert {
+  margin-top: 20px;
+}
 </style>

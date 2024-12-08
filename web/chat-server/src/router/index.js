@@ -3,28 +3,42 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: { name: 'login' }
+    redirect: { name: 'Login' }
   },
   {
     path: '/login',
-    name: 'login',
-    component: () => import('../views/Login.vue')
+    name: 'Login',
+    component: () => import('../views/access/Login.vue')
   },
   {
     path: '/register',
-    name: 'register',
-    component: () => import('../views/Register.vue')
+    name: 'Register',
+    component: () => import('../views/access/Register.vue')
   },
   {
     path: '/chat',
-    name: 'chat',
-    component: () => import('../views/Chat.vue')
+    name: 'Chat',
+    component: () => import('../views/chat/Chat.vue'),
+  },
+  {
+    path: '/chat/owninfo',
+    name: 'OwnInfo',
+    component: () => import('../views/chat/OwnInfo.vue')
+  },
+  {
+    path: '/chat/contactlist',
+    name: 'ContactList',
+    component: () => import('../views/chat/ContactList.vue')
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  next()
 })
 
 export default router

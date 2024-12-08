@@ -15,8 +15,8 @@ type groupInfoService struct {
 
 var GroupInfoService = new(groupInfoService)
 
-// SaveGroup 保存群聊，创建群聊也用这接口
-func (g *groupInfoService) SaveGroup(groupReq request.GroupRequest) error {
+// SaveGroup 保存群聊
+func (g *groupInfoService) SaveGroup(groupReq request.SaveGroupRequest) error {
 	var group model.GroupInfo
 	res := dao.GormDB.First(&group, "uuid = ?", groupReq.Uuid)
 	if res.Error != nil {
@@ -53,6 +53,11 @@ func (g *groupInfoService) SaveGroup(groupReq request.GroupRequest) error {
 	group.OwnerId = groupReq.OwnerId
 	group.CreatedAt = time.Now()
 	group.UpdatedAt = time.Now()
+	return nil
+}
+
+// CreateGroup 创建群聊
+func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) error {
 	return nil
 }
 

@@ -1,6 +1,6 @@
 package request
 
-type GroupRequest struct {
+type SaveGroupRequest struct {
 	Uuid    string `json:"uuid"`
 	OwnerId string `json:"owner_id"`
 	Name    string `json:"name"`

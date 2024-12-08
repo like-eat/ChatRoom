@@ -12,5 +12,5 @@ func GetRandomInt(len int) int {
 }
 
 func GetNowAndLenRandomString(len int) string {
-	return time.Now().Format("20241202") + strconv.Itoa(GetRandomInt(len))
+	return time.Now().Format("20060102") + strconv.Itoa(GetRandomInt(len))
 }
