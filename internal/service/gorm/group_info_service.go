@@ -2,10 +2,12 @@ package gorm
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
 	"time"
 )
@@ -58,6 +60,23 @@ func (g *groupInfoService) SaveGroup(groupReq request.SaveGroupRequest) error {
 
 // CreateGroup 创建群聊
 func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) error {
+	group := model.GroupInfo{
+		Uuid:      fmt.Sprintf("G%d", random.GetNowAndLenRandomString(11)),
+		Name:      groupReq.Name,
+		Notice:    groupReq.Notice,
+		OwnerId:   groupReq.OwnerId,
+		MemberCnt: 1,
+		AddMode:   groupReq.AddMode,
+		Avatar:    groupReq.Avatar,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	group.Members = append(group.Members, groupReq.OwnerId)
+	if res := dao.GormDB.Create(&group); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return res.Error
+	}
+
 	return nil
 }
 
