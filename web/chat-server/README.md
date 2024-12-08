@@ -1,4 +1,4 @@
-# kama-chat-server前端
+# KamaChat前端
 ## 项目介绍
 kama-chat-server前端，基于vue3+element-plus开发，用于kama-chat-server项目的web端展示。
 
