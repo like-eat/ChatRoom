@@ -20,6 +20,7 @@ func main() {
 	r.Use(cors.New(corsConfig))
 	r.POST("/login", v1.Login)
 	r.POST("/register", v1.Register)
+	r.POST("/createGroup", v1.CreateGroup)
 	conf := config.GetConfig()
 	host := conf.MainConfig.Host
 	port := conf.MainConfig.Port

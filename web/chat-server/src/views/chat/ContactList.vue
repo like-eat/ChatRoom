@@ -127,7 +127,7 @@
                   hide-after="0"
                   enterable="false"
                 >
-                  <button class="create-group-btn">
+                  <button class="create-group-btn" @click="handleCreateGroup">
                     <svg
                       t="1733664667695"
                       class="create-group-icon"
@@ -156,10 +156,7 @@
                       <span class="contactlist-user-title">联系人</span>
                     </template>
                   </el-sub-menu>
-                    <el-menu-item
-                      v-for="(user) in userList"
-                    >
-                    </el-menu-item>
+                  <el-menu-item v-for="user in userList"> </el-menu-item>
                   <el-sub-menu index="2">
                     <template #title>
                       <span class="contactlist-user-title">我创建的群聊</span>
@@ -354,6 +351,8 @@
 <script>
 import { reactive, toRefs, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useStore } from "vuex";
+import axios from 'axios';
 export default {
   name: "ContactList",
   setup() {
@@ -366,6 +365,13 @@ export default {
         telephone: "",
       },
       contactSearch: "",
+      createGroupInfo: {
+        owner_id: "",
+        name: "",
+        notice: "",
+        add_mode: false,
+        avatar: "",
+      },
     });
 
     onMounted(() => {
@@ -382,14 +388,27 @@ export default {
       }
     });
     const router = useRouter();
+    const store = useStore();
     const handleToOwnInfo = () => {
       router.push("/chat/owninfo");
     };
+    const handleCreateGroup = async() => {
+      try {
+        const response = axios.POST(store.state.backendUrl+'/createGroup', data.createGroupInfo);
+        console.log(response);
+        if (response.data.code == 200) {
+        } else {
+        }
+      } catch(error) {
 
+      }
+      
+    }
     return {
       ...toRefs(data),
       router,
       handleToOwnInfo,
+      handleCreateGroup,
     };
   },
 };
@@ -436,12 +455,10 @@ export default {
   height: 15px;
 }
 
-
 .el-menu {
   background-color: rgb(252, 210.9, 210.9);
   width: 101%;
 }
-
 
 .contactlist-user-title {
   font-family: Arial, Helvetica, sans-serif;
