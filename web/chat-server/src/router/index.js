@@ -16,20 +16,15 @@ const routes = [
     component: () => import('../views/access/Register.vue')
   },
   {
-    path: '/chat',
-    name: 'Chat',
-    component: () => import('../views/chat/Chat.vue'),
-  },
-  {
     path: '/chat/owninfo',
     name: 'OwnInfo',
-    component: () => import('../views/chat/OwnInfo.vue')
+    component: () => import('../views/chat/user/OwnInfo.vue')
   },
   {
     path: '/chat/contactlist',
     name: 'ContactList',
-    component: () => import('../views/chat/ContactList.vue')
-  }
+    component: () => import('../views/chat/contact/ContactList.vue')
+  },
 ]
 
 const router = createRouter({

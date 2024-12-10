@@ -143,7 +143,7 @@ export default {
           data.successMessage = "注册成功！";
           console.log(response.data.message);
           sessionStorage.setItem("userInfo", response.data.data);
-          router.push("/chat");
+          router.push("/chat/contactlist");
         } else {
           data.showError = true;
           data.errorMessage = "注册失败！请重试！";

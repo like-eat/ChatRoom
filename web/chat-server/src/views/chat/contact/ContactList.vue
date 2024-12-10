@@ -20,7 +20,7 @@
               <el-tooltip
                 effect="customized"
                 content="会话聊天"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -33,7 +33,7 @@
               <el-tooltip
                 effect="customized"
                 content="通讯录管理"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -46,7 +46,7 @@
               <el-tooltip
                 effect="customized"
                 content="朋友圈"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -59,7 +59,7 @@
               <el-tooltip
                 effect="customized"
                 content="我的收藏"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -72,7 +72,7 @@
               <el-tooltip
                 effect="customized"
                 content="搜索"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -87,7 +87,7 @@
               <el-tooltip
                 effect="customized"
                 content="设置"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -100,7 +100,7 @@
               <el-tooltip
                 effect="customized"
                 content="我的主页"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -123,11 +123,11 @@
                 <el-tooltip
                   effect="customized"
                   content="创建群聊"
-                  placement="bottom"
+                  placement="top"
                   hide-after="0"
                   enterable="false"
                 >
-                  <button class="create-group-btn" @click="handleCreateGroup">
+                  <button class="create-group-btn" @click="showModal">
                     <svg
                       t="1733664667695"
                       class="create-group-icon"
@@ -146,6 +146,89 @@
                     </svg>
                   </button>
                 </el-tooltip>
+                <Modal :isVisible="isModalVisible">
+                  <template v-slot:header>
+                    <div class="modal-header">
+                      <div class="modal-quit-btn-container">
+                        <button class="modal-quit-btn" @click="quitModal">
+                          <el-icon><Close /></el-icon>
+                        </button>
+                      </div>
+                      <div class="modal-header-title">
+                        <h3>创建群聊</h3>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-slot:body>
+                    <div class="modal-body">
+                      <el-form
+                        ref="formRef"
+                        :model="createGroupInfo"
+                        label-width="70px"
+                        class="demo-dynamic"
+                      >
+                        <el-form-item
+                          prop="name"
+                          label="群名称"
+                          :rules="[
+                            {
+                              required: true,
+                              message: '此项为必填项',
+                              trigger: 'blur',
+                            },
+                          ]"
+                        >
+                          <el-input
+                            v-model="createGroupInfo.name"
+                            placeholder="必填"
+                          />
+                        </el-form-item>
+                        <el-form-item prop="notice" label="群公告">
+                          <el-input
+                            v-model="createGroupInfo.notice"
+                            type="textarea"
+                            show-word-limit
+                            maxlength="500"
+                            :autosize="{ minRows: 3, maxRows: 3 }"
+                            placeholder="选填"
+                          />
+                        </el-form-item>
+                        <el-form-item
+                          prop="add_mode"
+                          label="加群方式"
+                          :rules="[
+                            {
+                              required: true,
+                              message: 'Please select activity resource',
+                              trigger: 'change',
+                            },
+                          ]"
+                        >
+                          <el-radio-group v-model="createGroupInfo.add_mode">
+                            <el-radio :value="false">直接加入</el-radio>
+                            <el-radio :value="true">群主审核</el-radio>
+                          </el-radio-group>
+                        </el-form-item>
+                        <el-form-item prop="avatar" label="群头像">
+                          <el-input
+                            v-model="createGroupInfo.avatar"
+                            placeholder="选填"
+                          />
+                        </el-form-item>
+                      </el-form>
+                    </div>
+                  </template>
+                  <template v-slot:footer>
+                    <div class="modal-footer">
+                      <el-button
+                        class="modal-close-btn"
+                        @click="closeModal"
+                      >
+                        完成
+                      </el-button>
+                    </div>
+                  </template>
+                </Modal>
               </div>
             </div>
             <div class="contactlist-body">
@@ -156,7 +239,7 @@
                       <span class="contactlist-user-title">联系人</span>
                     </template>
                   </el-sub-menu>
-                  <el-menu-item v-for="user in userList"> </el-menu-item>
+                  <!-- <el-menu-item v-for="user in userList"> </el-menu-item> -->
                   <el-sub-menu index="2">
                     <template #title>
                       <span class="contactlist-user-title">我创建的群聊</span>
@@ -349,12 +432,16 @@
 </template>
 
 <script>
-import { reactive, toRefs, onMounted } from "vue";
+import { reactive, toRefs, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useStore } from "vuex";
-import axios from 'axios';
+import axios from "axios";
+import Modal from "@/components/Modal.vue";
 export default {
   name: "ContactList",
+  components: {
+    Modal,
+  },
   setup() {
     const data = reactive({
       chatMessage: "",
@@ -369,9 +456,10 @@ export default {
         owner_id: "",
         name: "",
         notice: "",
-        add_mode: false,
+        add_mode: null,
         avatar: "",
       },
+      isModalVisible: false,
     });
 
     onMounted(() => {
@@ -389,32 +477,58 @@ export default {
     });
     const router = useRouter();
     const store = useStore();
+    const modal = ref(null);
     const handleToOwnInfo = () => {
       router.push("/chat/owninfo");
     };
-    const handleCreateGroup = async() => {
+    const handleCreateGroup = async () => {
       try {
-        const response = axios.POST(store.state.backendUrl+'/createGroup', data.createGroupInfo);
+        console.log(store.state.backendUrl + "/createGroup");
+        data.createGroupInfo.owner_id = data.userInfo.uuid;
+        const response = await axios.post(
+          store.state.backendUrl + "/createGroup",
+          data.createGroupInfo
+        );
         console.log(response);
-        if (response.data.code == 200) {
-        } else {
-        }
-      } catch(error) {
-
+        // if (response.data.code == 200) {
+        // } else {
+        // }
+      } catch (error) {
+        console.error(error);
       }
-      
-    }
+    };
+    const showModal = () => {
+      data.isModalVisible = true;
+    };
+    const quitModal = () => {
+      data.isModalVisible = false;
+    };
+    const closeModal = () => {
+      if (data.createGroupInfo.name == "") {
+        alert("请输入群聊名称");
+        return;
+      }
+      if (data.createGroupInfo.add_mode == null) {
+        alert("请选择加群方式");
+        return;
+      }
+      data.isModalVisible = false;
+      handleCreateGroup();
+    };
     return {
       ...toRefs(data),
       router,
       handleToOwnInfo,
       handleCreateGroup,
+      showModal,
+      closeModal,
+      quitModal,
     };
   },
 };
 </script>
 
-<style>
+<style scoped>
 .contactlist-header {
   display: flex;
   flex-direction: row;
@@ -462,5 +576,60 @@ export default {
 
 .contactlist-user-title {
   font-family: Arial, Helvetica, sans-serif;
+}
+
+h3 {
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(69, 69, 68);
+}
+
+.modal-quit-btn-container {
+  height: 30%;
+  width: 100%;
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.modal-quit-btn {
+  background-color: rgba(255, 255, 255, 0);
+  color: rgb(229, 25, 25);
+  padding: 15px;
+  border: none;
+  cursor: pointer;
+  position: fixed;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-header {
+  height: 20%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  /*background-color:aqua;*/
+}
+
+.modal-body {
+  height: 55%;
+  width: 400px;
+}
+
+.modal-footer {
+  height: 25%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+.modal-header-title {
+  height: 70%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>

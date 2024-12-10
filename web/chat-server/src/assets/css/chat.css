@@ -181,14 +181,20 @@
     border-bottom-right-radius: 30px;
 }
 
-.el-popper.is-customized  {
+.el-popper.is-customized {
     /* Set padding to ensure the height is 32px */
     padding: 6px 12px;
     /*background: linear-gradient(90deg, rgb(244, 154, 162), rgb(250, 193, 211));*/
-    background: rgb(252, 210.9, 210.9);
-  }
-  
-  .el-popper.is-customized .el-popper__arrow::before {
+    background: rgb(250, 183, 183);
+}
+
+.el-popper.is-customized .el-popper__arrow::before {
     /*background: rgb(244, 154, 162);*/
-    background: rgb(252, 210.9, 210.9);
-  }
+    background: rgb(250, 183, 183);
+}
+
+
+.modal-close-btn {
+    background-color: rgb(252, 210.9, 210.9);
+    border-radius: 6px;
+}

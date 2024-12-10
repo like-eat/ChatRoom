@@ -20,7 +20,7 @@
               <el-tooltip
                 effect="customized"
                 content="会话聊天"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -33,7 +33,7 @@
               <el-tooltip
                 effect="customized"
                 content="通讯录管理"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -46,7 +46,7 @@
               <el-tooltip
                 effect="customized"
                 content="朋友圈"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -59,7 +59,7 @@
               <el-tooltip
                 effect="customized"
                 content="我的收藏"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -72,7 +72,7 @@
               <el-tooltip
                 effect="customized"
                 content="搜索"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -87,7 +87,7 @@
               <el-tooltip
                 effect="customized"
                 content="设置"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >
@@ -100,7 +100,7 @@
               <el-tooltip
                 effect="customized"
                 content="我的主页"
-                placement="right"
+                placement="left"
                 hide-after="0"
                 enterable="false"
               >

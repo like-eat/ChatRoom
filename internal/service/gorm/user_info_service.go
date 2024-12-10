@@ -34,7 +34,7 @@ func (u *userInfoService) checkTelephoneValid(telephone string) bool {
 
 // checkEmailValid 校验邮箱是否有效
 func (u *userInfoService) checkEmailValid(email string) bool {
-	pattern := `^[\w\.-]+@[\w-]+\.[\w{2,3}(\.\w{2})?]$`
+	pattern := `^[^\s@]+@[^\s@]+\.[^\s@]+$`
 	match, err := regexp.MatchString(pattern, email)
 	if err != nil {
 		zlog.Fatal(err.Error())
@@ -42,9 +42,9 @@ func (u *userInfoService) checkEmailValid(email string) bool {
 	return match
 }
 
-// TODO
+// checkUserIsAdminOrNot 检验用户是否为管理员
 func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) bool {
-	return false
+	return user.IsAdmin
 }
 
 // Login 登录

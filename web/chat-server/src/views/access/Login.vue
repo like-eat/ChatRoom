@@ -116,7 +116,7 @@ export default {
           data.successMessage = "登录成功！";
           console.log(response.data.message);
           sessionStorage.setItem("userInfo", response.data.data);
-          router.push("/chat");
+          router.push("/chat/contactlist");
         } else {
           data.showError = true;
           data.errorMessage = "登录失败！请重试！";

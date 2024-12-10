@@ -1,6 +1,7 @@
 package gorm
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
@@ -18,50 +19,50 @@ type groupInfoService struct {
 var GroupInfoService = new(groupInfoService)
 
 // SaveGroup 保存群聊
-func (g *groupInfoService) SaveGroup(groupReq request.SaveGroupRequest) error {
-	var group model.GroupInfo
-	res := dao.GormDB.First(&group, "uuid = ?", groupReq.Uuid)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			// 创建群聊
-			group.Uuid = groupReq.Uuid
-			group.Name = groupReq.Name
-			group.Notice = groupReq.Notice
-			group.AddMode = groupReq.AddMode
-			group.Avatar = groupReq.Avatar
-			group.MemberCnt = 1
-			group.Members = append(group.Members, groupReq.OwnerId)
-			group.OwnerId = groupReq.OwnerId
-			group.CreatedAt = time.Now()
-			group.UpdatedAt = time.Now()
-			if res := dao.GormDB.Create(&group); res.Error != nil {
-				zlog.Error(res.Error.Error())
-				return res.Error
-			}
-			return nil
-		} else {
-			zlog.Error(res.Error.Error())
-			return res.Error
-		}
-	}
-	// 更新群聊
-	group.Uuid = groupReq.Uuid
-	group.Name = groupReq.Name
-	group.Notice = groupReq.Notice
-	group.AddMode = groupReq.AddMode
-	group.Avatar = groupReq.Avatar
-	group.MemberCnt = 1
-	group.Members = append(group.Members, groupReq.OwnerId)
-	group.OwnerId = groupReq.OwnerId
-	group.CreatedAt = time.Now()
-	group.UpdatedAt = time.Now()
-	return nil
-}
+//func (g *groupInfoService) SaveGroup(groupReq request.SaveGroupRequest) error {
+//	var group model.GroupInfo
+//	res := dao.GormDB.First(&group, "uuid = ?", groupReq.Uuid)
+//	if res.Error != nil {
+//		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+//			// 创建群聊
+//			group.Uuid = groupReq.Uuid
+//			group.Name = groupReq.Name
+//			group.Notice = groupReq.Notice
+//			group.AddMode = groupReq.AddMode
+//			group.Avatar = groupReq.Avatar
+//			group.MemberCnt = 1
+//			group.Members = append(group.Members, groupReq.OwnerId)
+//			group.OwnerId = groupReq.OwnerId
+//			group.CreatedAt = time.Now()
+//			group.UpdatedAt = time.Now()
+//			if res := dao.GormDB.Create(&group); res.Error != nil {
+//				zlog.Error(res.Error.Error())
+//				return res.Error
+//			}
+//			return nil
+//		} else {
+//			zlog.Error(res.Error.Error())
+//			return res.Error
+//		}
+//	}
+//	// 更新群聊
+//	group.Uuid = groupReq.Uuid
+//	group.Name = groupReq.Name
+//	group.Notice = groupReq.Notice
+//	group.AddMode = groupReq.AddMode
+//	group.Avatar = groupReq.Avatar
+//	group.MemberCnt = 1
+//	group.Members = append(group.Members, groupReq.OwnerId)
+//	group.OwnerId = groupReq.OwnerId
+//	group.CreatedAt = time.Now()
+//	group.UpdatedAt = time.Now()
+//	return nil
+//}
 
 // CreateGroup 创建群聊
 func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) error {
 	group := model.GroupInfo{
-		Uuid:      fmt.Sprintf("G%d", random.GetNowAndLenRandomString(11)),
+		Uuid:      fmt.Sprintf("G%s", random.GetNowAndLenRandomString(11)),
 		Name:      groupReq.Name,
 		Notice:    groupReq.Notice,
 		OwnerId:   groupReq.OwnerId,
@@ -71,7 +72,14 @@ func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) erro
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	group.Members = append(group.Members, groupReq.OwnerId)
+	var members []string
+	members = append(members, groupReq.OwnerId)
+	var err error
+	group.Members, err = json.Marshal(members)
+	if err != nil {
+		zlog.Error(err.Error())
+		return err
+	}
 	if res := dao.GormDB.Create(&group); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return res.Error
@@ -93,7 +101,12 @@ func (g *groupInfoService) GetAllMembers(groupId string) ([]string, error) {
 			return nil, res.Error
 		}
 	} else {
-		return group.Members, nil
+		var members []string
+		if err := json.Unmarshal(group.Members, members); err != nil {
+			zlog.Error(err.Error())
+			return nil, err
+		}
+		return members, nil
 	}
 }
 
