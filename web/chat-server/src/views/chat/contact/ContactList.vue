@@ -163,7 +163,7 @@
                     <div class="modal-body">
                       <el-form
                         ref="formRef"
-                        :model="createGroupInfo"
+                        :model="createGroupReq"
                         label-width="70px"
                         class="demo-dynamic"
                       >
@@ -179,13 +179,13 @@
                           ]"
                         >
                           <el-input
-                            v-model="createGroupInfo.name"
+                            v-model="createGroupReq.name"
                             placeholder="必填"
                           />
                         </el-form-item>
                         <el-form-item prop="notice" label="群公告">
                           <el-input
-                            v-model="createGroupInfo.notice"
+                            v-model="createGroupReq.notice"
                             type="textarea"
                             show-word-limit
                             maxlength="500"
@@ -204,14 +204,14 @@
                             },
                           ]"
                         >
-                          <el-radio-group v-model="createGroupInfo.add_mode">
+                          <el-radio-group v-model="createGroupReq.add_mode">
                             <el-radio :value="false">直接加入</el-radio>
                             <el-radio :value="true">群主审核</el-radio>
                           </el-radio-group>
                         </el-form-item>
                         <el-form-item prop="avatar" label="群头像">
                           <el-input
-                            v-model="createGroupInfo.avatar"
+                            v-model="createGroupReq.avatar"
                             placeholder="选填"
                           />
                         </el-form-item>
@@ -233,19 +233,32 @@
             </div>
             <div class="contactlist-body">
               <div class="contactlist-user">
-                <el-menu router unique-opened>
-                  <el-sub-menu index="1">
+                <el-menu router unique-opened @open="handleShowUserList"
+                  @close="handleHideUserList">
+                  <el-sub-menu index="1"  >
                     <template #title>
                       <span class="contactlist-user-title">联系人</span>
                     </template>
                   </el-sub-menu>
-                  <!-- <el-menu-item v-for="user in userList"> </el-menu-item> -->
-                  <el-sub-menu index="2">
+                  <el-menu-item v-for="user in contactUserList" :key="user.user_id" :index="user.user_id">
+                  <img :src="user.avatar" class="contactlist-avatar" />
+                  {{user.user_name}}
+                   </el-menu-item>
+                </el-menu>
+                <el-menu router unique-opened @open="handleShowMyGroupList"
+                  @close="handleHideMyGroupList">
+                  <el-sub-menu index="1">
                     <template #title>
                       <span class="contactlist-user-title">我创建的群聊</span>
                     </template>
                   </el-sub-menu>
-                  <el-sub-menu index="3">
+                  <el-menu-item v-for="group in myGroupList" :key="group.group_id" :index="group.group_id">
+                  <img :src="group.avatar" class="contactlist-avatar" />
+                  {{group.group_name}}
+                   </el-menu-item>
+                </el-menu>
+                  <el-menu router unique-opened>
+                  <el-sub-menu index="1">
                     <template #title>
                       <span class="contactlist-user-title">我加入的群聊</span>
                     </template>
@@ -452,7 +465,7 @@ export default {
         telephone: "",
       },
       contactSearch: "",
-      createGroupInfo: {
+      createGroupReq: {
         owner_id: "",
         name: "",
         notice: "",
@@ -460,6 +473,14 @@ export default {
         avatar: "",
       },
       isModalVisible: false,
+      getUserListReq: {
+        owner_id: "",
+      },
+      contactUserList: [],
+      loadMyGroupReq: {
+        owner_id: "",
+      },
+      myGroupList: [],
     });
 
     onMounted(() => {
@@ -483,11 +504,11 @@ export default {
     };
     const handleCreateGroup = async () => {
       try {
-        console.log(store.state.backendUrl + "/createGroup");
-        data.createGroupInfo.owner_id = data.userInfo.uuid;
+        console.log(store.state.backendUrl + "/group/createGroup");
+        data.createGroupReq.owner_id = data.userInfo.uuid;
         const response = await axios.post(
-          store.state.backendUrl + "/createGroup",
-          data.createGroupInfo
+          store.state.backendUrl + "/group/createGroup",
+          data.createGroupReq
         );
         console.log(response);
         // if (response.data.code == 200) {
@@ -504,17 +525,56 @@ export default {
       data.isModalVisible = false;
     };
     const closeModal = () => {
-      if (data.createGroupInfo.name == "") {
+      if (data.createGroupReq.name == "") {
         alert("请输入群聊名称");
         return;
       }
-      if (data.createGroupInfo.add_mode == null) {
+      if (data.createGroupReq.add_mode == null) {
         alert("请选择加群方式");
         return;
       }
       data.isModalVisible = false;
       handleCreateGroup();
     };
+
+    const handleShowUserList = async () => {
+      try {
+        console.log(data.userInfo);
+        data.getUserListReq.owner_id = data.userInfo.uuid;
+        console.log(data.getUserListReq);
+        const getUserListRsp = await axios.post(
+          store.state.backendUrl + "/user/getUserList",
+          data.getUserListReq
+        );
+        console.log(getUserListRsp);
+        data.contactUserList = getUserListRsp.data.data;
+        console.log(data.contactUserList[0].user_id);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const handleHideUserList = () => {
+      data.contactUserList = [];
+    };
+
+    const handleShowMyGroupList = async() => {
+      try {
+        console.log(data.userInfo);
+        data.loadMyGroupReq.owner_id = data.userInfo.uuid;
+        console.log(data.loadMyGroupReq);
+        const loadMyGroupRsp = await axios.post(
+          store.state.backendUrl + "/group/loadMyGroup",
+          data.loadMyGroupReq
+        );
+        console.log(loadMyGroupRsp);
+        data.myGroupList = loadMyGroupRsp.data.data;
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    const handleHideMyGroupList = () => {
+      data.myGroupList = [];
+    }
     return {
       ...toRefs(data),
       router,
@@ -523,6 +583,10 @@ export default {
       showModal,
       closeModal,
       quitModal,
+      handleShowUserList,
+      handleHideUserList,
+      handleShowMyGroupList,
+      handleHideMyGroupList,
     };
   },
 };
@@ -572,6 +636,11 @@ export default {
 .el-menu {
   background-color: rgb(252, 210.9, 210.9);
   width: 101%;
+}
+
+.el-menu-item {
+  background-color: rgb(255, 255, 255);
+  height: 45px;
 }
 
 .contactlist-user-title {
@@ -624,12 +693,17 @@ h3 {
   align-items: center;
 }
 
-
 .modal-header-title {
   height: 70%;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.contactlist-avatar {
+  width: 30px;
+  height: 30px;
+  margin-right: 20px;
 }
 </style>

@@ -29,3 +29,28 @@ func CreateGroup(c *gin.Context) {
 		"message": "create group success",
 	})
 }
+
+// LoadMyGroup 获取我创建的群聊
+func LoadMyGroup(c *gin.Context) {
+	var loadMyGroupReq request.LoadMyGroupRequest
+	if err := c.BindJSON(&loadMyGroupReq); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	groupList, err := gorm.GroupInfoService.LoadMyGroup(loadMyGroupReq.OwnerId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "load my group success",
+		"data":    groupList,
+	})
+}

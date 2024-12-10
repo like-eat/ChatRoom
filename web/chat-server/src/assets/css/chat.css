@@ -113,7 +113,7 @@
 }
 
 .send-btn {
-    height: 15%;
+    height: 20%;
     width: 100%;
     background-color: rgb(252, 210.9, 210.9);
     border-bottom-right-radius: 30px;
@@ -121,8 +121,7 @@
 
 .chat-send {
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    flex-direction: column-reverse;
     width: 10%;
     height: 100%;
 }
@@ -198,3 +197,4 @@
     background-color: rgb(252, 210.9, 210.9);
     border-radius: 6px;
 }
+
