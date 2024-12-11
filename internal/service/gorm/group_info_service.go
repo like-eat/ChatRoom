@@ -121,7 +121,7 @@ func (g *groupInfoService) LoadMyGroup(ownerId string) ([]respond.LoadMyGroupRes
 	var groupListRsp []respond.LoadMyGroupRespond
 	for _, group := range groupList {
 		groupListRsp = append(groupListRsp, respond.LoadMyGroupRespond{
-			GroupID:   group.Uuid,
+			GroupId:   group.Uuid,
 			GroupName: group.Name,
 			Avatar:    group.Avatar,
 		})

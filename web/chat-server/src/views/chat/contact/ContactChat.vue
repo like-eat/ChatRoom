@@ -37,7 +37,7 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
+                <button class="icon-btn" @click="handleToContactList">
                   <el-icon>
                     <User />
                   </el-icon>
@@ -220,10 +220,7 @@
                   </template>
                   <template v-slot:footer>
                     <div class="modal-footer">
-                      <el-button
-                        class="modal-close-btn"
-                        @click="closeModal"
-                      >
+                      <el-button class="modal-close-btn" @click="closeModal">
                         完成
                       </el-button>
                     </div>
@@ -233,42 +230,65 @@
             </div>
             <div class="contactlist-body">
               <div class="contactlist-user">
-                <el-menu router unique-opened @open="handleShowUserList"
-                  @close="handleHideUserList">
-                  <el-sub-menu index="1"  >
+                <el-menu
+                  router
+                  unique-opened
+                  @open="handleShowUserList"
+                  @close="handleHideUserList"
+                >
+                  <el-sub-menu index="1">
                     <template #title>
                       <span class="contactlist-user-title">联系人</span>
                     </template>
                   </el-sub-menu>
-                  <el-menu-item v-for="user in contactUserList" :key="user.user_id" :index="user.user_id">
-                  <img :src="user.avatar" class="contactlist-avatar" />
-                  {{user.user_name}}
-                   </el-menu-item>
+                  <el-menu-item
+                    v-for="user in contactUserList"
+                    :key="user.user_id"
+                    :index="user.user_id"
+                  >
+                    <img :src="user.avatar" class="contactlist-avatar" />
+                    {{ user.user_name }}
+                  </el-menu-item>
                 </el-menu>
-                <el-menu router unique-opened @open="handleShowMyGroupList"
-                  @close="handleHideMyGroupList">
+                <el-menu
+                  router
+                  unique-opened
+                  @open="handleShowMyGroupList"
+                  @close="handleHideMyGroupList"
+                >
                   <el-sub-menu index="1">
                     <template #title>
                       <span class="contactlist-user-title">我创建的群聊</span>
                     </template>
                   </el-sub-menu>
-                  <el-menu-item v-for="group in myGroupList" :key="group.group_id" :index="group.group_id">
-                  <img :src="group.avatar" class="contactlist-avatar" />
-                  {{group.group_name}}
-                   </el-menu-item>
+                  <el-menu-item
+                    v-for="group in myGroupList"
+                    :key="group.group_id"
+                    :index="group.group_id"
+                  >
+                    <img :src="group.avatar" class="contactlist-avatar" />
+                    {{ group.group_name }}
+                  </el-menu-item>
                 </el-menu>
-                  <el-menu router unique-opened
+                <el-menu
+                  router
+                  unique-opened
                   @open="handleShowMyJoinedGroupList"
-                  @close="handleHideMyJoinedGroupList">
+                  @close="handleHideMyJoinedGroupList"
+                >
                   <el-sub-menu index="1">
                     <template #title>
                       <span class="contactlist-user-title">我加入的群聊</span>
                     </template>
                   </el-sub-menu>
-                  <el-menu-item v-for="group in myJoinedGroupList" :key="group.group_id" :index="group.group_id">
-                  <img :src="group.avatar" class="contactlist-avatar" />
-                  {{group.group_name}}
-                   </el-menu-item>
+                  <el-menu-item
+                    v-for="group in myJoinedGroupList"
+                    :key="group.group_id"
+                    :index="group.group_id"
+                  >
+                    <img :src="group.avatar" class="contactlist-avatar" />
+                    {{ group.group_name }}
+                  </el-menu-item>
                 </el-menu>
               </div>
             </div>
@@ -276,7 +296,13 @@
         </el-aside>
         <el-container class="chat-container">
           <el-header>
-            <h2 class="chat-name"></h2>
+            <div class="chat-title">
+              <img :src="contactInfo.contact_avatar" style="width:40px; height:40px; margin-right: 10px;" />
+              <h2 class="chat-name">{{ contactInfo.contact_name }}</h2>
+            </div>
+            <div class="chat-title-right">
+            <el-icon><MoreFilled /></el-icon>
+            </div>
           </el-header>
           <el-main>
             <div class="chat-screen"></div>
@@ -451,13 +477,13 @@
 </template>
 
 <script>
-import { reactive, toRefs, onMounted, ref } from "vue";
-import { onBeforeRouteUpdate, useRouter } from "vue-router";
+import { reactive, toRefs, onMounted } from "vue";
+import { useRouter, onBeforeRouteUpdate } from "vue-router";
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
 export default {
-  name: "ContactList",
+  name: "ContactChat",
   components: {
     Modal,
   },
@@ -491,8 +517,44 @@ export default {
         owner_id: "",
       },
       myJoinedGroupList: [],
+      getContactInfoReq: {
+        contact_id: "",
+      },
+      contactInfo: {
+        contact_id: "",
+        contact_name: "",
+        contact_avatar: "",
+        contact_phone: "",
+        contact_email: "",
+        contact_gender: false,
+        contact_signature: "",
+        contact_birthday: "",
+        contact_notice: "",
+        contact_members: [],
+        contact_member_cnt: 0,
+        contact_owner_id: "",
+        contact_add_mode: false,
+      },
     });
-    
+    const router = useRouter();
+    const store = useStore();
+    onBeforeRouteUpdate((to, from, next) => {
+      getChatContactInfo(to.params.id);
+      next();
+    });
+    const getChatContactInfo = async (id) => {
+      try {
+        data.getContactInfoReq.contact_id = id;
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/getContactInfo",
+          data.getContactInfoReq
+        );
+        data.contactInfo = rsp.data.data;
+        console.log(data.contactInfo);
+      } catch (error) {
+        console.log(error);
+      }
+    };
     onMounted(() => {
       const userInfoStr = sessionStorage.getItem("userInfo");
       if (userInfoStr) {
@@ -505,12 +567,21 @@ export default {
       } else {
         data.userInfo = {};
       }
+      try {
+        getChatContactInfo(router.currentRoute.value.params.id);
+      } catch (error) {
+        console.error(error);
+      }
     });
-    const router = useRouter();
-    const store = useStore();
+
+    const handleToContactList = () => {
+      router.push("/chat/contactlist");
+    };
+
     const handleToOwnInfo = () => {
       router.push("/chat/owninfo");
     };
+
     const handleCreateGroup = async () => {
       try {
         data.createGroupReq.owner_id = data.userInfo.uuid;
@@ -557,7 +628,7 @@ export default {
       data.contactUserList = [];
     };
 
-    const handleShowMyGroupList = async() => {
+    const handleShowMyGroupList = async () => {
       try {
         data.loadMyGroupReq.owner_id = data.userInfo.uuid;
         const loadMyGroupRsp = await axios.post(
@@ -568,11 +639,11 @@ export default {
       } catch (error) {
         console.error(error);
       }
-    }
+    };
     const handleHideMyGroupList = () => {
       data.myGroupList = [];
-    }
-    const handleShowMyJoinedGroupList = async() => {
+    };
+    const handleShowMyJoinedGroupList = async () => {
       try {
         data.loadMyJoinedGroupReq.owner_id = data.userInfo.uuid;
         const loadMyJoinedGroupRsp = await axios.post(
@@ -583,10 +654,10 @@ export default {
       } catch (error) {
         console.error(error);
       }
-    }
+    };
     const handleHideMyJoinedGroupList = () => {
       data.myJoinedGroupList = [];
-    }
+    };
     return {
       ...toRefs(data),
       router,
@@ -595,6 +666,7 @@ export default {
       showModal,
       closeModal,
       quitModal,
+      handleToContactList,
       handleShowUserList,
       handleHideUserList,
       handleShowMyGroupList,
@@ -720,4 +792,29 @@ h3 {
   height: 30px;
   margin-right: 20px;
 }
+
+.el-header {
+    padding: 10px;
+    display: flex;
+    flex-direction: row;
+}
+
+.chat-title {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 50%;
+    height: 100%;
+}
+
+.chat-title-right {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    width: 50%;
+    height: 100%;
+    margin-right: 10px;
+    color: rgb(201, 139, 139);
+}
+
 </style>

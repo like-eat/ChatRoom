@@ -25,6 +25,11 @@ const routes = [
     name: 'ContactList',
     component: () => import('../views/chat/contact/ContactList.vue')
   },
+  {
+    path: '/chat/:id',
+    name: 'ContactChat',
+    component: () => import('../views/chat/contact/ContactChat.vue')
+  }
 ]
 
 const router = createRouter({

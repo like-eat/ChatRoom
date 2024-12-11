@@ -7,6 +7,7 @@
       }"
     >
       <el-container class="chat-window-container">
+      <el-aside class="aside-container">
         <div class="navigation-bar">
           <div class="up-bar">
             <button class="avatar-btn">
@@ -36,7 +37,7 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn" @click="handleToCantactList">
+                <button class="icon-btn" @click="handleToContactList">
                   <el-icon>
                     <User />
                   </el-icon>
@@ -109,7 +110,12 @@
               </el-tooltip>
           </div>
         </div>
+        <div class="contactlist-container">
+        </div>
+      </el-aside>
         <div class="owner-info-window">
+        <div class="my-homepage-title"><h2>我的主页</h2></div>
+        
           <p class="owner-prefix">用户id：{{ userInfo.uuid }}</p>
           <p class="owner-prefix">昵称：{{ userInfo.nickname }}</p>
           <p class="owner-prefix">电话：{{ userInfo.telephone }}</p>
@@ -301,7 +307,7 @@ export default {
       data.isModalVisible = false;
     };
 
-    const handleToCantactList = () => {
+    const handleToContactList = () => {
       router.push("/chat/contactlist");
     }
     return {
@@ -310,7 +316,7 @@ export default {
       showModal,
       closeModal,
       quitModal,
-      handleToCantactList,
+      handleToContactList,
     };
   },
 };
@@ -394,6 +400,11 @@ h3 {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+h2 {
+  margin-bottom: 20px;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 </style>

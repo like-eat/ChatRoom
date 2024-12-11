@@ -21,8 +21,10 @@ func main() {
 	r.POST("/login", v1.Login)
 	r.POST("/register", v1.Register)
 	r.POST("/group/createGroup", v1.CreateGroup)
-	r.POST("/user/getUserList", v1.GetUserList)
+	r.POST("/contact/getUserList", v1.GetUserList)
 	r.POST("/group/loadMyGroup", v1.LoadMyGroup)
+	r.POST("/contact/loadMyJoinedGroup", v1.LoadMyJoinedGroup)
+	r.POST("/contact/getContactInfo", v1.GetContactInfo)
 	conf := config.GetConfig()
 	host := conf.MainConfig.Host
 	port := conf.MainConfig.Port

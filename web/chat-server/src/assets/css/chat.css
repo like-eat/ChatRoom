@@ -51,7 +51,7 @@
     border-top-left-radius: 30px;
     border-bottom-left-radius: 30px;
     background-color: rgb(252, 210.9, 210.9);
-    width: 60px;
+    width: 25%;
     height: 100%;
 }
 
@@ -71,6 +71,11 @@
     height: 30%;
     display: flex;
     flex-direction: column-reverse;
+}
+
+.contactlist-container {
+    height: 100%;
+    width: 74%;
 }
 
 .chat-name {
