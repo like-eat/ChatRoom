@@ -32,7 +32,7 @@ func CreateGroup(c *gin.Context) {
 
 // LoadMyGroup 获取我创建的群聊
 func LoadMyGroup(c *gin.Context) {
-	var loadMyGroupReq request.LoadMyGroupRequest
+	var loadMyGroupReq request.OwnlistRequest
 	if err := c.BindJSON(&loadMyGroupReq); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":  400,

@@ -10,7 +10,7 @@ import (
 
 // GetUserList 获取联系人列表
 func GetUserList(c *gin.Context) {
-	var myUserListReq request.MyUserListRequest
+	var myUserListReq request.OwnlistRequest
 	if err := c.BindJSON(&myUserListReq); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":  400,
@@ -39,7 +39,7 @@ func GetUserList(c *gin.Context) {
 
 // LoadMyJoinedGroup 获取我加入的群聊
 func LoadMyJoinedGroup(c *gin.Context) {
-	var loadMyJoinedGroupReq request.LoadMyJoinedGroupRequest
+	var loadMyJoinedGroupReq request.OwnlistRequest
 	if err := c.BindJSON(&loadMyJoinedGroupReq); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":  400,

@@ -130,13 +130,13 @@
                 >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="session-user-title">用户</span>
+                      <span class="sessionlist-user-title">用户</span>
                     </template>
                   </el-sub-menu>
                   <el-menu-item
                     v-for="user in userSessionList"
                     :key="user.user_id"
-                    :index="user.user_id"
+                    @click="handleToChatUser(user)"
                   >
                     <img :src="user.avatar" class="sessionlist-avatar" />
                     {{ user.user_name }}
@@ -150,19 +150,18 @@
                 >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="session-user-title">群聊</span>
+                      <span class="sessionlist-user-title">群聊</span>
                     </template>
                   </el-sub-menu>
                   <el-menu-item
                     v-for="group in myGroupList"
                     :key="group.group_id"
-                    :index="group.group_id"
+										@click="handleToChatGroup(group)"
                   >
                     <img :src="group.avatar" class="contactlist-avatar" />
                     {{ group.group_name }}
                   </el-menu-item>
                 </el-menu>
-                
               </div>
             </div>
           </div>
@@ -483,6 +482,12 @@ export default {
     const handleToContactList = () => {
       router.push("/chat/contactlist");
     };
+    const handleToChatUser = (user) => {
+      router.push("/chat/" + user.user_id);
+    };
+		const handleToChatGroup = (group) => {
+			router.push("/chat/" + group.group_id);
+		}
     return {
       ...toRefs(data),
       router,
@@ -498,6 +503,8 @@ export default {
       handleShowMyJoinedGroupList,
       handleHideMyJoinedGroupList,
       handleToContactList,
+			handleToChatUser,
+			handleToChatGroup,
     };
   },
 };
@@ -547,7 +554,7 @@ export default {
 
 .el-menu {
   background-color: rgb(252, 210.9, 210.9);
-  width: 101%;
+  width: 100%;
 }
 
 .el-menu-item {
@@ -555,7 +562,7 @@ export default {
   height: 45px;
 }
 
-.contactlist-user-title {
+.sessionlist-user-title {
   font-family: Arial, Helvetica, sans-serif;
 }
 

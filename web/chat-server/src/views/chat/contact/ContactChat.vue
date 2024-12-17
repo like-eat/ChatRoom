@@ -662,6 +662,14 @@ export default {
     const handleToSessionList = () => {
       router.push("/chat/sessionlist");
     };
+
+    const handleToChatUser = (user) => {
+      router.push("/chat/" + user.user_id);
+    };
+
+    const handleToChatGroup = (group) => {
+      router.push("/chat/" + group.group_id);
+    }
     return {
       ...toRefs(data),
       router,
@@ -678,6 +686,8 @@ export default {
       handleShowMyJoinedGroupList,
       handleHideMyJoinedGroupList,
       handleToSessionList,
+      handleToChatUser,
+      handleToChatGroup,
     };
   },
 };

@@ -1,5 +1,5 @@
 package request
 
-type MyUserListRequest struct {
+type OwnlistRequest struct {
 	OwnerId string `json:"owner_id"`
 }

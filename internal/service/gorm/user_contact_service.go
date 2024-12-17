@@ -7,7 +7,6 @@ import (
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
 	"kama_chat_server/pkg/zlog"
-	"log"
 )
 
 type userContactService struct {
@@ -28,7 +27,6 @@ func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUs
 			return "", nil, res.Error
 		}
 	}
-	log.Println(contactList)
 	var userListRsp []respond.MyUserListRespond
 	for _, contact := range contactList {
 		if contact.ContactType == false {
