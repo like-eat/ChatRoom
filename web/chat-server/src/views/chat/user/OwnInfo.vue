@@ -24,7 +24,7 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
+                <button class="icon-btn" @click="handleToSessionList">
                   <el-icon>
                     <ChatRound />
                   </el-icon>
@@ -310,6 +310,10 @@ export default {
     const handleToContactList = () => {
       router.push("/chat/contactlist");
     }
+
+    const handleToSessionList = () => {
+      router.push("/chat/sessionlist");
+    };
     return {
       ...toRefs(data),
       router,
@@ -317,6 +321,7 @@ export default {
       closeModal,
       quitModal,
       handleToContactList,
+      handleToSessionList,
     };
   },
 };

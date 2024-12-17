@@ -325,6 +325,19 @@ export default {
       router.push("/chat/contactlist");
     }
 
+    const handleToSessionList = () => {
+      router.push("/chat/sessionlist");
+    };
+
+    return {
+      ...toRefs(data),
+      router,
+      handleToOwnInfo,
+      handleToCantactList,
+      handleToSessionList,
+    };
+    }
+
     return {
       ...toRefs(data),
       router,

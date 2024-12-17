@@ -24,7 +24,7 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
+                <button class="icon-btn" @click="handleToSessionList">
                   <el-icon>
                     <ChatRound />
                   </el-icon>
@@ -658,6 +658,10 @@ export default {
     const handleHideMyJoinedGroupList = () => {
       data.myJoinedGroupList = [];
     };
+
+    const handleToSessionList = () => {
+      router.push("/chat/sessionlist");
+    };
     return {
       ...toRefs(data),
       router,
@@ -673,6 +677,7 @@ export default {
       handleHideMyGroupList,
       handleShowMyJoinedGroupList,
       handleHideMyJoinedGroupList,
+      handleToSessionList,
     };
   },
 };

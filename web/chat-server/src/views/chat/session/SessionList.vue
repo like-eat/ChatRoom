@@ -24,7 +24,7 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn" @click="handleToSessionList">
+                <button class="icon-btn">
                   <el-icon>
                     <ChatRound />
                   </el-icon>
@@ -37,7 +37,7 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
+                <button class="icon-btn" @click="handleToContactList">
                   <el-icon>
                     <User />
                   </el-icon>
@@ -110,166 +110,59 @@
               </el-tooltip>
             </div>
           </div>
-          <div class="contactlist-container">
+          <div class="sessionlist-container">
             <div class="contactlist-header">
               <el-input
                 v-model="contactSearch"
                 class="contact-search-input"
-                placeholder="搜索联系人/群聊"
+                placeholder="搜索会话"
                 size="small"
                 suffix-icon="Search"
               />
-              <div class="contactlist-header-right">
-                <el-tooltip
-                  effect="customized"
-                  content="创建群聊"
-                  placement="top"
-                  hide-after="0"
-                  enterable="false"
-                >
-                  <button class="create-group-btn" @click="showModal">
-                    <svg
-                      t="1733664667695"
-                      class="create-group-icon"
-                      viewBox="0 0 1024 1024"
-                      version="1.1"
-                      xmlns="http://www.w3.org/2000/svg"
-                      p-id="2875"
-                      width="128"
-                      height="128"
-                    >
-                      <path
-                        d="M488.021333 96a248.021333 248.021333 0 1 1-17.92 495.36l-1.749333 0.341333-4.352 0.298667A304 304 0 0 0 160 896a32 32 0 1 1-64 0 368.170667 368.170667 0 0 1 250.026667-348.672A247.978667 247.978667 0 0 1 488.021333 96z m288 528a32 32 0 0 1 32 32l-0.042666 87.978667H896a32 32 0 0 1 31.701333 27.690666l0.298667 4.352a32 32 0 0 1-32 32l-88.021333-0.042666V896a32 32 0 0 1-27.648 31.701333l-4.352 0.298667a32 32 0 0 1-32-32v-88.021333h-87.978667a32 32 0 0 1-31.701333-27.648l-0.298667-4.352a32 32 0 0 1 32-32h87.978667v-87.978667a32 32 0 0 1 27.690666-31.701333zM488.021333 160a184.021333 184.021333 0 1 0 0 368 184.021333 184.021333 0 0 0 0-368z"
-                        fill="#2c2c2c"
-                        p-id="2876"
-                      ></path>
-                    </svg>
-                  </button>
-                </el-tooltip>
-                <Modal :isVisible="isModalVisible">
-                  <template v-slot:header>
-                    <div class="modal-header">
-                      <div class="modal-quit-btn-container">
-                        <button class="modal-quit-btn" @click="quitModal">
-                          <el-icon><Close /></el-icon>
-                        </button>
-                      </div>
-                      <div class="modal-header-title">
-                        <h3>创建群聊</h3>
-                      </div>
-                    </div>
-                  </template>
-                  <template v-slot:body>
-                    <div class="modal-body">
-                      <el-form
-                        ref="formRef"
-                        :model="createGroupReq"
-                        label-width="80px"
-                        class="demo-dynamic"
-                      >
-                        <el-form-item
-                          prop="name"
-                          label="群名称"
-                          :rules="[
-                            {
-                              required: true,
-                              message: '此项为必填项',
-                              trigger: 'blur',
-                            },
-                          ]"
-                        >
-                          <el-input
-                            v-model="createGroupReq.name"
-                            placeholder="必填"
-                          />
-                        </el-form-item>
-                        <el-form-item prop="notice" label="群公告">
-                          <el-input
-                            v-model="createGroupReq.notice"
-                            type="textarea"
-                            show-word-limit
-                            maxlength="500"
-                            :autosize="{ minRows: 3, maxRows: 3 }"
-                            placeholder="选填"
-                          />
-                        </el-form-item>
-                        <el-form-item
-                          prop="add_mode"
-                          label="加群方式"
-                          :rules="[
-                            {
-                              required: true,
-                              message: 'Please select activity resource',
-                              trigger: 'change',
-                            },
-                          ]"
-                        >
-                          <el-radio-group v-model="createGroupReq.add_mode">
-                            <el-radio :value="false">直接加入</el-radio>
-                            <el-radio :value="true">群主审核</el-radio>
-                          </el-radio-group>
-                        </el-form-item>
-                        <el-form-item prop="avatar" label="群头像">
-                          <el-input
-                            v-model="createGroupReq.avatar"
-                            placeholder="选填"
-                          />
-                        </el-form-item>
-                      </el-form>
-                    </div>
-                  </template>
-                  <template v-slot:footer>
-                    <div class="modal-footer">
-                      <el-button
-                        class="modal-close-btn"
-                        @click="closeModal"
-                      >
-                        完成
-                      </el-button>
-                    </div>
-                  </template>
-                </Modal>
-              </div>
             </div>
             <div class="contactlist-body">
               <div class="contactlist-user">
-                <el-menu router unique-opened @open="handleShowUserList"
-                  @close="handleHideUserList">
-                  <el-sub-menu index="1"  >
-                    <template #title>
-                      <span class="contactlist-user-title">联系人</span>
-                    </template>
-                  </el-sub-menu>
-                  <el-menu-item v-for="user in contactUserList" :key="user.user_id" :index="user.user_id">
-                  <img :src="user.avatar" class="contactlist-avatar" />
-                  {{user.user_name}}
-                   </el-menu-item>
-                </el-menu>
-                <el-menu router unique-opened @open="handleShowMyGroupList"
-                  @close="handleHideMyGroupList">
+                <el-menu
+                  router
+                  unique-opened
+                  @open="handleShowUserSessionList"
+                  @close="handleHideUserSessionList"
+                >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="contactlist-user-title">我创建的群聊</span>
+                      <span class="session-user-title">用户</span>
                     </template>
                   </el-sub-menu>
-                  <el-menu-item v-for="group in myGroupList" :key="group.group_id" :index="group.group_id">
-                  <img :src="group.avatar" class="contactlist-avatar" />
-                  {{group.group_name}}
-                   </el-menu-item>
+                  <el-menu-item
+                    v-for="user in userSessionList"
+                    :key="user.user_id"
+                    :index="user.user_id"
+                  >
+                    <img :src="user.avatar" class="sessionlist-avatar" />
+                    {{ user.user_name }}
+                  </el-menu-item>
                 </el-menu>
-                  <el-menu router unique-opened
-                  @open="handleShowMyJoinedGroupList"
-                  @close="handleHideMyJoinedGroupList">
+                <el-menu
+                  router
+                  unique-opened
+                  @open="handleShowGroupSessionList"
+                  @close="handleHideGroupSessionList"
+                >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="contactlist-user-title">我加入的群聊</span>
+                      <span class="session-user-title">群聊</span>
                     </template>
                   </el-sub-menu>
-                  <el-menu-item v-for="group in myJoinedGroupList" :key="group.group_id" :index="group.group_id">
-                  <img :src="group.avatar" class="contactlist-avatar" />
-                  {{group.group_name}}
-                   </el-menu-item>
+                  <el-menu-item
+                    v-for="group in myGroupList"
+                    :key="group.group_id"
+                    :index="group.group_id"
+                  >
+                    <img :src="group.avatar" class="contactlist-avatar" />
+                    {{ group.group_name }}
+                  </el-menu-item>
                 </el-menu>
+                
               </div>
             </div>
           </div>
@@ -492,7 +385,7 @@ export default {
       },
       myJoinedGroupList: [],
     });
-    
+
     onMounted(() => {
       const userInfoStr = sessionStorage.getItem("userInfo");
       if (userInfoStr) {
@@ -557,7 +450,7 @@ export default {
       data.contactUserList = [];
     };
 
-    const handleShowMyGroupList = async() => {
+    const handleShowMyGroupList = async () => {
       try {
         data.loadMyGroupReq.owner_id = data.userInfo.uuid;
         const loadMyGroupRsp = await axios.post(
@@ -568,11 +461,11 @@ export default {
       } catch (error) {
         console.error(error);
       }
-    }
+    };
     const handleHideMyGroupList = () => {
       data.myGroupList = [];
-    }
-    const handleShowMyJoinedGroupList = async() => {
+    };
+    const handleShowMyJoinedGroupList = async () => {
       try {
         data.loadMyJoinedGroupReq.owner_id = data.userInfo.uuid;
         const loadMyJoinedGroupRsp = await axios.post(
@@ -583,14 +476,13 @@ export default {
       } catch (error) {
         console.error(error);
       }
-    }
+    };
     const handleHideMyJoinedGroupList = () => {
       data.myJoinedGroupList = [];
-    }
-
-    const handleToSessionList = () => {
-      router.push("/chat/sessionList");
-    }
+    };
+    const handleToContactList = () => {
+      router.push("/chat/contactlist");
+    };
     return {
       ...toRefs(data),
       router,
@@ -605,7 +497,7 @@ export default {
       handleHideMyGroupList,
       handleShowMyJoinedGroupList,
       handleHideMyJoinedGroupList,
-      handleToSessionList,
+      handleToContactList,
     };
   },
 };
@@ -615,15 +507,16 @@ export default {
 .contactlist-header {
   display: flex;
   flex-direction: row;
+  width: 100%;
   margin-top: 10px;
   margin-bottom: 10px;
 }
 
 .contact-search-input {
-  width: 185px;
+  width: 215px;
   height: 30px;
   margin-left: 5px;
-  margin-right: 5px;
+  margin-right: 2px;
 }
 
 .contactlist-header-right {

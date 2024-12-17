@@ -29,6 +29,10 @@ const routes = [
     path: '/chat/:id',
     name: 'ContactChat',
     component: () => import('../views/chat/contact/ContactChat.vue')
+  }, {
+    path: '/chat/sessionList',
+    name: 'SessionList',
+    component: () => import('../views/chat/session/SessionList.vue')
   }
 ]
 
