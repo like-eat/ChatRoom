@@ -25,6 +25,9 @@ func main() {
 	r.POST("/group/loadMyGroup", v1.LoadMyGroup)
 	r.POST("/contact/loadMyJoinedGroup", v1.LoadMyJoinedGroup)
 	r.POST("/contact/getContactInfo", v1.GetContactInfo)
+	r.POST("/session/openSession", v1.OpenSession)
+	r.POST("/session/getUserSessionList", v1.GetUserSessionList)
+	r.POST("/session/getGroupSessionList", v1.GetGroupSessionList)
 	conf := config.GetConfig()
 	host := conf.MainConfig.Host
 	port := conf.MainConfig.Port

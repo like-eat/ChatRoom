@@ -156,7 +156,7 @@
                   <el-menu-item
                     v-for="group in myGroupList"
                     :key="group.group_id"
-										@click="handleToChatGroup(group)"
+                    @click="handleToChatGroup(group)"
                   >
                     <img :src="group.avatar" class="contactlist-avatar" />
                     {{ group.group_name }}
@@ -371,18 +371,11 @@ export default {
         avatar: "",
       },
       isModalVisible: false,
-      getUserListReq: {
+      ownListReq: {
         owner_id: "",
       },
-      contactUserList: [],
-      loadMyGroupReq: {
-        owner_id: "",
-      },
-      myGroupList: [],
-      loadMyJoinedGroupReq: {
-        owner_id: "",
-      },
-      myJoinedGroupList: [],
+      userSessionList: [],
+      groupSessionList: [],
     });
 
     onMounted(() => {
@@ -485,9 +478,34 @@ export default {
     const handleToChatUser = (user) => {
       router.push("/chat/" + user.user_id);
     };
-		const handleToChatGroup = (group) => {
-			router.push("/chat/" + group.group_id);
-		}
+    const handleToChatGroup = (group) => {
+      router.push("/chat/" + group.group_id);
+    };
+
+    const handleShowUserSessionList = async () => {
+      try {
+        data.ownListReq.owner_id = data.userInfo.uuid;
+        const userSessionListRsp = await axios.post(
+          store.state.backendUrl + "/session/getUserSessionList",
+          data.ownListReq
+        );
+        data.userSessionList = userSessionListRsp.data.data;
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const handleHideGroupSessionList = async () => {
+      try {
+        data.ownListReq.owner_id = data.userInfo.uuid;
+        const groupSessionListRsp = await axios.post(
+          store.state.backendUrl + "/session/getGroupSessionList",
+          data.ownListReq
+        );
+        data.groupSessionList = groupSessionListRsp.data.data;
+      } catch (error) {
+        console.error(error);
+      }
+    };
     return {
       ...toRefs(data),
       router,
@@ -503,8 +521,10 @@ export default {
       handleShowMyJoinedGroupList,
       handleHideMyJoinedGroupList,
       handleToContactList,
-			handleToChatUser,
-			handleToChatGroup,
+      handleToChatUser,
+      handleToChatGroup,
+      handleShowUserSessionList,
+      handleHideGroupSessionList,
     };
   },
 };

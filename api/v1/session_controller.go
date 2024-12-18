@@ -7,28 +7,28 @@ import (
 	"net/http"
 )
 
-// CreateSession 创建会话
-//func CreateSession(c *gin.Context) {
-//	var createSessionReq request.CreateSessionRequest
-//	if err := c.BindJSON(&createSessionReq); err != nil {
-//		c.JSON(http.StatusOK, gin.H{
-//			"code":  400,
-//			"error": err.Error(),
-//		})
-//		return
-//	}
-//	if err := gorm.SessionService.CreateSession(createSessionReq); err != nil {
-//		c.JSON(http.StatusOK, gin.H{
-//			"code":  400,
-//			"error": err.Error(),
-//		})
-//		return
-//	}
-//	c.JSON(http.StatusOK, gin.H{
-//		"code":    200,
-//		"message": "create session success",
-//	})
-//}
+// OpenSession 打开会话
+func OpenSession(c *gin.Context) {
+	var openSessionReq request.OpenSessionRequest
+	if err := c.BindJSON(&openSessionReq); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	if err := gorm.SessionService.OpenSession(openSessionReq); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "create session success",
+	})
+}
 
 // GetUserSessionList 获取用户会话列表
 func GetUserSessionList(c *gin.Context) {
@@ -55,8 +55,8 @@ func GetUserSessionList(c *gin.Context) {
 	}
 }
 
-// GetGroupList 获取用户群聊列表
-func GetGroupList(c *gin.Context) {
+// GetGroupSessionList 获取用户群聊列表
+func GetGroupSessionList(c *gin.Context) {
 	var getGroupListReq request.OwnlistRequest
 	if err := c.BindJSON(&getGroupListReq); err != nil {
 		c.JSON(http.StatusOK, gin.H{

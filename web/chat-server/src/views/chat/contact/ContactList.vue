@@ -612,11 +612,31 @@ export default {
       router.push("/chat/sessionList");
     };
 
-    const handleToChatUser = (user) => {
+    const handleToChatUser = async(user) => {
+      try {
+        const req = {
+          send_id: data.userInfo.uuid,
+          receive_id: user.user_id,
+        };
+        const rsp = await axios.post(store.state.backendUrl + "/session/openSession", req);
+        console.log(rsp.data.data);
+      } catch (error) {
+        console.error(error);
+      }
       router.push("/chat/" + user.user_id);
     };
 
-    const handleToChatGroup = (group) => {
+    const handleToChatGroup = async(group) => {
+      try {
+        const req = {
+          send_id: data.userInfo.uuid,
+          receive_id: user.user_id,
+        };
+        const rsp = await axios.post(store.state.backendUrl + "/session/openSession", req);
+        console.log(rsp.data.data);
+      } catch (error) {
+        console.error(error);
+      }
       router.push("/chat/" + group.group_id);
     }
     return {
