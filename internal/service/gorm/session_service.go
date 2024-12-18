@@ -21,7 +21,7 @@ var SessionService = new(sessionService)
 // CreateSession 创建会话
 func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 	var user model.UserInfo
-	if res := dao.GormDB.First(&user, req.SendId); res.Error != nil {
+	if res := dao.GormDB.Where("uuid = ?", req.SendId).First(&user); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			zlog.Error(" send user not found")
 			return errors.New("user not found")
@@ -36,7 +36,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 	}
 	if req.ReceiveId[0] == 'U' {
 		var receiveUser model.UserInfo
-		if res := dao.GormDB.First(&receiveUser, req.ReceiveId); res.Error != nil {
+		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&receiveUser); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive user not found")
 				return errors.New("receive user not found")
@@ -51,7 +51,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 		}
 	} else {
 		var receiveGroup model.GroupInfo
-		if res := dao.GormDB.First(&receiveGroup, req.ReceiveId); res.Error != nil {
+		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&receiveGroup); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive group not found")
 				return errors.New("receive group not found")
@@ -66,13 +66,13 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 		}
 	}
 	var session model.Session
-	session.Uuid = fmt.Sprintf("S%d", random.GetNowAndLenRandomString(11))
+	session.Uuid = fmt.Sprintf("S%s", random.GetNowAndLenRandomString(11))
 	session.SendId = req.SendId
 	session.ReceiveId = req.ReceiveId
 	session.CreatedAt = time.Now()
 	if req.ReceiveId[0] == 'U' {
 		var user model.UserInfo
-		if res := dao.GormDB.First(&user, req.ReceiveId); res.Error != nil {
+		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&user); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive user not found")
 				return errors.New("receive user not found")
@@ -87,7 +87,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 		}
 	} else {
 		var group model.GroupInfo
-		if res := dao.GormDB.First(&group, req.ReceiveId); res.Error != nil {
+		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&group); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive group not found")
 				return errors.New("receive group not found")

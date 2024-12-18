@@ -111,7 +111,7 @@
             </div>
           </div>
           <div class="sessionlist-container">
-            <div class="contactlist-header">
+            <div class="sessionlist-header">
               <el-input
                 v-model="contactSearch"
                 class="contact-search-input"
@@ -130,7 +130,7 @@
                 >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="sessionlist-user-title">用户</span>
+                      <span class="sessionlist-title">用户</span>
                     </template>
                   </el-sub-menu>
                   <el-menu-item
@@ -150,15 +150,15 @@
                 >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="sessionlist-user-title">群聊</span>
+                      <span class="sessionlist-title">群聊</span>
                     </template>
                   </el-sub-menu>
                   <el-menu-item
-                    v-for="group in myGroupList"
+                    v-for="group in groupSessionList"
                     :key="group.group_id"
                     @click="handleToChatGroup(group)"
                   >
-                    <img :src="group.avatar" class="contactlist-avatar" />
+                    <img :src="group.avatar" class="sessionlist-avatar" />
                     {{ group.group_name }}
                   </el-menu-item>
                 </el-menu>
@@ -345,6 +345,7 @@
 <script>
 import { reactive, toRefs, onMounted, ref } from "vue";
 import { onBeforeRouteUpdate, useRouter } from "vue-router";
+import { ElMessageBox } from 'element-plus';
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
@@ -494,7 +495,10 @@ export default {
         console.error(error);
       }
     };
-    const handleHideGroupSessionList = async () => {
+    const handleHideUserSessionList = () => {
+      data.userSessionList = [];
+    };
+    const handleShowGroupSessionList = async () => {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const groupSessionListRsp = await axios.post(
@@ -505,6 +509,26 @@ export default {
       } catch (error) {
         console.error(error);
       }
+    };
+    const handleHideGroupSessionList = () => {
+      data.groupSessionList = [];
+    };
+    const handleContextMenu = (event, group) => {
+      event.preventDefault(); // 阻止默认的右键菜单
+      // 显示自定义的删除选项
+      ElMessageBox.confirm('确定要删除该会话组吗?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }).then(() => {
+        // 执行删除操作
+        this.deleteGroup(group);
+      }).catch(() => {
+        // 取消删除操作
+      });
+    };
+    const deleteSession = () => {
+      console.log("删除会话组");
     };
     return {
       ...toRefs(data),
@@ -524,14 +548,17 @@ export default {
       handleToChatUser,
       handleToChatGroup,
       handleShowUserSessionList,
+      handleHideUserSessionList,
+      handleShowGroupSessionList,
       handleHideGroupSessionList,
+      handleContextMenu,
     };
   },
 };
 </script>
 
 <style scoped>
-.contactlist-header {
+.sessionlist-header {
   display: flex;
   flex-direction: row;
   width: 100%;
@@ -544,33 +571,7 @@ export default {
   height: 30px;
   margin-left: 5px;
   margin-right: 2px;
-}
-
-.contactlist-header-right {
-  width: 40px;
-  height: 30px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.create-group-btn {
-  background-color: rgb(252, 210.9, 210.9);
-  cursor: pointer;
-  border: none;
-  height: 100%;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 10px;
-}
-
-.create-group-icon {
-  width: 15px;
-  height: 15px;
-}
+} 
 
 .el-menu {
   background-color: rgb(252, 210.9, 210.9);
@@ -582,7 +583,7 @@ export default {
   height: 45px;
 }
 
-.sessionlist-user-title {
+.sessionlist-title {
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -640,7 +641,7 @@ h3 {
   align-items: center;
 }
 
-.contactlist-avatar {
+.sessionlist-avatar {
   width: 30px;
   height: 30px;
   margin-right: 20px;

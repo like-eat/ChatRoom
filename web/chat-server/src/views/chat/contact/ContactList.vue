@@ -619,7 +619,7 @@ export default {
           receive_id: user.user_id,
         };
         const rsp = await axios.post(store.state.backendUrl + "/session/openSession", req);
-        console.log(rsp.data.data);
+        console.log(rsp.data);
       } catch (error) {
         console.error(error);
       }
@@ -630,15 +630,15 @@ export default {
       try {
         const req = {
           send_id: data.userInfo.uuid,
-          receive_id: user.user_id,
+          receive_id: group.group_id,
         };
         const rsp = await axios.post(store.state.backendUrl + "/session/openSession", req);
-        console.log(rsp.data.data);
+        console.log(rsp.data);
       } catch (error) {
         console.error(error);
       }
       router.push("/chat/" + group.group_id);
-    }
+    };
     return {
       ...toRefs(data),
       router,

@@ -233,60 +233,40 @@
                 <el-menu
                   router
                   unique-opened
-                  @open="handleShowUserList"
-                  @close="handleHideUserList"
+                  @open="handleShowUserSessionList"
+                  @close="handleHideUserSessionList"
                 >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="contactlist-user-title">联系人</span>
+                      <span class="sessionlist-title">用户</span>
                     </template>
                   </el-sub-menu>
                   <el-menu-item
-                    v-for="user in contactUserList"
+                    v-for="user in userSessionList"
                     :key="user.user_id"
-                    :index="user.user_id"
+                    @click="handleToChatUser(user)"
                   >
-                    <img :src="user.avatar" class="contactlist-avatar" />
+                    <img :src="user.avatar" class="sessionlist-avatar" />
                     {{ user.user_name }}
                   </el-menu-item>
                 </el-menu>
                 <el-menu
                   router
                   unique-opened
-                  @open="handleShowMyGroupList"
-                  @close="handleHideMyGroupList"
+                  @open="handleShowGroupSessionList"
+                  @close="handleHideGroupSessionList"
                 >
                   <el-sub-menu index="1">
                     <template #title>
-                      <span class="contactlist-user-title">我创建的群聊</span>
+                      <span class="sessionlist-title">群聊</span>
                     </template>
                   </el-sub-menu>
                   <el-menu-item
-                    v-for="group in myGroupList"
+                    v-for="group in groupSessionList"
                     :key="group.group_id"
-                    :index="group.group_id"
+                    @click="handleToChatGroup(group)"
                   >
-                    <img :src="group.avatar" class="contactlist-avatar" />
-                    {{ group.group_name }}
-                  </el-menu-item>
-                </el-menu>
-                <el-menu
-                  router
-                  unique-opened
-                  @open="handleShowMyJoinedGroupList"
-                  @close="handleHideMyJoinedGroupList"
-                >
-                  <el-sub-menu index="1">
-                    <template #title>
-                      <span class="contactlist-user-title">我加入的群聊</span>
-                    </template>
-                  </el-sub-menu>
-                  <el-menu-item
-                    v-for="group in myJoinedGroupList"
-                    :key="group.group_id"
-                    :index="group.group_id"
-                  >
-                    <img :src="group.avatar" class="contactlist-avatar" />
+                    <img :src="group.avatar" class="sessionlist-avatar" />
                     {{ group.group_name }}
                   </el-menu-item>
                 </el-menu>
