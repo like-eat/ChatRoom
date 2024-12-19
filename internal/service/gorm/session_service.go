@@ -19,50 +19,50 @@ type sessionService struct {
 var SessionService = new(sessionService)
 
 // CreateSession 创建会话
-func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
+func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string, error) {
 	var user model.UserInfo
 	if res := dao.GormDB.Where("uuid = ?", req.SendId).First(&user); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			zlog.Error(" send user not found")
-			return errors.New("user not found")
+			return "", errors.New("user not found")
 		} else {
 			zlog.Error(res.Error.Error())
-			return res.Error
+			return "", res.Error
 		}
 	}
 	if user.DeletedAt.Valid {
 		zlog.Info("user has been deleted")
-		return nil
+		return "", nil
 	}
 	if req.ReceiveId[0] == 'U' {
 		var receiveUser model.UserInfo
 		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&receiveUser); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive user not found")
-				return errors.New("receive user not found")
+				return "", errors.New("receive user not found")
 			} else {
 				zlog.Error(res.Error.Error())
-				return res.Error
+				return "", res.Error
 			}
 		}
 		if receiveUser.DeletedAt.Valid {
 			zlog.Info("receive user has been deleted")
-			return nil
+			return "", nil
 		}
 	} else {
 		var receiveGroup model.GroupInfo
 		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&receiveGroup); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive group not found")
-				return errors.New("receive group not found")
+				return "", errors.New("receive group not found")
 			} else {
 				zlog.Error(res.Error.Error())
-				return res.Error
+				return "", res.Error
 			}
 		}
 		if receiveGroup.DeletedAt.Valid {
 			zlog.Info("receive group has been deleted")
-			return nil
+			return "", nil
 		}
 	}
 	var session model.Session
@@ -75,10 +75,10 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&user); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive user not found")
-				return errors.New("receive user not found")
+				return "", errors.New("receive user not found")
 			} else {
 				zlog.Error(res.Error.Error())
-				return res.Error
+				return "", res.Error
 			}
 		}
 		if !user.DeletedAt.Valid {
@@ -90,10 +90,10 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&group); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("receive group not found")
-				return errors.New("receive group not found")
+				return "", errors.New("receive group not found")
 			} else {
 				zlog.Error(res.Error.Error())
-				return res.Error
+				return "", res.Error
 			}
 		}
 		if !group.DeletedAt.Valid {
@@ -101,11 +101,15 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) error {
 			session.Avatar = group.Avatar
 		}
 	}
-	return dao.GormDB.Create(&session).Error
+	if res := dao.GormDB.Create(&session); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return "", res.Error
+	}
+	return session.Uuid, nil
 }
 
 // OpenSession 打开会话
-func (s *sessionService) OpenSession(req request.OpenSessionRequest) error {
+func (s *sessionService) OpenSession(req request.OpenSessionRequest) (string, error) {
 	var session model.Session
 	if res := dao.GormDB.Where("send_id = ? and receive_id = ?", req.SendId, req.ReceiveId).First(&session); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
@@ -114,12 +118,15 @@ func (s *sessionService) OpenSession(req request.OpenSessionRequest) error {
 				SendId:    req.SendId,
 				ReceiveId: req.ReceiveId,
 			}
-			if err := s.CreateSession(createReq); err != nil {
-				return err
+			var uuid string
+			var err error
+			if uuid, err = s.CreateSession(createReq); err != nil {
+				return "", err
 			}
+			return uuid, nil
 		}
 	}
-	return nil
+	return session.Uuid, nil
 }
 
 // GetUserSessionList 获取用户会话列表
@@ -172,4 +179,13 @@ func (s *sessionService) GetGroupSessionList(ownerId string) ([]respond.GroupSes
 		}
 	}
 	return sessionListRsp, nil
+}
+
+// DeleteSession 删除会话
+func (s *sessionService) DeleteSession(sessionId string) error {
+	if res := dao.GormDB.Where("uuid = ?", sessionId).Delete(&model.Session{}); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return res.Error
+	}
+	return nil
 }

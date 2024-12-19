@@ -17,7 +17,8 @@ func OpenSession(c *gin.Context) {
 		})
 		return
 	}
-	if err := gorm.SessionService.OpenSession(openSessionReq); err != nil {
+	sessionId, err := gorm.SessionService.OpenSession(openSessionReq)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":  400,
 			"error": err.Error(),
@@ -27,6 +28,7 @@ func OpenSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "create session success",
+		"data":    sessionId,
 	})
 }
 
@@ -76,6 +78,29 @@ func GetGroupSessionList(c *gin.Context) {
 			"code":    200,
 			"message": "load my group success",
 			"data":    groupList,
+		})
+	}
+}
+
+// DeleteSession 删除会话
+func DeleteSession(c *gin.Context) {
+	var deleteSessionReq request.DeleteSessionRequest
+	if err := c.BindJSON(&deleteSessionReq); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	if err := gorm.SessionService.DeleteSession(deleteSessionReq.SessionId); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "delete session success",
 		})
 	}
 }

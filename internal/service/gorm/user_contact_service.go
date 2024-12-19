@@ -145,3 +145,16 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 		}
 	}
 }
+
+// DeleteContact 删除联系人
+func (u *userContactService) DeleteContact(ownerId, contactId string) error {
+	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", ownerId, contactId).Delete(&model.UserContact{}); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return res.Error
+	}
+	if res := dao.GormDB.Where("send_id = ? AND receive_id = ?", ownerId, contactId).Delete(&model.Session{}); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return res.Error
+	}
+	return nil
+}

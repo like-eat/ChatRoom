@@ -3,19 +3,10 @@
   <div class="modal-overlay" v-if="isVisible">
     <div class="modal-content">
       <slot name="header">
-        <div class="modal-header">
-          <h3>Default Title</h3>
-        </div>
       </slot>
       <slot name="body">
-        <div class="modal-body">
-          <p>Default Content</p>
-        </div>
       </slot>
       <slot name="footer">
-        <div class="modal-footer">
-          <button @click="closeModal">完成</button>
-        </div>
       </slot>
     </div>
   </div>
@@ -41,7 +32,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 2000;
   border-radius: 30px;
 }
 
@@ -53,8 +44,8 @@ export default {
   box-shadow: 0 2px 15px rgb(195, 8, 8);
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  
 }
 
 </style>

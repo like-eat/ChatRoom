@@ -176,7 +176,150 @@
               <h2 class="chat-name">{{ contactInfo.contact_name }}</h2>
             </div>
             <div class="chat-title-right">
-              <el-icon><MoreFilled /></el-icon>
+              <Modal :isVisible="isUserContactInfoModalVisible">
+                <template v-slot:header>
+                  <div class="modal-quit-btn-container">
+                    <button
+                      class="modal-quit-btn"
+                      @click="quitUserContactInfoModal"
+                    >
+                      <el-icon><Close /></el-icon>
+                    </button>
+                  </div>
+                  <div class="modal-header-title">
+                    <h3>个人主页</h3>
+                  </div>
+                </template>
+                <template v-slot:body>
+                  <el-descriptions
+                    direction="vertical"
+                    border
+                    class="modal-list"
+                    size="small"
+                  >
+                    <el-descriptions-item
+                      :rowspan="2"
+                      :width="120"
+                      label="头像"
+                      align="center"
+                    >
+                      <el-image
+                        style="width: 100px; height: 100px"
+                        :src="contactInfo.contact_avatar"
+                      />
+                    </el-descriptions-item>
+                    <el-descriptions-item label="Id" :width="140">{{
+                      contactInfo.contact_id
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="性别">{{
+                      contactInfo.contact_gender
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="电话号码">{{
+                      contactInfo.contact_phone
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="昵称">{{
+                      contactInfo.contact_name
+                    }}</el-descriptions-item>
+
+                    <el-descriptions-item label="邮箱" :span="2">
+                      <div style="height: 30px">
+                        {{ contactInfo.contact_email }}
+                      </div></el-descriptions-item
+                    >
+
+                    <el-descriptions-item label="生日" :span="2" :width="140"
+                      >{{ contactInfo.contact_birthday }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="个性签名">
+                      <div style="height: 70px">
+                        {{ contactInfo.contact_signature }}
+                      </div>
+                    </el-descriptions-item>
+                  </el-descriptions>
+                </template>
+              </Modal>
+              <Modal :isVisible="isGroupContactInfoModalVisible">
+                <template v-slot:header>
+                  <div class="modal-quit-btn-container">
+                    <button
+                      class="modal-quit-btn"
+                      @click="quitGroupContactInfoModal"
+                    >
+                      <el-icon><Close /></el-icon>
+                    </button>
+                  </div>
+                  <div class="modal-header-title">
+                    <h3>群聊主页</h3>
+                  </div>
+                </template>
+                <template v-slot:body>
+                  <el-descriptions
+                    direction="vertical"
+                    border
+                    class="modal-list"
+                    size="small"
+                  >
+                    <el-descriptions-item
+                      :rowspan="2"
+                      :width="120"
+                      label="头像"
+                      align="center"
+                    >
+                      <el-image
+                        style="width: 100px; height: 100px"
+                        :src="contactInfo.contact_avatar"
+                      />
+                    </el-descriptions-item>
+                    <el-descriptions-item label="Id" :width="140">{{
+                      contactInfo.contact_id
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="群人数">{{
+                      contactInfo.contact_member_cnt
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="群主id">{{
+                      contactInfo.contact_owner_id
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="入群方式" :width="140"
+                      >{{ contactInfo.contact_add_mode }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="群名称" :span="3">{{
+                      contactInfo.contact_name
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="群公告" :span="2">
+                      <div style="height: 70px">
+                        {{ contactInfo.contact_notice }}
+                      </div>
+                    </el-descriptions-item>
+                  </el-descriptions>
+                </template>
+              </Modal>
+              <el-dropdown placement="bottom" trigger="click">
+                <button class="setting-btn">
+                  <el-icon><MoreFilled /></el-icon>
+                </button>
+                <template #dropdown>
+                  <el-dropdown-menu v-if="contactInfo.contact_id[0] === 'U'">
+                    <el-dropdown-item @click="showUserContactInfoModal">
+                      个人信息
+                    </el-dropdown-item>
+
+                    <el-dropdown-item @click="preToDeleteSession"
+                      >删除该会话</el-dropdown-item
+                    >
+                    <el-dropdown-item @click="preToDeleteContact">删除联系人</el-dropdown-item>
+                    <el-dropdown-item>拉黑联系人</el-dropdown-item>
+                  </el-dropdown-menu>
+                  <el-dropdown-menu
+                    v-else-if="contactInfo.contact_id[0] === 'G'"
+                  >
+                    <el-dropdown-item @click="showGroupContactInfoModal"
+                      >群聊信息</el-dropdown-item
+                    >
+                    <el-dropdown-item @click="preToDeleteSession">删除该会话</el-dropdown-item>
+                    <el-dropdown-item>退出群聊</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </el-header>
           <el-main>
@@ -357,6 +500,7 @@ import { useRouter, onBeforeRouteUpdate } from "vue-router";
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
+import { ElMessage, ElMessageBox } from 'element-plus';
 export default {
   name: "ContactChat",
   components: {
@@ -379,7 +523,8 @@ export default {
         add_mode: null,
         avatar: "",
       },
-      isModalVisible: false,
+      isUserContactInfoModalVisible: false,
+      isGroupContactInfoModalVisible: false,
       getUserListReq: {
         owner_id: "",
       },
@@ -401,25 +546,29 @@ export default {
         contact_avatar: "",
         contact_phone: "",
         contact_email: "",
-        contact_gender: false,
+        contact_gender: null,
         contact_signature: "",
         contact_birthday: "",
         contact_notice: "",
         contact_members: [],
         contact_member_cnt: 0,
         contact_owner_id: "",
-        contact_add_mode: false,
+        contact_add_mode: null,
       },
       ownListReq: {
         owner_id: "",
       },
       userSessionList: [],
       groupSessionList: [],
+      sessionId: "",
     });
     const router = useRouter();
     const store = useStore();
+    //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate((to, from, next) => {
       getChatContactInfo(to.params.id);
+      getSessionId(router.currentRoute.value.params.id);
+      console.log(data.sessionId);
       next();
     });
     const getChatContactInfo = async (id) => {
@@ -430,11 +579,39 @@ export default {
           data.getContactInfoReq
         );
         data.contactInfo = rsp.data.data;
+        if (data.contactInfo.contact_gender == false) {
+          data.contactInfo.contact_gender = "男";
+        } else {
+          data.contactInfo.contact_gender = "女";
+        }
+        if (data.contactInfo.contact_add_mode == false) {
+          data.contactInfo.contact_add_mode = "直接加入";
+        } else {
+          data.contactInfo.contact_add_mode = "需要审核";
+        }
         console.log(data.contactInfo);
       } catch (error) {
         console.log(error);
       }
     };
+    const getSessionId = async (contactId) => {
+      try {
+        const req = {
+          send_id: data.userInfo.uuid,
+          receive_id: contactId,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/session/openSession",
+          req
+        );
+        data.sessionId = rsp.data.data;
+        console.log(rsp);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    // 这是刚渲染/chat/:id页面的时候会调用
     onMounted(() => {
       const userInfoStr = sessionStorage.getItem("userInfo");
       if (userInfoStr) {
@@ -449,6 +626,8 @@ export default {
       }
       try {
         getChatContactInfo(router.currentRoute.value.params.id);
+        getSessionId(router.currentRoute.value.params.id);
+        console.log(data.sessionId);
       } catch (error) {
         console.error(error);
       }
@@ -473,23 +652,17 @@ export default {
         console.error(error);
       }
     };
-    const showModal = () => {
-      data.isModalVisible = true;
+    const showUserContactInfoModal = () => {
+      data.isUserContactInfoModalVisible = true;
     };
-    const quitModal = () => {
-      data.isModalVisible = false;
+    const quitUserContactInfoModal = () => {
+      data.isUserContactInfoModalVisible = false;
     };
-    const closeModal = () => {
-      if (data.createGroupReq.name == "") {
-        alert("请输入群聊名称");
-        return;
-      }
-      if (data.createGroupReq.add_mode == null) {
-        alert("请选择加群方式");
-        return;
-      }
-      data.isModalVisible = false;
-      handleCreateGroup();
+    const showGroupContactInfoModal = () => {
+      data.isGroupContactInfoModalVisible = true;
+    };
+    const quitGroupContactInfoModal = () => {
+      data.isGroupContactInfoModalVisible = false;
     };
 
     const handleShowUserList = async () => {
@@ -543,11 +716,11 @@ export default {
       router.push("/chat/sessionlist");
     };
 
-    const handleToChatUser = (user) => {
+    const handleToChatUser = async (user) => {
       router.push("/chat/" + user.user_id);
     };
 
-    const handleToChatGroup = (group) => {
+    const handleToChatGroup = async (group) => {
       router.push("/chat/" + group.group_id);
     };
 
@@ -581,14 +754,88 @@ export default {
     const handleHideGroupSessionList = () => {
       data.groupSessionList = [];
     };
+    const preToDeleteSession = () => {
+      try {
+        ElMessageBox.confirm("确认删除该会话以及其聊天记录？", "Warning", {
+          confirmButtonText: "确认",
+          cancelButtonText: "取消",
+          type: "warning",
+        })
+          .then(() => {
+            deleteSession();
+            ElMessage({
+              type: "success",
+              message: "成功删除",
+            });
+          })
+          .catch(() => {
+            ElMessage({
+              type: "info",
+              message: "取消删除",
+            });
+          });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const deleteSession = async () => {
+      try {        
+        const req = {
+          session_id: data.sessionId,
+        };
+        const rsp = await axios.post(store.state.backendUrl +"/session/deleteSession", req);
+        console.log(rsp.data);
+      } catch (error) {
+        console.error(error);
+      }
+      router.push("/chat/sessionlist");
+    };
+    const preToDeleteContact = () => {
+      try {
+        ElMessageBox.confirm("确认删除该联系人？", "Warning", {
+          confirmButtonText: "确认",
+          cancelButtonText: "取消",
+          type: "warning",
+        })
+          .then(() => {
+            deleteContact();
+            ElMessage({
+              type: "success",
+              message: "成功删除",
+            });
+          })
+          .catch(() => {
+            ElMessage({
+              type: "info",
+              message: "取消删除",
+            });
+          });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const deleteContact = async () => {
+      try {        
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: data.contactInfo.contact_id,
+        };
+        const rsp = await axios.post(store.state.backendUrl +"/contact/deleteContact", req);
+        console.log(rsp.data);
+      } catch (error) {
+        console.error(error);
+      }
+      router.push("/chat/sessionlist");
+    };
     return {
       ...toRefs(data),
       router,
       handleToOwnInfo,
       handleCreateGroup,
-      showModal,
-      closeModal,
-      quitModal,
+      showUserContactInfoModal,
+      quitUserContactInfoModal,
+      showGroupContactInfoModal,
+      quitGroupContactInfoModal,
       handleToContactList,
       handleShowUserList,
       handleHideUserList,
@@ -603,6 +850,9 @@ export default {
       handleShowGroupSessionList,
       handleHideUserSessionList,
       handleHideGroupSessionList,
+      deleteSession,
+      preToDeleteSession,
+      preToDeleteContact,
     };
   },
 };
@@ -644,7 +894,7 @@ h3 {
 }
 
 .modal-quit-btn-container {
-  height: 30%;
+  height: 25px;
   width: 100%;
   display: flex;
   flex-direction: row-reverse;
@@ -661,31 +911,8 @@ h3 {
   align-items: center;
 }
 
-.modal-header {
-  height: 20%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  /*background-color:aqua;*/
-}
-
-.modal-body {
-  height: 55%;
-  width: 400px;
-}
-
-.modal-footer {
-  height: 25%;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .modal-header-title {
-  height: 70%;
+  height: 30px;
   width: 100%;
   display: flex;
   justify-content: center;
@@ -726,5 +953,18 @@ h3 {
   width: 30px;
   height: 30px;
   margin-right: 20px;
+}
+
+.setting-btn {
+  background-color: rgba(255, 255, 255, 0);
+  border: none;
+  cursor: pointer;
+  color: rgb(201, 139, 139);
+}
+
+.modal-list {
+  height: 270px;
+  width: 90%;
+  margin-top: 5px;
 }
 </style>

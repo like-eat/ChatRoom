@@ -93,3 +93,27 @@ func GetContactInfo(c *gin.Context) {
 		})
 	}
 }
+
+// DeleteContact 删除联系人
+func DeleteContact(c *gin.Context) {
+	var deleteContactReq request.DeleteContactRequest
+	if err := c.BindJSON(&deleteContactReq); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	err := gorm.UserContactService.DeleteContact(deleteContactReq.OwnerId, deleteContactReq.ContactId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "delete contact success",
+		})
+	}
+}
