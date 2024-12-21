@@ -29,11 +29,17 @@ const routes = [
     path: '/chat/:id',
     name: 'ContactChat',
     component: () => import('../views/chat/contact/ContactChat.vue')
-  }, {
+  },
+  {
     path: '/chat/sessionList',
     name: 'SessionList',
     component: () => import('../views/chat/session/SessionList.vue')
-  }
+  },
+  // {
+  //   path: '/chat/applyContact',
+  //   name: 'ApplyContact',
+  //   component: () => import('../views/chat/search/ApplyContact.vue')
+  // }
 ]
 
 const router = createRouter({

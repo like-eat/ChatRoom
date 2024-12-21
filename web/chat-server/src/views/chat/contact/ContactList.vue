@@ -120,14 +120,8 @@
                 suffix-icon="Search"
               />
               <div class="contactlist-header-right">
-                <el-tooltip
-                  effect="customized"
-                  content="创建群聊"
-                  placement="top"
-                  hide-after="0"
-                  enterable="false"
-                >
-                  <button class="create-group-btn" @click="showModal">
+                <el-dropdown placement="bottom" trigger="click">
+                  <button class="create-group-btn">
                     <svg
                       t="1733664667695"
                       class="create-group-icon"
@@ -145,12 +139,79 @@
                       ></path>
                     </svg>
                   </button>
-                </el-tooltip>
-                <Modal :isVisible="isModalVisible">
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="showCreateGroupModal">
+                        创建群聊
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="showApplyContactModal">
+                        添加好友
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                <SmallModal :isVisible="isApplyContactModalVisible">
                   <template v-slot:header>
                     <div class="modal-header">
                       <div class="modal-quit-btn-container">
-                        <button class="modal-quit-btn" @click="quitModal">
+                        <button
+                          class="modal-quit-btn"
+                          @click="quitApplyContactModal"
+                        >
+                          <el-icon><Close /></el-icon>
+                        </button>
+                      </div>
+                      <div class="modal-header-title">
+                        <h3>添加好友</h3>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-slot:body>
+                    <div class="modal-body">
+                      <el-form
+                        ref="formRef"
+                        :model="applyContactReq"
+                        label-width="80px"
+                        class="demo-dynamic"
+                      >
+                        <el-form-item
+                          prop="name"
+                          label="用户id"
+                          :rules="[
+                            {
+                              required: true,
+                              message: '此项为必填项',
+                              trigger: 'blur',
+                            },
+                          ]"
+                        >
+                          <el-input
+                            v-model="applyContactReq.contact_id"
+                            placeholder="请填写申请好友的用户id"
+                          />
+                        </el-form-item>
+                      </el-form>
+                    </div>
+                  </template>
+                  <template v-slot:footer>
+                    <div class="modal-footer">
+                      <el-button
+                        class="modal-close-btn"
+                        @click="closeApplyContactModal"
+                      >
+                        完成
+                      </el-button>
+                    </div>
+                  </template>
+                </SmallModal>
+                <Modal :isVisible="isCreateGroupModalVisible">
+                  <template v-slot:header>
+                    <div class="modal-header">
+                      <div class="modal-quit-btn-container">
+                        <button
+                          class="modal-quit-btn"
+                          @click="quitCreateGroupModal"
+                        >
                           <el-icon><Close /></el-icon>
                         </button>
                       </div>
@@ -220,7 +281,10 @@
                   </template>
                   <template v-slot:footer>
                     <div class="modal-footer">
-                      <el-button class="modal-close-btn" @click="closeModal">
+                      <el-button
+                        class="modal-close-btn"
+                        @click="closeCreateGroupModal"
+                      >
                         完成
                       </el-button>
                     </div>
@@ -471,15 +535,17 @@
 </template>
 
 <script>
-import { reactive, toRefs, onMounted, ref } from "vue";
+import { reactive, toRefs, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useStore } from "vuex";
-import axios from "axios";
 import Modal from "@/components/Modal.vue";
+import SmallModal from "@/components/SmallModal.vue";
+import axios from "axios";
 export default {
   name: "ContactList",
   components: {
     Modal,
+    SmallModal,
   },
   setup() {
     const data = reactive({
@@ -498,7 +564,8 @@ export default {
         add_mode: null,
         avatar: "",
       },
-      isModalVisible: false,
+      isCreateGroupModalVisible: false,
+      isApplyContactModalVisible: false,
       getUserListReq: {
         owner_id: "",
       },
@@ -511,6 +578,10 @@ export default {
         owner_id: "",
       },
       myJoinedGroupList: [],
+      applyContactReq: {
+        contact_id: "",
+        message: "",
+      },
     });
 
     onMounted(() => {
@@ -547,13 +618,13 @@ export default {
         console.error(error);
       }
     };
-    const showModal = () => {
-      data.isModalVisible = true;
+    const showCreateGroupModal = () => {
+      data.isCreateGroupModalVisible = true;
     };
-    const quitModal = () => {
-      data.isModalVisible = false;
+    const quitCreateGroupModal = () => {
+      data.isCreateGroupModalVisible = false;
     };
-    const closeModal = () => {
+    const closeCreateGroupModal = () => {
       if (data.createGroupReq.name == "") {
         alert("请输入群聊名称");
         return;
@@ -562,10 +633,18 @@ export default {
         alert("请选择加群方式");
         return;
       }
-      data.isModalVisible = false;
+      data.isCreateGroupModalVisible = false;
       handleCreateGroup();
     };
-
+    const showApplyContactModal = () => {
+      data.isApplyContactModalVisible = true;
+    };
+    const quitApplyContactModal = () => {
+      data.isApplyContactModalVisible = false;
+    };
+    const closeApplyContactModal = () => {
+      data.isApplyContactModalVisible = false;
+    };
     const handleShowUserList = async () => {
       try {
         data.getUserListReq.owner_id = data.userInfo.uuid;
@@ -617,11 +696,11 @@ export default {
       router.push("/chat/sessionList");
     };
 
-    const handleToChatUser = async(user) => {
+    const handleToChatUser = async (user) => {
       router.push("/chat/" + user.user_id);
     };
 
-    const handleToChatGroup = async(group) => {
+    const handleToChatGroup = async (group) => {
       router.push("/chat/" + group.group_id);
     };
     return {
@@ -629,9 +708,12 @@ export default {
       router,
       handleToOwnInfo,
       handleCreateGroup,
-      showModal,
-      closeModal,
-      quitModal,
+      showCreateGroupModal,
+      closeCreateGroupModal,
+      quitCreateGroupModal,
+      showApplyContactModal,
+      quitApplyContactModal,
+      closeApplyContactModal,
       handleShowUserList,
       handleHideUserList,
       handleShowMyGroupList,
@@ -759,5 +841,9 @@ h3 {
   width: 30px;
   height: 30px;
   margin-right: 20px;
+}
+
+.el-form-item {
+  width: 400px;
 }
 </style>
