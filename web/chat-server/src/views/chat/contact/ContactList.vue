@@ -472,7 +472,7 @@
 
 <script>
 import { reactive, toRefs, onMounted, ref } from "vue";
-import { onBeforeRouteUpdate, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
@@ -518,6 +518,11 @@ export default {
       if (userInfoStr) {
         try {
           data.userInfo = JSON.parse(userInfoStr);
+          if (data.userInfo.gender == false) {
+            data.userInfo.gender = "男";
+          } else {
+            data.userInfo.gender = "女";
+          }
         } catch (error) {
           console.error("反序列化用户信息时出错:", error);
           data.userInfo = {};
