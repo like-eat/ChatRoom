@@ -196,16 +196,29 @@
                                   margin-right: 10px;
                                 "
                               />
-                              <div class="newcontact-name">
-                                {{ newContact.contact_name }}
-                              </div>
+
+                              <el-tooltip
+                                effect="customized"
+                                :content="newContact.message"
+                                placement="top"
+                                hide-after="0"
+                                enterable="false"
+                              >
+                                <div>
+                                  {{ newContact.contact_name }}
+                                </div>
+                              </el-tooltip>
                             </div>
-                            <el-button
-                              class="action-btn"
-                              @click="handleButtonClick(index)"
-                            >
-                              去处理
-                            </el-button>
+                            <el-dropdown placement="right" trigger="click">
+                              <el-button class="action-btn"> 去处理 </el-button>
+                              <template #dropdown>
+                                <el-dropdown-menu>
+                                  <el-dropdown-item @click="handleAgree(newContact.contact_id)">同意</el-dropdown-item>
+                                  <el-dropdown-item @click="handleReject(newContact.contact_id)"> 拒绝 </el-dropdown-item>
+                                  <el-dropdown-item @click="handleBlack(newContact.contact_id)"> 拉黑 </el-dropdown-item>
+                                </el-dropdown-menu>
+                              </template>
+                            </el-dropdown>
                           </li>
                         </ul>
                       </el-scrollbar>
@@ -348,8 +361,8 @@
                           ]"
                         >
                           <el-radio-group v-model="createGroupReq.add_mode">
-                            <el-radio :value="false">直接加入</el-radio>
-                            <el-radio :value="true">群主审核</el-radio>
+                            <el-radio :value="0">直接加入</el-radio>
+                            <el-radio :value="1">群主审核</el-radio>
                           </el-radio-group>
                         </el-form-item>
                         <el-form-item prop="avatar" label="群头像">
@@ -662,6 +675,7 @@ export default {
         owner_id: "",
       },
       newContactList: [],
+      applyContent: "",
     });
 
     onMounted(() => {
@@ -669,7 +683,7 @@ export default {
       if (userInfoStr) {
         try {
           data.userInfo = JSON.parse(userInfoStr);
-          if (data.userInfo.gender == false) {
+          if (data.userInfo.gender == 0) {
             data.userInfo.gender = "男";
           } else {
             data.userInfo.gender = "女";
@@ -844,6 +858,23 @@ export default {
         console.error(error);
       }
     };
+    const handleAgree = async (contactId) => {
+      try {
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: contactId,
+        };
+        const rsp = await axios.post(store.state.backendUrl + "/contact/passContactApply", req);
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.succress(rsp.data.message);
+        } else if (rsp.data.message != "") {
+          ElMessage.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
     return {
       ...toRefs(data),
       router,
@@ -868,6 +899,7 @@ export default {
       handleToChatUser,
       handleToChatGroup,
       handleNewContactList,
+      handleAgree,
     };
   },
 };
@@ -1017,6 +1049,4 @@ h3 {
   align-items: center;
   font-family: Arial, Helvetica, sans-serif;
 }
-
-
 </style>

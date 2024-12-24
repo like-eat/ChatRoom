@@ -6,7 +6,7 @@ type RegisterRespond struct {
 	Telephone string `json:"telephone"`
 	Avatar    string `json:"avatar"`
 	Email     string `json:"email"`
-	Gender    bool   `json:"gender"`
+	Gender    int    `json:"gender"`
 	Birthday  string `json:"birthday"`
 	Signature string `json:"signature"`
 	CreatedAt string `json:"created_at"`

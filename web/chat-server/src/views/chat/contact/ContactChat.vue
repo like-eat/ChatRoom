@@ -579,12 +579,12 @@ export default {
           data.getContactInfoReq
         );
         data.contactInfo = rsp.data.data;
-        if (data.contactInfo.contact_gender == false) {
+        if (data.contactInfo.contact_gender == 0) {
           data.contactInfo.contact_gender = "男";
         } else {
           data.contactInfo.contact_gender = "女";
         }
-        if (data.contactInfo.contact_add_mode == false) {
+        if (data.contactInfo.contact_add_mode == 0) {
           data.contactInfo.contact_add_mode = "直接加入";
         } else {
           data.contactInfo.contact_add_mode = "需要审核";
@@ -827,6 +827,7 @@ export default {
       }
       router.push("/chat/sessionlist");
     };
+    
     return {
       ...toRefs(data),
       router,

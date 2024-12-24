@@ -205,8 +205,8 @@
                           ]"
                         >
                           <el-radio-group v-model="createGroupReq.add_mode">
-                            <el-radio :value="false">直接加入</el-radio>
-                            <el-radio :value="true">群主审核</el-radio>
+                            <el-radio :value="0">直接加入</el-radio>
+                            <el-radio :value="1">群主审核</el-radio>
                           </el-radio-group>
                         </el-form-item>
                         <el-form-item prop="avatar" label="群头像">
@@ -443,7 +443,7 @@ export default {
       if (userInfoStr) {
         try {
           data.userInfo = JSON.parse(userInfoStr);
-          if (data.userInfo.gender == false) {
+          if (data.userInfo.gender == 0) {
             data.userInfo.gender = "男";
           } else {
             data.userInfo.gender = "女";

@@ -64,24 +64,6 @@
           >注册</el-button
         >
       </div>
-      <el-alert
-        v-if="showError"
-        title="Error alert"
-        type="error"
-        :description="errorMessage"
-        show-icon
-        closable
-        @close="handleAlertClose"
-      />
-      <el-alert
-        v-if="showSuccess"
-        title="Success"
-        type="success"
-        :description="successMessage"
-        show-icon
-        closable
-        @close="handleAlertClose"
-      />
     </div>
   </div>
 </template>
@@ -90,6 +72,7 @@
 import { reactive, toRefs } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { ElMessage } from 'element-plus';
 export default {
   name: "Register",
   setup() {
@@ -99,38 +82,27 @@ export default {
         password: "",
         nickname: "",
       },
-      showError: false,
-      errorMessage: "",
-      showSuccess: false,
-      successMessage: "",
     });
     const router = useRouter();
     const handleRegister = async () => {
       try {
-        if (data.showError || data.showSuccess) {
-          console.log("Alert is showing, not sending request. please close it first.");
-          return;
-        }
         if (
           !data.registerData.nickname ||
           !data.registerData.telephone ||
           !data.registerData.password
         ) {
-          data.showError = true;
-          data.errorMessage = "请填写完整注册信息。";
+          ElMessage.error("请填写完整注册信息。");
           return;
         }
         if (
           data.registerData.nickname.length < 3 ||
           data.registerData.nickname.length > 10
         ) {
-          data.showError = true;
-          data.errorMessage = "昵称长度在 3 到 10 个字符。";
+          ElMessage.error("昵称长度在 3 到 10 个字符。");
           return;
         }
         if (!checkTelephoneValid()) {
-          data.showError = true;
-          data.errorMessage = "请输入有效的手机号码。";
+          ElMessage.error("请输入有效的手机号码。");
           return;
         }
         const response = await axios.post(
@@ -139,26 +111,18 @@ export default {
         ); // 发送POST请求
         console.log(response)
         if (response.data.code == 200) {
-          data.showSuccess = true;
-          data.successMessage = "注册成功！";
+          ElMessage.success("注册成功！");
           console.log(response.data.message);
           sessionStorage.setItem("userInfo", response.data.data);
           router.push("/chat/sessionlist");
         } else {
-          data.showError = true;
-          data.errorMessage = "注册失败！请重试！";
+          ElMessage.error("注册失败！请重试！");
           console.log(response.data.error);
         }
       } catch (error) {
-        data.showError = true;
-        data.errorMessage = "注册失败！请重试！";
+        ElMessage.error("注册失败！请重试！");
+        console.error(error);
       }
-    };
-    const handleAlertClose = () => {
-      data.showError = false;
-      data.errorMessage = "";
-      data.showSuccess = false;
-      data.successMessage = "";
     };
     const checkTelephoneValid = () => {
       const regex = /^1([38][0-9]|14[579]|5[^4]|16[6]|7[1-35-8]|9[189])\d{8}$/;
@@ -168,7 +132,6 @@ export default {
       ...toRefs(data),
       router,
       handleRegister,
-      handleAlertClose,
     };
   },
 };

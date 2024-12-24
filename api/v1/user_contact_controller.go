@@ -25,13 +25,13 @@ func GetUserList(c *gin.Context) {
 		})
 	} else if message != "" && err == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": message,
+			"code":    400,
+			"message": message,
 		})
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    200,
-			"message": "get userlist success",
+			"message": message,
 			"data":    userList,
 		})
 	}
@@ -47,19 +47,27 @@ func LoadMyJoinedGroup(c *gin.Context) {
 		})
 		return
 	}
-	groupList, err := gorm.UserContactService.LoadMyJoinedGroup(loadMyJoinedGroupReq.OwnerId)
+	message, groupList, err := gorm.UserContactService.LoadMyJoinedGroup(loadMyJoinedGroupReq.OwnerId)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code":  400,
 			"error": err.Error(),
 		})
 		return
+	} else {
+		if message != "" {
+			c.JSON(http.StatusOK, gin.H{
+				"code":    400,
+				"message": message,
+			})
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"code":    200,
+				"message": message,
+				"data":    groupList,
+			})
+		}
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "load my joined group success",
-		"data":    groupList,
-	})
 }
 
 // GetContactInfo 获取联系人信息
@@ -163,6 +171,30 @@ func GetNewContactList(c *gin.Context) {
 			"code":    200,
 			"message": message,
 			"data":    data,
+		})
+	}
+}
+
+// PassContactApply 通过联系人申请
+func PassContactApply(c *gin.Context) {
+	var passContactApplyReq request.PassContactApplyRequest
+	if err := c.BindJSON(&passContactApplyReq); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	message, err := gorm.UserContactService.PassContactApply(passContactApplyReq.OwnerId, passContactApplyReq.ContactId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": message,
 		})
 	}
 }

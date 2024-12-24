@@ -9,6 +9,8 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
 	"time"
@@ -61,7 +63,7 @@ var GroupInfoService = new(groupInfoService)
 //}
 
 // CreateGroup 创建群聊
-func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) error {
+func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) string {
 	group := model.GroupInfo{
 		Uuid:      fmt.Sprintf("G%s", random.GetNowAndLenRandomString(11)),
 		Name:      groupReq.Name,
@@ -70,6 +72,7 @@ func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) erro
 		MemberCnt: 1,
 		AddMode:   groupReq.AddMode,
 		Avatar:    groupReq.Avatar,
+		Status:    group_status_enum.NORMAL,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -79,44 +82,41 @@ func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) erro
 	group.Members, err = json.Marshal(members)
 	if err != nil {
 		zlog.Error(err.Error())
-		return err
+		return error_info.SYSTEM_ERROR
 	}
 	if res := dao.GormDB.Create(&group); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return res.Error
 	}
-
-	return nil
 }
 
 // GetAllMembers 获取所有成员信息
-func (g *groupInfoService) GetAllMembers(groupId string) ([]string, error) {
+func (g *groupInfoService) GetAllMembers(groupId string) []string {
 	var group model.GroupInfo
 	res := dao.GormDB.Preload("Members").First(&group, "uuid = ?", groupId)
 	if res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Info("group not existed")
-			return nil, nil
+			zlog.Error("群组不存在")
+			return nil
 		} else {
 			zlog.Error(res.Error.Error())
-			return nil, res.Error
+			return nil
 		}
 	} else {
 		var members []string
 		if err := json.Unmarshal(group.Members, members); err != nil {
 			zlog.Error(err.Error())
-			return nil, err
+			return nil
 		}
-		return members, nil
+		return members
 	}
 }
 
 // LoadMyGroup 获取我创建的群聊
-func (g *groupInfoService) LoadMyGroup(ownerId string) ([]respond.LoadMyGroupRespond, error) {
+func (g *groupInfoService) LoadMyGroup(ownerId string) []respond.LoadMyGroupRespond {
 	var groupList []model.GroupInfo
 	if res := dao.GormDB.Order("created_at DESC").Where("owner_id = ?", ownerId).Find(&groupList); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return nil, res.Error
+		return nil
 	}
 	var groupListRsp []respond.LoadMyGroupRespond
 	for _, group := range groupList {
@@ -127,38 +127,32 @@ func (g *groupInfoService) LoadMyGroup(ownerId string) ([]respond.LoadMyGroupRes
 		})
 	}
 
-	return groupListRsp, nil
+	return groupListRsp
 }
 
 // GetGroupInfo 获取聊天详情
-func (g *groupInfoService) GetGroupInfo(userId string, groupId string) (model.GroupInfo, error) {
+func (g *groupInfoService) GetGroupInfo(userId string, groupId string) *model.GroupInfo {
 	var user model.UserInfo
 	if res := dao.GormDB.First(&user, "uuid = ?", userId); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Info(res.Error.Error())
-			return model.GroupInfo{}, res.Error
+			zlog.Error(res.Error.Error())
+			return nil
 		} else {
 			zlog.Error(res.Error.Error())
-			return model.GroupInfo{}, res.Error
+			return nil
 		}
 	}
-	// 找到了，看是否被删除（禁用）
-	if user.DeletedAt.Valid { // 已经删除了
-		zlog.Info("user already be deleted, no access to this group")
-		return model.GroupInfo{}, nil
-	} else {
-		var group model.GroupInfo
-		if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
-			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-				zlog.Info(res.Error.Error())
-				return model.GroupInfo{}, res.Error
-			} else {
-				zlog.Error(res.Error.Error())
-				return model.GroupInfo{}, res.Error
-			}
+	var group model.GroupInfo
+	if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			zlog.Error(res.Error.Error())
+			return nil
+		} else {
+			zlog.Error(res.Error.Error())
+			return nil
 		}
-		return group, nil
 	}
+	return &group
 }
 
 //func (g *groupInfoService) checkUserAndGroupValid(userId string, groupId string)

@@ -32,6 +32,7 @@ func main() {
 	r.POST("/contact/deleteContact", v1.DeleteContact)
 	r.POST("/contact/applyContact", v1.ApplyContact)
 	r.POST("/contact/getNewContactList", v1.GetNewContactList)
+	r.POST("/contact/passContactApply", v1.PassContactApply)
 	conf := config.GetConfig()
 	host := conf.MainConfig.Host
 	port := conf.MainConfig.Port

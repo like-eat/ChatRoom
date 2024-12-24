@@ -10,6 +10,7 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/enum/error_info"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
 	"regexp"
@@ -27,7 +28,7 @@ func (u *userInfoService) checkTelephoneValid(telephone string) bool {
 	pattern := `^1([38][0-9]|14[579]|5[^4]|16[6]|7[1-35-8]|9[189])\d{8}$`
 	match, err := regexp.MatchString(pattern, telephone)
 	if err != nil {
-		zlog.Fatal(err.Error())
+		zlog.Error(err.Error())
 	}
 	return match
 }
@@ -37,34 +38,34 @@ func (u *userInfoService) checkEmailValid(email string) bool {
 	pattern := `^[^\s@]+@[^\s@]+\.[^\s@]+$`
 	match, err := regexp.MatchString(pattern, email)
 	if err != nil {
-		zlog.Fatal(err.Error())
+		zlog.Error(err.Error())
 	}
 	return match
 }
 
 // checkUserIsAdminOrNot 检验用户是否为管理员
-func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) bool {
+func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) int8 {
 	return user.IsAdmin
 }
 
 // Login 登录
-func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, string, error) {
+func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, string) {
 	password := loginReq.Password
 	var user model.UserInfo
 	res := dao.GormDB.First(&user, "telephone = ?", loginReq.Telephone)
 	if res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			message := "user not existed"
-			zlog.Info(message)
-			return message, "", nil
+			message := "用户不存在，请注册"
+			zlog.Error(message)
+			return message, ""
 		}
 		zlog.Error(res.Error.Error())
-		return "", "", res.Error
+		return error_info.SYSTEM_ERROR, ""
 	}
 	if user.Password != password {
-		message := "password not correct"
-		zlog.Info(message)
-		return message, "", nil
+		message := "密码不正确，请重试"
+		zlog.Error(message)
+		return message, ""
 	}
 	// 手机号验证，最后一步才调用api，省钱hhh
 	//if err := sms.VerificationCode(loginReq.Telephone); err != nil {
@@ -90,27 +91,27 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 	loginRspStr, err := json.Marshal(loginRsp)
 	if err != nil {
 		zlog.Error(err.Error())
-		return "", "", err
+		return error_info.SYSTEM_ERROR, ""
 	}
-	return "", string(loginRspStr), nil
+	return "登陆成功", string(loginRspStr)
 }
 
 // Register 注册，返回(message, register_respond_string, error)
-func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, string, error) {
+func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, string) {
 	// 不用校验手机号，前端校验
 
 	var newUser model.UserInfo
 	res := dao.GormDB.First(&newUser, "telephone = ?", registerReq.Telephone)
 	if res.Error == nil {
 		// 用户已经存在，注册失败
-		message := "user already existed"
-		zlog.Info(message)
-		return message, "", nil
+		message := "用户已经存在，注册失败"
+		zlog.Error(message)
+		return message, ""
 	} else {
 		// 其他报错
 		if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			zlog.Error(res.Error.Error())
-			return "", "", res.Error
+			return error_info.SYSTEM_ERROR, ""
 		}
 		// 可以继续注册
 	}
@@ -130,7 +131,7 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 	res = dao.GormDB.Create(&newUser)
 	if res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return "", "", res.Error
+		return error_info.SYSTEM_ERROR, ""
 	}
 	// 注册成功，chat client建立
 	//if err := chat.NewClientInit(c, newUser.Uuid); err != nil {
@@ -152,7 +153,7 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 	registerRspStr, err := json.Marshal(registerRsp)
 	if err != nil {
 		zlog.Error(err.Error())
-		return "", "", err
+		return error_info.SYSTEM_ERROR, ""
 	}
-	return "", string(registerRspStr), nil
+	return "注册成功", string(registerRspStr)
 }

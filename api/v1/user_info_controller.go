@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
+	"kama_chat_server/pkg/zlog"
 	"net/http"
 )
 
@@ -12,33 +13,26 @@ import (
 func Register(c *gin.Context) {
 	var registerReq request.RegisterRequest
 	if err := c.BindJSON(&registerReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": "系统问题，请联系工作人员",
 		})
 		return
 	}
 	fmt.Println(registerReq)
-	message, userInfoStr, err := gorm.UserInfoService.Register(c, registerReq)
-	if message != "" && err == nil {
+	message, userInfoStr := gorm.UserInfoService.Register(c, registerReq)
+	if message != "" {
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": message,
+			"code":    400,
+			"message": message,
 		})
-		return
-	} else if message == "" && err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-		return
-	} else if message == "" && err == nil {
+	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    200,
-			"message": "register success",
+			"message": message,
 			"data":    userInfoStr,
 		})
-		return
 	}
 }
 
@@ -46,31 +40,24 @@ func Register(c *gin.Context) {
 func Login(c *gin.Context) {
 	var loginReq request.LoginRequest
 	if err := c.BindJSON(&loginReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": "系统问题，请联系工作人员",
 		})
 		return
 	}
-	message, userInfoStr, err := gorm.UserInfoService.Login(c, loginReq)
-	if message != "" && err == nil {
+	message, userInfoStr := gorm.UserInfoService.Login(c, loginReq)
+	if message != "" {
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": message,
+			"code":    400,
+			"message": message,
 		})
-		return
-	} else if message == "" && err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-		return
-	} else if message == "" && err == nil {
+	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    200,
-			"message": "login success",
+			"message": message,
 			"data":    userInfoStr,
 		})
-		return
 	}
 }
