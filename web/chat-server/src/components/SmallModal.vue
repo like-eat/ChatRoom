@@ -44,8 +44,10 @@ export default {
   box-shadow: 0 2px 15px rgb(195, 8, 8);
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
   
 }
+
 
 </style>

@@ -117,3 +117,27 @@ func DeleteContact(c *gin.Context) {
 		})
 	}
 }
+
+// ApplyContact 申请添加联系人
+func ApplyContact(c *gin.Context) {
+	var applyContactReq request.ApplyContactRequest
+	if err := c.BindJSON(&applyContactReq); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	message, err := gorm.UserContactService.ApplyContact(applyContactReq)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": message,
+		})
+	}
+}

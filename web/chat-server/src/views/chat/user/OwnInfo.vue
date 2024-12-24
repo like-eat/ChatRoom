@@ -468,7 +468,7 @@ export default {
         data.updateInfo.birthday == "" &&
         data.updateInfo.signature == ""
       ) {
-        alert("请至少修改一项");
+        ElMessage("请至少修改一项");
         return;
       }
       if (data.updateInfo.nickname != "") {
@@ -481,7 +481,7 @@ export default {
       }
       if (data.updateInfo.email != "") {
         if (!checkEmailValid(data.updateInfo.email)) {
-          alert("请输入有效的邮箱。");
+          ElMessage("请输入有效的邮箱。");
           return;
         }
       }
@@ -516,11 +516,11 @@ export default {
     };
     const closeCreateGroupModal = () => {
       if (data.createGroupReq.name == "") {
-        alert("请输入群聊名称");
+        ElMessage("请输入群聊名称");
         return;
       }
       if (data.createGroupReq.add_mode == null) {
-        alert("请选择加群方式");
+        ElMessage("请选择加群方式");
         return;
       }
       data.isCreateGroupModalVisible = false;

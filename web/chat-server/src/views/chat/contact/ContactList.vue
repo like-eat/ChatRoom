@@ -145,11 +145,62 @@
                         创建群聊
                       </el-dropdown-item>
                       <el-dropdown-item @click="showApplyContactModal">
-                        添加好友
+                        添加用户/群聊
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="showNewContactModal">
+                        新的朋友
                       </el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
+                <SmallModal :isVisible="isNewContactModalVisible">
+                  <template v-slot:header>
+                    <div class="modal-header">
+                      <div class="modal-quit-btn-container">
+                        <button
+                          class="modal-quit-btn"
+                          @click="quitNewContactModal"
+                        >
+                          <el-icon><Close /></el-icon>
+                        </button>
+                      </div>
+                      <div class="modal-header-title">
+                        <h3>新的朋友</h3>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-slot:body>
+                    <div class="modal-body">
+                      <el-scrollbar max-height="400px">
+                        <ul>
+                          <li
+                            v-for="(friend, index) in friends"
+                            :key="index"
+                            class="friend-item"
+                          >
+                            <div class="friend-name">{{ friend.name }}</div>
+                            <button
+                              class="action-button"
+                              @click="handleButtonClick(index)"
+                            >
+                              去处理
+                            </button>
+                          </li>
+                        </ul>
+                      </el-scrollbar>
+                    </div>
+                  </template>
+                  <template v-slot:footer>
+                    <div class="modal-footer">
+                      <el-button
+                        class="modal-close-btn"
+                        @click="closeNewContactModal"
+                      >
+                        完成
+                      </el-button>
+                    </div>
+                  </template>
+                </SmallModal>
                 <SmallModal :isVisible="isApplyContactModalVisible">
                   <template v-slot:header>
                     <div class="modal-header">
@@ -162,7 +213,7 @@
                         </button>
                       </div>
                       <div class="modal-header-title">
-                        <h3>添加好友</h3>
+                        <h3>添加用户/群聊</h3>
                       </div>
                     </div>
                   </template>
@@ -171,12 +222,12 @@
                       <el-form
                         ref="formRef"
                         :model="applyContactReq"
-                        label-width="80px"
-                        class="demo-dynamic"
+                        label-width="100px"
+                        class="apply-contact-form"
                       >
                         <el-form-item
                           prop="name"
-                          label="用户id"
+                          label="用户/群聊id"
                           :rules="[
                             {
                               required: true,
@@ -187,7 +238,17 @@
                         >
                           <el-input
                             v-model="applyContactReq.contact_id"
-                            placeholder="请填写申请好友的用户id"
+                            placeholder="请填写申请的用户/群聊id"
+                          />
+                        </el-form-item>
+                        <el-form-item prop="message" label="申请消息">
+                          <el-input
+                            v-model="applyContactReq.message"
+                            placeholder="选填，填写更容易通过"
+                            type="textarea"
+                            show-word-limit
+                            maxlength="100"
+                            :autosize="{ minRows: 3, maxRows: 3 }"
                           />
                         </el-form-item>
                       </el-form>
@@ -541,6 +602,7 @@ import { useStore } from "vuex";
 import Modal from "@/components/Modal.vue";
 import SmallModal from "@/components/SmallModal.vue";
 import axios from "axios";
+import { ElMessage } from "element-plus";
 export default {
   name: "ContactList",
   components: {
@@ -566,21 +628,17 @@ export default {
       },
       isCreateGroupModalVisible: false,
       isApplyContactModalVisible: false,
-      getUserListReq: {
-        owner_id: "",
-      },
+      isNewContactModalVisible: false,
       contactUserList: [],
-      loadMyGroupReq: {
-        owner_id: "",
-      },
       myGroupList: [],
-      loadMyJoinedGroupReq: {
-        owner_id: "",
-      },
       myJoinedGroupList: [],
       applyContactReq: {
+        owner_id: "",
         contact_id: "",
         message: "",
+      },
+      ownListReq: {
+        owner_id: "",
       },
     });
 
@@ -626,11 +684,11 @@ export default {
     };
     const closeCreateGroupModal = () => {
       if (data.createGroupReq.name == "") {
-        alert("请输入群聊名称");
+        ElMessage("请输入群聊名称");
         return;
       }
       if (data.createGroupReq.add_mode == null) {
-        alert("请选择加群方式");
+        ElMessage("请选择加群方式");
         return;
       }
       data.isCreateGroupModalVisible = false;
@@ -643,14 +701,52 @@ export default {
       data.isApplyContactModalVisible = false;
     };
     const closeApplyContactModal = () => {
-      data.isApplyContactModalVisible = false;
+      if (data.applyContactReq.contact_id == "") {
+        ElMessage.error("请输入申请用户/群组id");
+        return;
+      }
+      handleApplyContact();
+    };
+
+    const showNewContactModal = () => {
+      data.isNewContactModalVisible = true;
+    };
+
+    const quitNewContactModal = () => {
+      data.isNewContactModalVisible = false;
+    };
+
+    const closeNewContactModal = () => {};
+
+    const handleApplyContact = async () => {
+      try {
+        data.applyContactReq.owner_id = data.userInfo.uuid;
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/applyContact",
+          data.applyContactReq
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          if (rsp.data.message == "申请成功") {
+            data.isApplyContactModalVisible = false;
+            ElMessage.success("申请成功");
+            return;
+          } else {
+            ElMessage.error(rsp.data.message);
+          }
+        } else {
+          ElMessage.error("申请失败");
+        }
+      } catch (error) {
+        console.error(error);
+      }
     };
     const handleShowUserList = async () => {
       try {
-        data.getUserListReq.owner_id = data.userInfo.uuid;
+        data.ownListReq.owner_id = data.userInfo.uuid;
         const getUserListRsp = await axios.post(
           store.state.backendUrl + "/contact/getUserList",
-          data.getUserListReq
+          data.ownListReq
         );
         data.contactUserList = getUserListRsp.data.data;
       } catch (error) {
@@ -663,10 +759,10 @@ export default {
 
     const handleShowMyGroupList = async () => {
       try {
-        data.loadMyGroupReq.owner_id = data.userInfo.uuid;
+        data.ownListReq.owner_id = data.userInfo.uuid;
         const loadMyGroupRsp = await axios.post(
           store.state.backendUrl + "/group/loadMyGroup",
-          data.loadMyGroupReq
+          data.ownListReq
         );
         data.myGroupList = loadMyGroupRsp.data.data;
       } catch (error) {
@@ -678,10 +774,10 @@ export default {
     };
     const handleShowMyJoinedGroupList = async () => {
       try {
-        data.loadMyJoinedGroupReq.owner_id = data.userInfo.uuid;
+        data.ownListReq.owner_id = data.userInfo.uuid;
         const loadMyJoinedGroupRsp = await axios.post(
           store.state.backendUrl + "/contact/loadMyJoinedGroup",
-          data.loadMyJoinedGroupReq
+          data.ownListReq
         );
         data.myJoinedGroupList = loadMyJoinedGroupRsp.data.data;
       } catch (error) {
@@ -714,6 +810,9 @@ export default {
       showApplyContactModal,
       quitApplyContactModal,
       closeApplyContactModal,
+      showNewContactModal,
+      quitNewContactModal,
+      closeNewContactModal,
       handleShowUserList,
       handleHideUserList,
       handleShowMyGroupList,
@@ -818,7 +917,11 @@ h3 {
 
 .modal-body {
   height: 55%;
-  width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .modal-footer {
@@ -841,9 +944,5 @@ h3 {
   width: 30px;
   height: 30px;
   margin-right: 20px;
-}
-
-.el-form-item {
-  width: 400px;
 }
 </style>

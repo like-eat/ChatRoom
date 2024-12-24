@@ -416,11 +416,11 @@ export default {
     };
     const closeModal = () => {
       if (data.createGroupReq.name == "") {
-        alert("请输入群聊名称");
+        ElMessage("请输入群聊名称");
         return;
       }
       if (data.createGroupReq.add_mode == null) {
-        alert("请选择加群方式");
+        ElMessage("请选择加群方式");
         return;
       }
       data.isModalVisible = false;

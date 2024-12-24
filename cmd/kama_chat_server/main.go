@@ -30,6 +30,7 @@ func main() {
 	r.POST("/session/getGroupSessionList", v1.GetGroupSessionList)
 	r.POST("/session/deleteSession", v1.DeleteSession)
 	r.POST("/contact/deleteContact", v1.DeleteContact)
+	r.POST("/contact/applyContact", v1.ApplyContact)
 	conf := config.GetConfig()
 	host := conf.MainConfig.Host
 	port := conf.MainConfig.Port

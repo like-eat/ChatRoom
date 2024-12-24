@@ -2,11 +2,15 @@ package gorm
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"kama_chat_server/internal/dao"
+	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
+	"time"
 )
 
 type userContactService struct {
@@ -157,4 +161,103 @@ func (u *userContactService) DeleteContact(ownerId, contactId string) error {
 		return res.Error
 	}
 	return nil
+}
+
+// ApplyContact 申请添加联系人
+func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (string, error) {
+	if req.ContactId[0] == 'U' {
+		var user model.UserInfo
+		if res := dao.GormDB.First(&user, "uuid = ?", req.ContactId); res.Error != nil {
+			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+				zlog.Info("contact not found in UserInfo")
+				return "用户不存在", nil
+			} else {
+				zlog.Error(res.Error.Error())
+				return "", res.Error
+			}
+		}
+		if user.DeletedAt.Valid {
+			zlog.Info("user has been deleted")
+			return "用户已经被禁用", nil
+		}
+		var contactApply model.ContactApply
+		if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", req.OwnerId, req.ContactId).First(&contactApply); res.Error != nil {
+			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+				contactApply = model.ContactApply{
+					Uuid:        fmt.Sprintf("A%s", random.GetNowAndLenRandomString(11)),
+					UserId:      req.OwnerId,
+					ContactId:   req.ContactId,
+					ContactType: false,
+					Status:      false,
+					Message:     req.Message,
+					LastApplyAt: time.Now(),
+				}
+				if res := dao.GormDB.Create(&contactApply); res.Error != nil {
+					zlog.Error(res.Error.Error())
+					return "", res.Error
+				}
+			} else {
+				zlog.Error(res.Error.Error())
+				return "", res.Error
+			}
+		}
+		contactApply.LastApplyAt = time.Now()
+
+		if res := dao.GormDB.Save(&contactApply); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return "", res.Error
+		}
+		return "申请成功", nil
+	} else if req.ContactId[0] == 'G' {
+		var group model.GroupInfo
+		if res := dao.GormDB.First(&group, "uuid = ?", req.ContactId); res.Error != nil {
+			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+				zlog.Info("contact not found in UserInfo")
+				return "群聊不存在", nil
+			} else {
+				zlog.Error(res.Error.Error())
+				return "", res.Error
+			}
+		}
+		if group.DeletedAt.Valid {
+			zlog.Info("user has been deleted")
+			return "群聊已经被禁用", nil
+		}
+		var contactApply model.ContactApply
+		if res := dao.GormDB.Where("group_id = ? AND contact_id = ?", req.OwnerId, req.ContactId).First(&contactApply); res.Error != nil {
+			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+				contactApply = model.ContactApply{
+					Uuid:        fmt.Sprintf("A%s", random.GetNowAndLenRandomString(11)),
+					UserId:      req.OwnerId,
+					ContactId:   req.ContactId,
+					ContactType: false,
+					Status:      false,
+					Message:     req.Message,
+					LastApplyAt: time.Now(),
+				}
+				if res := dao.GormDB.Create(&contactApply); res.Error != nil {
+					zlog.Error(res.Error.Error())
+					return "", res.Error
+				}
+			} else {
+				zlog.Error(res.Error.Error())
+				return "", res.Error
+			}
+		}
+		contactApply.LastApplyAt = time.Now()
+
+		if res := dao.GormDB.Save(&contactApply); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return "", res.Error
+		}
+		return "申请成功", nil
+	} else {
+		return "用户/群聊不存在", nil
+	}
+
+}
+
+// GetNewContactList 获取新的联系人申请列表
+func (u *userContactService) GetNewContactList(ownerId string) ([]respond.ContactApplyResponse, error) {
+
 }
