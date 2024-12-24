@@ -11,6 +11,7 @@ type ContactApply struct {
 	Status      bool      `gorm:"column:status;not null;type:tinyint(1);comment:申请状态，0.申请中，1.申请通过"`
 	Message     string    `gorm:"column:message;type:varchar(100);comment:申请信息"`
 	LastApplyAt time.Time `gorm:"column:last_apply_at;type:datetime;not null;comment:最后申请时间"`
+	DeletedAt   time.Time `gorm:"column:deleted_at;index;type:datetime;comment:删除时间"`
 }
 
 func (ContactApply) TableName() string {

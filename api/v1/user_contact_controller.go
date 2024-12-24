@@ -141,3 +141,28 @@ func ApplyContact(c *gin.Context) {
 		})
 	}
 }
+
+// GetNewContactList 获取新的联系人申请列表
+func GetNewContactList(c *gin.Context) {
+	var req request.OwnlistRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+		return
+	}
+	message, data, err := gorm.UserContactService.GetNewContactList(req.OwnerId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": message,
+			"data":    data,
+		})
+	}
+}

@@ -172,19 +172,40 @@
                   <template v-slot:body>
                     <div class="modal-body">
                       <el-scrollbar max-height="400px">
-                        <ul>
+                        <ul
+                          class="newcontact-list"
+                          style="list-style-type: none"
+                        >
                           <li
-                            v-for="(friend, index) in friends"
-                            :key="index"
-                            class="friend-item"
+                            v-for="newContact in newContactList"
+                            :key="newContact.contact_id"
+                            class="newcontact-item"
                           >
-                            <div class="friend-name">{{ friend.name }}</div>
-                            <button
-                              class="action-button"
+                            <div
+                              style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                              "
+                            >
+                              <img
+                                :src="newContact.contact_avatar"
+                                style="
+                                  width: 30px;
+                                  height: 30px;
+                                  margin-right: 10px;
+                                "
+                              />
+                              <div class="newcontact-name">
+                                {{ newContact.contact_name }}
+                              </div>
+                            </div>
+                            <el-button
+                              class="action-btn"
                               @click="handleButtonClick(index)"
                             >
                               去处理
-                            </button>
+                            </el-button>
                           </li>
                         </ul>
                       </el-scrollbar>
@@ -640,6 +661,7 @@ export default {
       ownListReq: {
         owner_id: "",
       },
+      newContactList: [],
     });
 
     onMounted(() => {
@@ -709,14 +731,18 @@ export default {
     };
 
     const showNewContactModal = () => {
-      data.isNewContactModalVisible = true;
+      handleNewContactList();
     };
 
     const quitNewContactModal = () => {
       data.isNewContactModalVisible = false;
+      data.newContactList = [];
     };
 
-    const closeNewContactModal = () => {};
+    const closeNewContactModal = () => {
+      data.isNewContactModalVisible = false;
+      data.newContactList = [];
+    };
 
     const handleApplyContact = async () => {
       try {
@@ -799,6 +825,25 @@ export default {
     const handleToChatGroup = async (group) => {
       router.push("/chat/" + group.group_id);
     };
+
+    const handleNewContactList = async () => {
+      try {
+        data.ownListReq.owner_id = data.userInfo.uuid;
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/getNewContactList",
+          data.ownListReq
+        );
+        data.newContactList = rsp.data.data;
+        if (data.newContactList == null) {
+          ElMessage.warning("没有新的好友申请");
+          return;
+        }
+        data.isNewContactModalVisible = true;
+        console.log(rsp);
+      } catch (error) {
+        console.error(error);
+      }
+    };
     return {
       ...toRefs(data),
       router,
@@ -822,6 +867,7 @@ export default {
       handleToSessionList,
       handleToChatUser,
       handleToChatGroup,
+      handleNewContactList,
     };
   },
 };
@@ -945,4 +991,32 @@ h3 {
   height: 30px;
   margin-right: 20px;
 }
+
+.newcontact-list {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.newcontact-item {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+}
+
+.action-btn {
+  background-color: rgb(252, 210.9, 210.9);
+  border: none;
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
 </style>

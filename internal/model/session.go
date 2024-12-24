@@ -12,6 +12,7 @@ type Session struct {
 	LastMessage   string    `gorm:"column:last_message;type:varchar(2000);comment:最新的消息"`
 	LastMessageAt time.Time `gorm:"column:last_message_at;type:datetime;comment:最近接收时间"`
 	CreatedAt     time.Time `gorm:"column:created_at;Index;type:datetime;comment:创建时间"`
+	DeletedAt     time.Time `gorm:"column:deleted_at;Index;type:datetime;comment:删除时间"`
 }
 
 func (Session) TableName() string {

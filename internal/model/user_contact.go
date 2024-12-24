@@ -10,6 +10,7 @@ type UserContact struct {
 	Status      int       `gorm:"column:status;not null;comment:联系状态，0.正常，1.拉黑，2.被拉黑，3.删除好友，4.被删除好友"`
 	CreatedAt   time.Time `gorm:"column:created_at;type:datetime;not null;comment:创建时间"`
 	UpdateAt    time.Time `gorm:"column:update_at;type:datetime;not null;comment:更新时间"`
+	DeletedAt   time.Time `gorm:"column:deleted_at;type:datetime;index;comment:删除时间"`
 }
 
 func (UserContact) TableName() string {

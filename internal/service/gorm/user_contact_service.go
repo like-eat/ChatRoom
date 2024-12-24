@@ -152,14 +152,16 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 
 // DeleteContact 删除联系人
 func (u *userContactService) DeleteContact(ownerId, contactId string) error {
-	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", ownerId, contactId).Delete(&model.UserContact{}); res.Error != nil {
+	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", ownerId, contactId).Update("deleted_at", time.Now()); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return res.Error
 	}
-	if res := dao.GormDB.Where("send_id = ? AND receive_id = ?", ownerId, contactId).Delete(&model.Session{}); res.Error != nil {
+
+	if res := dao.GormDB.Model(&model.Session{}).Where("send_id = ? AND receive_id = ?", ownerId, contactId).Update("deleted_at", time.Now()); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return res.Error
 	}
+
 	return nil
 }
 
@@ -170,15 +172,11 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 		if res := dao.GormDB.First(&user, "uuid = ?", req.ContactId); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Info("contact not found in UserInfo")
-				return "用户不存在", nil
+				return "用户不存在/已被禁用", nil
 			} else {
 				zlog.Error(res.Error.Error())
 				return "", res.Error
 			}
-		}
-		if user.DeletedAt.Valid {
-			zlog.Info("user has been deleted")
-			return "用户已经被禁用", nil
 		}
 		var contactApply model.ContactApply
 		if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", req.OwnerId, req.ContactId).First(&contactApply); res.Error != nil {
@@ -213,15 +211,11 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 		if res := dao.GormDB.First(&group, "uuid = ?", req.ContactId); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Info("contact not found in UserInfo")
-				return "群聊不存在", nil
+				return "群聊不存在/已被禁用", nil
 			} else {
 				zlog.Error(res.Error.Error())
 				return "", res.Error
 			}
-		}
-		if group.DeletedAt.Valid {
-			zlog.Info("user has been deleted")
-			return "群聊已经被禁用", nil
 		}
 		var contactApply model.ContactApply
 		if res := dao.GormDB.Where("group_id = ? AND contact_id = ?", req.OwnerId, req.ContactId).First(&contactApply); res.Error != nil {
@@ -258,6 +252,32 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 }
 
 // GetNewContactList 获取新的联系人申请列表
-func (u *userContactService) GetNewContactList(ownerId string) ([]respond.ContactApplyResponse, error) {
-
+func (u *userContactService) GetNewContactList(ownerId string) (string, []respond.NewContactListRespond, error) {
+	var contactApplyList []model.ContactApply
+	if res := dao.GormDB.Where("contact_id = ? AND status = ?", ownerId, false).Find(&contactApplyList); res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			zlog.Info("没有在申请的联系人")
+			return "没有在申请的联系人", nil, nil
+		} else {
+			zlog.Error(res.Error.Error())
+			return "", nil, res.Error
+		}
+	}
+	var rsp []respond.NewContactListRespond
+	// 所有contact都没被禁用，被禁用的已经删除了
+	for _, contactApply := range contactApplyList {
+		newContact := respond.NewContactListRespond{
+			ContactId: contactApply.Uuid,
+			Message:   contactApply.Message,
+		}
+		var user model.UserInfo
+		if res := dao.GormDB.First(&user, "uuid = ?", contactApply.UserId); res.Error != nil {
+			return "", nil, res.Error
+		}
+		newContact.ContactId = user.Uuid
+		newContact.ContactName = user.Nickname
+		newContact.ContactAvatar = user.Avatar
+		rsp = append(rsp, newContact)
+	}
+	return "获取成功", rsp, nil
 }
