@@ -17,19 +17,8 @@ func OpenSession(c *gin.Context) {
 		})
 		return
 	}
-	sessionId, err := gorm.SessionService.OpenSession(openSessionReq)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "create session success",
-		"data":    sessionId,
-	})
+	message, sessionId, ret := gorm.SessionService.OpenSession(openSessionReq)
+	JsonBack(c, message, ret, sessionId)
 }
 
 // GetUserSessionList 获取用户会话列表
@@ -42,19 +31,8 @@ func GetUserSessionList(c *gin.Context) {
 		})
 		return
 	}
-	sessionList, err := gorm.SessionService.GetUserSessionList(getUserSessionListReq.OwnerId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": "load my session success",
-			"data":    sessionList,
-		})
-	}
+	message, sessionList, ret := gorm.SessionService.GetUserSessionList(getUserSessionListReq.OwnerId)
+	JsonBack(c, message, ret, sessionList)
 }
 
 // GetGroupSessionList 获取用户群聊列表
@@ -67,19 +45,8 @@ func GetGroupSessionList(c *gin.Context) {
 		})
 		return
 	}
-	groupList, err := gorm.SessionService.GetGroupSessionList(getGroupListReq.OwnerId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": "load my group success",
-			"data":    groupList,
-		})
-	}
+	message, groupList, ret := gorm.SessionService.GetGroupSessionList(getGroupListReq.OwnerId)
+	JsonBack(c, message, ret, groupList)
 }
 
 // DeleteSession 删除会话
@@ -92,15 +59,6 @@ func DeleteSession(c *gin.Context) {
 		})
 		return
 	}
-	if err := gorm.SessionService.DeleteSession(deleteSessionReq.SessionId); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": "delete session success",
-		})
-	}
+	message, ret := gorm.SessionService.DeleteSession(deleteSessionReq.SessionId)
+	JsonBack(c, message, ret, nil)
 }

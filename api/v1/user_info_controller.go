@@ -21,19 +21,8 @@ func Register(c *gin.Context) {
 		return
 	}
 	fmt.Println(registerReq)
-	message, userInfoStr := gorm.UserInfoService.Register(c, registerReq)
-	if message != "" {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": message,
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": message,
-			"data":    userInfoStr,
-		})
-	}
+	message, userInfoStr, ret := gorm.UserInfoService.Register(c, registerReq)
+	JsonBack(c, message, ret, userInfoStr)
 }
 
 // Login 登录
@@ -47,17 +36,6 @@ func Login(c *gin.Context) {
 		})
 		return
 	}
-	message, userInfoStr := gorm.UserInfoService.Login(c, loginReq)
-	if message != "" {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": message,
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": message,
-			"data":    userInfoStr,
-		})
-	}
+	message, userInfoStr, ret := gorm.UserInfoService.Login(c, loginReq)
+	JsonBack(c, message, ret, userInfoStr)
 }

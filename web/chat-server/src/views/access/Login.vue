@@ -83,17 +83,14 @@ export default {
         );
         console.log(response);
         if (response.data.code == 200) {
-          ElMessage.success("登录成功！");
-          console.log(response.data.message);
+          ElMessage.success(response.data.message);
           sessionStorage.setItem("userInfo", response.data.data);
           router.push("/chat/sessionlist");
         } else {
-          ElMessage.error("登录失败！请重试！");
-          console.log(response.data.error);
+          ElMessage.error(response.data.message);
         }
       } catch (error) {
-        ElMessage.error("登录失败！请重试！");
-        console.error(error);
+        ElMessage.error(error);
       }
     };
     const checkTelephoneValid = () => {

@@ -49,7 +49,7 @@ func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) int8 {
 }
 
 // Login 登录
-func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, string) {
+func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, string, int) {
 	password := loginReq.Password
 	var user model.UserInfo
 	res := dao.GormDB.First(&user, "telephone = ?", loginReq.Telephone)
@@ -57,15 +57,15 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			message := "用户不存在，请注册"
 			zlog.Error(message)
-			return message, ""
+			return message, "", -1
 		}
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, ""
+		return error_info.SYSTEM_ERROR, "", 0
 	}
 	if user.Password != password {
 		message := "密码不正确，请重试"
 		zlog.Error(message)
-		return message, ""
+		return message, "", -1
 	}
 	// 手机号验证，最后一步才调用api，省钱hhh
 	//if err := sms.VerificationCode(loginReq.Telephone); err != nil {
@@ -91,13 +91,13 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 	loginRspStr, err := json.Marshal(loginRsp)
 	if err != nil {
 		zlog.Error(err.Error())
-		return error_info.SYSTEM_ERROR, ""
+		return error_info.SYSTEM_ERROR, "", -1
 	}
-	return "登陆成功", string(loginRspStr)
+	return "登陆成功!", string(loginRspStr), 0
 }
 
 // Register 注册，返回(message, register_respond_string, error)
-func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, string) {
+func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, string, int) {
 	// 不用校验手机号，前端校验
 
 	var newUser model.UserInfo
@@ -106,12 +106,12 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 		// 用户已经存在，注册失败
 		message := "用户已经存在，注册失败"
 		zlog.Error(message)
-		return message, ""
+		return message, "", -1
 	} else {
 		// 其他报错
 		if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, ""
+			return error_info.SYSTEM_ERROR, "", -1
 		}
 		// 可以继续注册
 	}
@@ -131,7 +131,7 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 	res = dao.GormDB.Create(&newUser)
 	if res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, ""
+		return error_info.SYSTEM_ERROR, "", -1
 	}
 	// 注册成功，chat client建立
 	//if err := chat.NewClientInit(c, newUser.Uuid); err != nil {
@@ -153,7 +153,7 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 	registerRspStr, err := json.Marshal(registerRsp)
 	if err != nil {
 		zlog.Error(err.Error())
-		return error_info.SYSTEM_ERROR, ""
+		return error_info.SYSTEM_ERROR, "", -1
 	}
-	return "注册成功", string(registerRspStr)
+	return "注册成功!", string(registerRspStr), 0
 }

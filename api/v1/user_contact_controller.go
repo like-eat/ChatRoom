@@ -17,24 +17,8 @@ func GetUserList(c *gin.Context) {
 			"error": err.Error(),
 		})
 	}
-	message, userList, err := gorm.UserContactService.GetUserList(myUserListReq.OwnerId)
-	if message == "" && err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else if message != "" && err == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
-			"message": message,
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": message,
-			"data":    userList,
-		})
-	}
+	message, userList, ret := gorm.UserContactService.GetUserList(myUserListReq.OwnerId)
+	JsonBack(c, message, ret, userList)
 }
 
 // LoadMyJoinedGroup 获取我加入的群聊
@@ -47,27 +31,8 @@ func LoadMyJoinedGroup(c *gin.Context) {
 		})
 		return
 	}
-	message, groupList, err := gorm.UserContactService.LoadMyJoinedGroup(loadMyJoinedGroupReq.OwnerId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-		return
-	} else {
-		if message != "" {
-			c.JSON(http.StatusOK, gin.H{
-				"code":    400,
-				"message": message,
-			})
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"code":    200,
-				"message": message,
-				"data":    groupList,
-			})
-		}
-	}
+	message, groupList, ret := gorm.UserContactService.LoadMyJoinedGroup(loadMyJoinedGroupReq.OwnerId)
+	JsonBack(c, message, ret, groupList)
 }
 
 // GetContactInfo 获取联系人信息
@@ -81,25 +46,8 @@ func GetContactInfo(c *gin.Context) {
 		return
 	}
 	log.Println(getContactInfoReq)
-	message, contactInfo, err := gorm.UserContactService.GetContactInfo(getContactInfoReq.ContactId)
-	if message == "" && err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else if message != "" && err == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": message,
-		})
-	} else {
-		log.Println(contactInfo)
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": "get contact name success",
-			"data":    contactInfo,
-		})
-	}
+	message, contactInfo, ret := gorm.UserContactService.GetContactInfo(getContactInfoReq.ContactId)
+	JsonBack(c, message, ret, contactInfo)
 }
 
 // DeleteContact 删除联系人
@@ -112,18 +60,8 @@ func DeleteContact(c *gin.Context) {
 		})
 		return
 	}
-	err := gorm.UserContactService.DeleteContact(deleteContactReq.OwnerId, deleteContactReq.ContactId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": "delete contact success",
-		})
-	}
+	message, ret := gorm.UserContactService.DeleteContact(deleteContactReq.OwnerId, deleteContactReq.ContactId)
+	JsonBack(c, message, ret, nil)
 }
 
 // ApplyContact 申请添加联系人
@@ -136,18 +74,8 @@ func ApplyContact(c *gin.Context) {
 		})
 		return
 	}
-	message, err := gorm.UserContactService.ApplyContact(applyContactReq)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": message,
-		})
-	}
+	message, ret := gorm.UserContactService.ApplyContact(applyContactReq)
+	JsonBack(c, message, ret, nil)
 }
 
 // GetNewContactList 获取新的联系人申请列表
@@ -160,19 +88,8 @@ func GetNewContactList(c *gin.Context) {
 		})
 		return
 	}
-	message, data, err := gorm.UserContactService.GetNewContactList(req.OwnerId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": message,
-			"data":    data,
-		})
-	}
+	message, data, ret := gorm.UserContactService.GetNewContactList(req.OwnerId)
+	JsonBack(c, message, ret, data)
 }
 
 // PassContactApply 通过联系人申请
@@ -185,16 +102,6 @@ func PassContactApply(c *gin.Context) {
 		})
 		return
 	}
-	message, err := gorm.UserContactService.PassContactApply(passContactApplyReq.OwnerId, passContactApplyReq.ContactId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":    200,
-			"message": message,
-		})
-	}
+	message, ret := gorm.UserContactService.PassContactApply(passContactApplyReq.OwnerId, passContactApplyReq.ContactId)
+	JsonBack(c, message, ret, nil)
 }

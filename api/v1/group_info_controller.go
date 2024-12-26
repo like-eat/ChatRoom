@@ -17,17 +17,8 @@ func CreateGroup(c *gin.Context) {
 		})
 		return
 	}
-	if err := gorm.GroupInfoService.CreateGroup(createGroupReq); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "create group success",
-	})
+	message, ret := gorm.GroupInfoService.CreateGroup(createGroupReq)
+	JsonBack(c, message, ret, nil)
 }
 
 // LoadMyGroup 获取我创建的群聊
@@ -40,17 +31,6 @@ func LoadMyGroup(c *gin.Context) {
 		})
 		return
 	}
-	groupList, err := gorm.GroupInfoService.LoadMyGroup(loadMyGroupReq.OwnerId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
-		})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "load my group success",
-		"data":    groupList,
-	})
+	message, groupList, ret := gorm.GroupInfoService.LoadMyGroup(loadMyGroupReq.OwnerId)
+	JsonBack(c, message, ret, groupList)
 }

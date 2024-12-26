@@ -109,19 +109,18 @@ export default {
           "http://127.0.0.1:8000/register",
           data.registerData
         ); // 发送POST请求
-        console.log(response)
         if (response.data.code == 200) {
-          ElMessage.success("注册成功！");
+          ElMessage.success(response.data.message);
           console.log(response.data.message);
           sessionStorage.setItem("userInfo", response.data.data);
           router.push("/chat/sessionlist");
         } else {
-          ElMessage.error("注册失败！请重试！");
-          console.log(response.data.error);
+          ElMessage.error(response.data.message);
+          console.log(response.data.message);
         }
       } catch (error) {
-        ElMessage.error("注册失败！请重试！");
-        console.error(error);
+        ElMessage.error(error);
+        console.log(error);
       }
     };
     const checkTelephoneValid = () => {

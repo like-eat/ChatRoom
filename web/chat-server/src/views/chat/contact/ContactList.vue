@@ -868,7 +868,7 @@ export default {
         console.log(rsp);
         if (rsp.data.code == 200) {
           ElMessage.succress(rsp.data.message);
-        } else if (rsp.data.message != "") {
+        } else {
           ElMessage.error(rsp.data.message);
         }
       } catch (error) {

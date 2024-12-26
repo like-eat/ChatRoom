@@ -63,7 +63,7 @@ var GroupInfoService = new(groupInfoService)
 //}
 
 // CreateGroup 创建群聊
-func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) string {
+func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) (string, int) {
 	group := model.GroupInfo{
 		Uuid:      fmt.Sprintf("G%s", random.GetNowAndLenRandomString(11)),
 		Name:      groupReq.Name,
@@ -82,41 +82,43 @@ func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) stri
 	group.Members, err = json.Marshal(members)
 	if err != nil {
 		zlog.Error(err.Error())
-		return error_info.SYSTEM_ERROR
+		return error_info.SYSTEM_ERROR, -1
 	}
 	if res := dao.GormDB.Create(&group); res.Error != nil {
 		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, -1
 	}
+	return "创建成功", 0
 }
 
 // GetAllMembers 获取所有成员信息
-func (g *groupInfoService) GetAllMembers(groupId string) []string {
+func (g *groupInfoService) GetAllMembers(groupId string) ([]string, int) {
 	var group model.GroupInfo
 	res := dao.GormDB.Preload("Members").First(&group, "uuid = ?", groupId)
 	if res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			zlog.Error("群组不存在")
-			return nil
+			return nil, -1
 		} else {
 			zlog.Error(res.Error.Error())
-			return nil
+			return nil, -1
 		}
 	} else {
 		var members []string
 		if err := json.Unmarshal(group.Members, members); err != nil {
 			zlog.Error(err.Error())
-			return nil
+			return nil, -1
 		}
-		return members
+		return members, 0
 	}
 }
 
 // LoadMyGroup 获取我创建的群聊
-func (g *groupInfoService) LoadMyGroup(ownerId string) []respond.LoadMyGroupRespond {
+func (g *groupInfoService) LoadMyGroup(ownerId string) (string, []respond.LoadMyGroupRespond, int) {
 	var groupList []model.GroupInfo
 	if res := dao.GormDB.Order("created_at DESC").Where("owner_id = ?", ownerId).Find(&groupList); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return nil
+		return error_info.SYSTEM_ERROR, nil, -1
 	}
 	var groupListRsp []respond.LoadMyGroupRespond
 	for _, group := range groupList {
@@ -127,32 +129,22 @@ func (g *groupInfoService) LoadMyGroup(ownerId string) []respond.LoadMyGroupResp
 		})
 	}
 
-	return groupListRsp
+	return "获取成功", groupListRsp, 0
 }
 
 // GetGroupInfo 获取聊天详情
-func (g *groupInfoService) GetGroupInfo(userId string, groupId string) *model.GroupInfo {
+func (g *groupInfoService) GetGroupInfo(userId string, groupId string) (string, *model.GroupInfo, int) {
 	var user model.UserInfo
 	if res := dao.GormDB.First(&user, "uuid = ?", userId); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Error(res.Error.Error())
-			return nil
-		} else {
-			zlog.Error(res.Error.Error())
-			return nil
-		}
+		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, nil, -1
 	}
 	var group model.GroupInfo
 	if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Error(res.Error.Error())
-			return nil
-		} else {
-			zlog.Error(res.Error.Error())
-			return nil
-		}
+		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, nil, -1
 	}
-	return &group
+	return "获取成功", &group, 0
 }
 
 //func (g *groupInfoService) checkUserAndGroupValid(userId string, groupId string)
