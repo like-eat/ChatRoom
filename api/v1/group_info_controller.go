@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
+	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/zlog"
 	"net/http"
 )
 
@@ -11,9 +13,10 @@ import (
 func CreateGroup(c *gin.Context) {
 	var createGroupReq request.CreateGroupRequest
 	if err := c.BindJSON(&createGroupReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -25,9 +28,10 @@ func CreateGroup(c *gin.Context) {
 func LoadMyGroup(c *gin.Context) {
 	var loadMyGroupReq request.OwnlistRequest
 	if err := c.BindJSON(&loadMyGroupReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}

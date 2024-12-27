@@ -306,8 +306,10 @@
                     <el-dropdown-item @click="preToDeleteSession"
                       >删除该会话</el-dropdown-item
                     >
-                    <el-dropdown-item @click="preToDeleteContact">删除联系人</el-dropdown-item>
-                    <el-dropdown-item>拉黑联系人</el-dropdown-item>
+                    <el-dropdown-item @click="preToDeleteContact"
+                      >删除联系人</el-dropdown-item
+                    >
+                    <el-dropdown-item @click="preToBlackContact">拉黑联系人</el-dropdown-item>
                   </el-dropdown-menu>
                   <el-dropdown-menu
                     v-else-if="contactInfo.contact_id[0] === 'G'"
@@ -315,7 +317,9 @@
                     <el-dropdown-item @click="showGroupContactInfoModal"
                       >群聊信息</el-dropdown-item
                     >
-                    <el-dropdown-item @click="preToDeleteSession">删除该会话</el-dropdown-item>
+                    <el-dropdown-item @click="preToDeleteSession"
+                      >删除该会话</el-dropdown-item
+                    >
                     <el-dropdown-item>退出群聊</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -500,7 +504,7 @@ import { useRouter, onBeforeRouteUpdate } from "vue-router";
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage, ElMessageBox } from "element-plus";
 export default {
   name: "ContactChat",
   components: {
@@ -779,11 +783,14 @@ export default {
       }
     };
     const deleteSession = async () => {
-      try {        
+      try {
         const req = {
           session_id: data.sessionId,
         };
-        const rsp = await axios.post(store.state.backendUrl +"/session/deleteSession", req);
+        const rsp = await axios.post(
+          store.state.backendUrl + "/session/deleteSession",
+          req
+        );
         console.log(rsp.data);
       } catch (error) {
         console.error(error);
@@ -815,19 +822,61 @@ export default {
       }
     };
     const deleteContact = async () => {
-      try {        
+      try {
         const req = {
           owner_id: data.userInfo.uuid,
           contact_id: data.contactInfo.contact_id,
         };
-        const rsp = await axios.post(store.state.backendUrl +"/contact/deleteContact", req);
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/deleteContact",
+          req
+        );
         console.log(rsp.data);
       } catch (error) {
         console.error(error);
       }
       router.push("/chat/sessionlist");
     };
-    
+    const preToBlackContact = () => {
+      try {
+        ElMessageBox.confirm("确认拉黑该联系人？", "Warning", {
+          confirmButtonText: "确认",
+          cancelButtonText: "取消",
+          type: "warning",
+        })
+          .then(() => {
+            blackContact();
+            ElMessage({
+              type: "success",
+              message: "成功拉黑",
+            });
+          })
+          .catch(() => {
+            ElMessage({
+              type: "info",
+              message: "取消拉黑",
+            });
+          });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const blackContact = async () => {
+      try {
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: data.contactInfo.contact_id,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/blackContact",
+          req
+        );
+        console.log(rsp.data);
+      } catch (error) {
+        console.error(error);
+      }
+      router.push("/chat/sessionlist");
+    };
     return {
       ...toRefs(data),
       router,
@@ -854,6 +903,7 @@ export default {
       deleteSession,
       preToDeleteSession,
       preToDeleteContact,
+      preToBlackContact,
     };
   },
 };

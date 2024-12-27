@@ -170,7 +170,7 @@
                     </div>
                   </template>
                   <template v-slot:body>
-                    <div class="modal-body">
+                    <div class="newcontact-modal-body">
                       <el-scrollbar max-height="400px">
                         <ul
                           class="newcontact-list"
@@ -225,13 +225,7 @@
                     </div>
                   </template>
                   <template v-slot:footer>
-                    <div class="modal-footer">
-                      <el-button
-                        class="modal-close-btn"
-                        @click="closeNewContactModal"
-                      >
-                        完成
-                      </el-button>
+                    <div class="newcontact-modal-footer">
                     </div>
                   </template>
                 </SmallModal>
@@ -753,10 +747,6 @@ export default {
       data.newContactList = [];
     };
 
-    const closeNewContactModal = () => {
-      data.isNewContactModalVisible = false;
-      data.newContactList = [];
-    };
 
     const handleApplyContact = async () => {
       try {
@@ -833,7 +823,27 @@ export default {
     };
 
     const handleToChatUser = async (user) => {
-      router.push("/chat/" + user.user_id);
+      try {
+        const req = {
+          send_id: data.userInfo.uuid,
+          receive_id: user.user_id,
+        };
+        const rsp = await axios.post(store.state.backendUrl + "/session/checkOpenSessionAllowed", req);
+        if (rsp.data.code == 200) {
+          if (rsp.data.data == true) {
+            router.push("/chat/" + user.user_id);
+          } else {
+            ElMessage.warning(rsp.data.message);
+            console.warning(rsp.data.message);
+          }
+        } else {
+          ElMessage.error(rsp.data.message);
+          console.error(rsp.data.message);
+        }
+      } catch (error) {
+        ElMessage.error(error);
+        console.error(error);
+      }
     };
 
     const handleToChatGroup = async (group) => {
@@ -847,6 +857,7 @@ export default {
           store.state.backendUrl + "/contact/getNewContactList",
           data.ownListReq
         );
+        console.log(rsp);
         data.newContactList = rsp.data.data;
         if (data.newContactList == null) {
           ElMessage.warning("没有新的好友申请");
@@ -867,7 +878,8 @@ export default {
         const rsp = await axios.post(store.state.backendUrl + "/contact/passContactApply", req);
         console.log(rsp);
         if (rsp.data.code == 200) {
-          ElMessage.succress(rsp.data.message);
+          ElMessage.success(rsp.data.message);
+          data.newContactList = data.newContactList.filter(c => c.contact_id !== contactId);
         } else {
           ElMessage.error(rsp.data.message);
         }
@@ -888,7 +900,6 @@ export default {
       closeApplyContactModal,
       showNewContactModal,
       quitNewContactModal,
-      closeNewContactModal,
       handleShowUserList,
       handleHideUserList,
       handleShowMyGroupList,
@@ -1000,6 +1011,23 @@ h3 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.newcontact-modal-body {
+  height: 70%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.newcontact-modal-footer {
+  height: 10%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .modal-footer {

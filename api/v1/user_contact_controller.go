@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
+	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/zlog"
 	"log"
 	"net/http"
 )
@@ -12,9 +14,10 @@ import (
 func GetUserList(c *gin.Context) {
 	var myUserListReq request.OwnlistRequest
 	if err := c.BindJSON(&myUserListReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 	}
 	message, userList, ret := gorm.UserContactService.GetUserList(myUserListReq.OwnerId)
@@ -25,9 +28,10 @@ func GetUserList(c *gin.Context) {
 func LoadMyJoinedGroup(c *gin.Context) {
 	var loadMyJoinedGroupReq request.OwnlistRequest
 	if err := c.BindJSON(&loadMyJoinedGroupReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -39,9 +43,10 @@ func LoadMyJoinedGroup(c *gin.Context) {
 func GetContactInfo(c *gin.Context) {
 	var getContactInfoReq request.GetContactInfoRequest
 	if err := c.BindJSON(&getContactInfoReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -54,9 +59,10 @@ func GetContactInfo(c *gin.Context) {
 func DeleteContact(c *gin.Context) {
 	var deleteContactReq request.DeleteContactRequest
 	if err := c.BindJSON(&deleteContactReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -68,9 +74,10 @@ func DeleteContact(c *gin.Context) {
 func ApplyContact(c *gin.Context) {
 	var applyContactReq request.ApplyContactRequest
 	if err := c.BindJSON(&applyContactReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -82,9 +89,10 @@ func ApplyContact(c *gin.Context) {
 func GetNewContactList(c *gin.Context) {
 	var req request.OwnlistRequest
 	if err := c.BindJSON(&req); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -96,12 +104,28 @@ func GetNewContactList(c *gin.Context) {
 func PassContactApply(c *gin.Context) {
 	var passContactApplyReq request.PassContactApplyRequest
 	if err := c.BindJSON(&passContactApplyReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
 	message, ret := gorm.UserContactService.PassContactApply(passContactApplyReq.OwnerId, passContactApplyReq.ContactId)
+	JsonBack(c, message, ret, nil)
+}
+
+// BlackContact 拉黑联系人
+func BlackContact(c *gin.Context) {
+	var blackContactReq request.BlackContactRequest
+	if err := c.BindJSON(&blackContactReq); err != nil {
+		zlog.Error(err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
+		})
+		return
+	}
+	message, ret := gorm.UserContactService.BlackContact(blackContactReq.OwnerId, blackContactReq.ContactId)
 	JsonBack(c, message, ret, nil)
 }

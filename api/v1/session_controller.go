@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
+	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/zlog"
 	"net/http"
 )
 
@@ -11,9 +13,10 @@ import (
 func OpenSession(c *gin.Context) {
 	var openSessionReq request.OpenSessionRequest
 	if err := c.BindJSON(&openSessionReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -25,9 +28,10 @@ func OpenSession(c *gin.Context) {
 func GetUserSessionList(c *gin.Context) {
 	var getUserSessionListReq request.OwnlistRequest
 	if err := c.BindJSON(&getUserSessionListReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -39,9 +43,10 @@ func GetUserSessionList(c *gin.Context) {
 func GetGroupSessionList(c *gin.Context) {
 	var getGroupListReq request.OwnlistRequest
 	if err := c.BindJSON(&getGroupListReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -53,12 +58,28 @@ func GetGroupSessionList(c *gin.Context) {
 func DeleteSession(c *gin.Context) {
 	var deleteSessionReq request.DeleteSessionRequest
 	if err := c.BindJSON(&deleteSessionReq); err != nil {
+		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":  400,
-			"error": err.Error(),
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
 	message, ret := gorm.SessionService.DeleteSession(deleteSessionReq.SessionId)
 	JsonBack(c, message, ret, nil)
+}
+
+// CheckOpenSessionAllowed 检查是否可以打开会话
+func CheckOpenSessionAllowed(c *gin.Context) {
+	var req request.CreateSessionRequest
+	if err := c.BindJSON(&req); err != nil {
+		zlog.Error(err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": error_info.SYSTEM_ERROR,
+		})
+		return
+	}
+	message, res, ret := gorm.SessionService.CheckOpenSessionAllowed(req.SendId, req.ReceiveId)
+	JsonBack(c, message, ret, res)
 }

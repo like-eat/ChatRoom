@@ -8,6 +8,7 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/enum/contact/contact_status_enum"
 	"kama_chat_server/pkg/enum/error_info"
 	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
@@ -66,6 +67,21 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 		return error_info.SYSTEM_ERROR, "", -1
 	}
 	return "会话创建成功", session.Uuid, 0
+}
+
+// CheckOpenSessionAllowed 检查是否允许发起会话
+func (s *sessionService) CheckOpenSessionAllowed(sendId, receiveId string) (string, bool, int) {
+	var contact model.UserContact
+	if res := dao.GormDB.Where("user_id = ? and contact_id = ?", sendId, receiveId).First(&contact); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, false, -1
+	}
+	if contact.Status == contact_status_enum.BE_BLACK {
+		return "已被对方拉黑，无法发起会话", false, 0
+	} else if contact.Status == contact_status_enum.BLACK {
+		return "已拉黑对方，先解除拉黑状态才能发起会话", false, 0
+	}
+	return "可以发起会话", true, 0
 }
 
 // OpenSession 打开会话
