@@ -16,7 +16,7 @@ func Register(c *gin.Context) {
 	if err := c.BindJSON(&registerReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -32,7 +32,7 @@ func Login(c *gin.Context) {
 	if err := c.BindJSON(&loginReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return

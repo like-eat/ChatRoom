@@ -42,7 +42,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 		}
 		if receiveUser.Status == user_status_enum.DISABLE {
 			zlog.Error("该用户被禁用了")
-			return "该用户被禁用了", "", -1
+			return "该用户被禁用了", "", -2
 		} else {
 			session.ReceiveName = receiveUser.Nickname
 			session.Avatar = receiveUser.Avatar
@@ -55,7 +55,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 		}
 		if receiveGroup.Status == group_status_enum.DISABLE {
 			zlog.Error("该群聊被禁用了")
-			return "该群聊被禁用了", "", -1
+			return "该群聊被禁用了", "", -2
 		} else {
 			session.ReceiveName = receiveGroup.Name
 			session.Avatar = receiveGroup.Avatar
@@ -84,6 +84,8 @@ func (s *sessionService) CheckOpenSessionAllowed(sendId, receiveId string) (stri
 	return "可以发起会话", true, 0
 }
 
+// DeleteSession 删除会话
+
 // OpenSession 打开会话
 func (s *sessionService) OpenSession(req request.OpenSessionRequest) (string, string, int) {
 	var session model.Session
@@ -105,8 +107,8 @@ func (s *sessionService) GetUserSessionList(ownerId string) (string, []respond.U
 	var sessionList []model.Session
 	if res := dao.GormDB.Order("created_at DESC").Where("send_id = ?", ownerId).Find(&sessionList); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Error("用户会话没找到")
-			return "用户会话没找到", nil, -1
+			zlog.Info("未创建用户会话")
+			return "未创建用户会话", nil, 0
 		} else {
 			zlog.Error(res.Error.Error())
 			return error_info.SYSTEM_ERROR, nil, -1
@@ -131,8 +133,8 @@ func (s *sessionService) GetGroupSessionList(ownerId string) (string, []respond.
 	var sessionList []model.Session
 	if res := dao.GormDB.Order("created_at DESC").Where("send_id = ?", ownerId).Find(&sessionList); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Error("群聊会话没找到")
-			return "群聊会话没找到", nil, -1
+			zlog.Info("未创建群聊会话")
+			return "未创建群聊会话", nil, 0
 		} else {
 			zlog.Error(res.Error.Error())
 			return error_info.SYSTEM_ERROR, nil, -1

@@ -120,14 +120,8 @@
                 suffix-icon="Search"
               />
               <div class="contactlist-header-right">
-                <el-tooltip
-                  effect="customized"
-                  content="创建群聊"
-                  placement="top"
-                  hide-after="0"
-                  enterable="false"
-                >
-                  <button class="create-group-btn" @click="showCreateGroupModal">
+                <el-dropdown placement="bottom" trigger="click">
+                  <button class="create-group-btn">
                     <svg
                       t="1733664667695"
                       class="create-group-icon"
@@ -145,12 +139,178 @@
                       ></path>
                     </svg>
                   </button>
-                </el-tooltip>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="showCreateGroupModal">
+                        创建群聊
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="showApplyContactModal">
+                        添加用户/群聊
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="showNewContactModal">
+                        新的朋友
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                <SmallModal :isVisible="isNewContactModalVisible">
+                  <template v-slot:header>
+                    <div class="modal-header">
+                      <div class="modal-quit-btn-container">
+                        <button
+                          class="modal-quit-btn"
+                          @click="quitNewContactModal"
+                        >
+                          <el-icon><Close /></el-icon>
+                        </button>
+                      </div>
+                      <div class="modal-header-title">
+                        <h3>新的朋友</h3>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-slot:body>
+                    <div class="newcontact-modal-body">
+                      <el-scrollbar max-height="400px">
+                        <ul
+                          class="newcontact-list"
+                          style="list-style-type: none"
+                        >
+                          <li
+                            v-for="newContact in newContactList"
+                            :key="newContact.contact_id"
+                            class="newcontact-item"
+                          >
+                            <div
+                              style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                              "
+                            >
+                              <img
+                                :src="newContact.contact_avatar"
+                                style="
+                                  width: 30px;
+                                  height: 30px;
+                                  margin-right: 10px;
+                                "
+                              />
+
+                              <el-tooltip
+                                effect="customized"
+                                :content="newContact.message"
+                                placement="top"
+                                hide-after="0"
+                                enterable="false"
+                              >
+                                <div>
+                                  {{ newContact.contact_name }}
+                                </div>
+                              </el-tooltip>
+                            </div>
+                            <el-dropdown placement="right" trigger="click">
+                              <el-button class="action-btn"> 去处理 </el-button>
+                              <template #dropdown>
+                                <el-dropdown-menu>
+                                  <el-dropdown-item
+                                    @click="handleAgree(newContact.contact_id)"
+                                    >同意</el-dropdown-item
+                                  >
+                                  <el-dropdown-item
+                                    @click="handleReject(newContact.contact_id)"
+                                  >
+                                    拒绝
+                                  </el-dropdown-item>
+                                  <el-dropdown-item
+                                    @click="handleBlack(newContact.contact_id)"
+                                  >
+                                    拉黑
+                                  </el-dropdown-item>
+                                </el-dropdown-menu>
+                              </template>
+                            </el-dropdown>
+                          </li>
+                        </ul>
+                      </el-scrollbar>
+                    </div>
+                  </template>
+                  <template v-slot:footer>
+                    <div class="newcontact-modal-footer"></div>
+                  </template>
+                </SmallModal>
+                <SmallModal :isVisible="isApplyContactModalVisible">
+                  <template v-slot:header>
+                    <div class="modal-header">
+                      <div class="modal-quit-btn-container">
+                        <button
+                          class="modal-quit-btn"
+                          @click="quitApplyContactModal"
+                        >
+                          <el-icon><Close /></el-icon>
+                        </button>
+                      </div>
+                      <div class="modal-header-title">
+                        <h3>添加用户/群聊</h3>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-slot:body>
+                    <div class="modal-body">
+                      <el-form
+                        ref="formRef"
+                        :model="applyContactReq"
+                        label-width="100px"
+                        class="apply-contact-form"
+                      >
+                        <el-form-item
+                          prop="name"
+                          label="用户/群聊id"
+                          :rules="[
+                            {
+                              required: true,
+                              message: '此项为必填项',
+                              trigger: 'blur',
+                            },
+                          ]"
+                        >
+                          <el-input
+                            v-model="applyContactReq.contact_id"
+                            placeholder="请填写申请的用户/群聊id"
+                          />
+                        </el-form-item>
+                        <el-form-item prop="message" label="申请消息">
+                          <el-input
+                            v-model="applyContactReq.message"
+                            placeholder="选填，填写更容易通过"
+                            type="textarea"
+                            show-word-limit
+                            maxlength="100"
+                            :autosize="{ minRows: 3, maxRows: 3 }"
+                          />
+                        </el-form-item>
+                      </el-form>
+                    </div>
+                  </template>
+                  <template v-slot:footer>
+                    <div class="modal-footer">
+                      <el-button
+                        class="modal-close-btn"
+                        @click="closeApplyContactModal"
+                      >
+                        完成
+                      </el-button>
+                    </div>
+                  </template>
+                </SmallModal>
                 <Modal :isVisible="isCreateGroupModalVisible">
                   <template v-slot:header>
                     <div class="modal-header">
                       <div class="modal-quit-btn-container">
-                        <button class="modal-quit-btn" @click="quitCreateGroupModal">
+                        <button
+                          class="modal-quit-btn"
+                          @click="quitCreateGroupModal"
+                        >
                           <el-icon><Close /></el-icon>
                         </button>
                       </div>
@@ -220,7 +380,10 @@
                   </template>
                   <template v-slot:footer>
                     <div class="modal-footer">
-                      <el-button class="modal-close-btn" @click="closeCreateGroupModal">
+                      <el-button
+                        class="modal-close-btn"
+                        @click="closeCreateGroupModal"
+                      >
                         完成
                       </el-button>
                     </div>
@@ -388,10 +551,13 @@ import axios from "axios";
 import { useRouter } from "vue-router";
 import Modal from "@/components/Modal.vue";
 import { checkEmailValid } from "@/assets/js/valid.js";
+import SmallModal from "@/components/SmallModal.vue";
+import { ElMessage } from "element-plus";
 export default {
   name: "OwnInfo",
   components: {
     Modal,
+    SmallModal,
   },
   setup() {
     const data = reactive({
@@ -415,6 +581,8 @@ export default {
       },
       isMyInfoModalVisible: false,
       isCreateGroupModalVisible: false,
+      isNewContactModalVisible: false,
+      isApplyJoinGroupModalVisible: false,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -423,18 +591,19 @@ export default {
         add_mode: null,
         avatar: "",
       },
-      getUserListReq: {
-        owner_id: "",
-      },
       contactUserList: [],
-      loadMyGroupReq: {
-        owner_id: "",
-      },
       myGroupList: [],
-      loadMyJoinedGroupReq: {
+      myJoinedGroupList: [],
+      applyContactReq: {
+        owner_id: "",
+        contact_id: "",
+        message: "",
+      },
+      ownListReq: {
         owner_id: "",
       },
-      myJoinedGroupList: [],
+      newContactList: [],
+      applyContent: "",
     });
     const router = useRouter();
     const store = useStore();
@@ -548,10 +717,10 @@ export default {
 
     const handleShowUserList = async () => {
       try {
-        data.getUserListReq.owner_id = data.userInfo.uuid;
+        data.ownListReq.owner_id = data.userInfo.uuid;
         const getUserListRsp = await axios.post(
           store.state.backendUrl + "/contact/getUserList",
-          data.getUserListReq
+          data.ownListReq
         );
         data.contactUserList = getUserListRsp.data.data;
       } catch (error) {
@@ -564,10 +733,10 @@ export default {
 
     const handleShowMyGroupList = async () => {
       try {
-        data.loadMyGroupReq.owner_id = data.userInfo.uuid;
+        data.ownListReq.owner_id = data.userInfo.uuid;
         const loadMyGroupRsp = await axios.post(
           store.state.backendUrl + "/group/loadMyGroup",
-          data.loadMyGroupReq
+          data.ownListReq
         );
         data.myGroupList = loadMyGroupRsp.data.data;
       } catch (error) {
@@ -579,10 +748,10 @@ export default {
     };
     const handleShowMyJoinedGroupList = async () => {
       try {
-        data.loadMyJoinedGroupReq.owner_id = data.userInfo.uuid;
+        data.ownListReq.owner_id = data.userInfo.uuid;
         const loadMyJoinedGroupRsp = await axios.post(
           store.state.backendUrl + "/contact/loadMyJoinedGroup",
-          data.loadMyJoinedGroupReq
+          data.ownListReq
         );
         data.myJoinedGroupList = loadMyJoinedGroupRsp.data.data;
       } catch (error) {
@@ -591,6 +760,150 @@ export default {
     };
     const handleHideMyJoinedGroupList = () => {
       data.myJoinedGroupList = [];
+    };
+    const showApplyContactModal = () => {
+      data.isApplyContactModalVisible = true;
+    };
+    const quitApplyContactModal = () => {
+      data.isApplyContactModalVisible = false;
+    };
+    const closeApplyContactModal = () => {
+      if (data.applyContactReq.contact_id == "") {
+        ElMessage.error("请输入申请用户/群组id");
+        return;
+      }
+      handleApplyContact();
+    };
+
+    const showNewContactModal = () => {
+      handleNewContactList();
+    };
+
+    const quitNewContactModal = () => {
+      data.isNewContactModalVisible = false;
+      data.newContactList = [];
+    };
+
+    const handleApplyContact = async () => {
+      try {
+        data.applyContactReq.owner_id = data.userInfo.uuid;
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/applyContact",
+          data.applyContactReq
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          if (rsp.data.message == "申请成功") {
+            data.isApplyContactModalVisible = false;
+            ElMessage.success("申请成功");
+            return;
+          } else {
+            ElMessage.error(rsp.data.message);
+          }
+        } else {
+          ElMessage.error("申请失败");
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const handleToChatUser = async (user) => {
+      try {
+        const req = {
+          send_id: data.userInfo.uuid,
+          receive_id: user.user_id,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/session/checkOpenSessionAllowed",
+          req
+        );
+        if (rsp.data.code == 200) {
+          if (rsp.data.data == true) {
+            router.push("/chat/" + user.user_id);
+          } else {
+            ElMessage.warning(rsp.data.message);
+            console.error(rsp.data.message);
+          }
+        } else {
+          ElMessage.error(rsp.data.message);
+          console.error(rsp.data.message);
+        }
+      } catch (error) {
+        ElMessage.error(error);
+        console.error(error);
+      }
+    };
+
+    const handleToChatGroup = async (group) => {
+      router.push("/chat/" + group.group_id);
+    };
+
+    const handleNewContactList = async () => {
+      try {
+        data.ownListReq.owner_id = data.userInfo.uuid;
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/getNewContactList",
+          data.ownListReq
+        );
+        console.log(rsp);
+        data.newContactList = rsp.data.data;
+        if (data.newContactList == null) {
+          ElMessage.warning("没有新的好友申请");
+          return;
+        }
+        data.isNewContactModalVisible = true;
+        console.log(rsp);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const handleAgree = async (contactId) => {
+      try {
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: contactId,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/passContactApply",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          data.newContactList = data.newContactList.filter(
+            (c) => c.contact_id !== contactId
+          );
+        } else {
+          ElMessage.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const handleCancelBlack = async (user) => {
+      try {
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: user.user_id,
+        };
+        const rsp = await axios.post(store.state.backendUrl + "/contact/cancelBlackContact", req);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          console.log(rsp.data.message);
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+          console.log(rsp.data.message);
+        } else if (rsp.data.code == 500) {
+          ElMessage.error(rsp.data.message);
+          console.log(rsp.data.message);
+        }
+      } catch (error) {
+        ElMessage.error(error);
+        console.error(error);
+      }
     };
     return {
       ...toRefs(data),
@@ -610,6 +923,16 @@ export default {
       handleHideMyGroupList,
       handleShowMyJoinedGroupList,
       handleHideMyJoinedGroupList,
+      showApplyContactModal,
+      quitApplyContactModal,
+      closeApplyContactModal,
+      showNewContactModal,
+      quitNewContactModal,
+      handleToChatUser,
+      handleToChatGroup,
+      handleNewContactList,
+      handleAgree,
+      handleCancelBlack,
     };
   },
 };
@@ -684,7 +1007,28 @@ h3 {
 
 .modal-body {
   height: 55%;
-  width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.newcontact-modal-body {
+  height: 70%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.newcontact-modal-footer {
+  height: 10%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .modal-footer {
@@ -693,6 +1037,66 @@ h3 {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.modal-header-title {
+  height: 70%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.contactlist-avatar {
+  width: 30px;
+  height: 30px;
+  margin-right: 20px;
+}
+
+.newcontact-list {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.newcontact-item {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+}
+
+.action-btn {
+  background-color: rgb(252, 210.9, 210.9);
+  border: none;
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.contactlist-user-menu-item {
+  justify-content: center;
+  align-items: center;
+}
+
+.contactlist-user-item {
+  width: 221px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  color: rgba(43, 42, 42, 0.893);
+}
+
+.contactlist-user-avatar {
+  width: 30px;
+  height: 30px;
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 h2 {

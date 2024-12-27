@@ -15,7 +15,7 @@ func CreateGroup(c *gin.Context) {
 	if err := c.BindJSON(&createGroupReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -30,7 +30,7 @@ func LoadMyGroup(c *gin.Context) {
 	if err := c.BindJSON(&loadMyGroupReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return

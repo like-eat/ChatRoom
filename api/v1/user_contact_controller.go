@@ -16,7 +16,7 @@ func GetUserList(c *gin.Context) {
 	if err := c.BindJSON(&myUserListReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 	}
@@ -30,7 +30,7 @@ func LoadMyJoinedGroup(c *gin.Context) {
 	if err := c.BindJSON(&loadMyJoinedGroupReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -45,7 +45,7 @@ func GetContactInfo(c *gin.Context) {
 	if err := c.BindJSON(&getContactInfoReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -61,7 +61,7 @@ func DeleteContact(c *gin.Context) {
 	if err := c.BindJSON(&deleteContactReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -76,7 +76,7 @@ func ApplyContact(c *gin.Context) {
 	if err := c.BindJSON(&applyContactReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -91,7 +91,7 @@ func GetNewContactList(c *gin.Context) {
 	if err := c.BindJSON(&req); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -106,7 +106,7 @@ func PassContactApply(c *gin.Context) {
 	if err := c.BindJSON(&passContactApplyReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -117,15 +117,30 @@ func PassContactApply(c *gin.Context) {
 
 // BlackContact 拉黑联系人
 func BlackContact(c *gin.Context) {
-	var blackContactReq request.BlackContactRequest
-	if err := c.BindJSON(&blackContactReq); err != nil {
+	var req request.BlackContactRequest
+	if err := c.BindJSON(&req); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
 	}
-	message, ret := gorm.UserContactService.BlackContact(blackContactReq.OwnerId, blackContactReq.ContactId)
+	message, ret := gorm.UserContactService.BlackContact(req.OwnerId, req.ContactId)
+	JsonBack(c, message, ret, nil)
+}
+
+// CancelBlackContact 解除拉黑联系人
+func CancelBlackContact(c *gin.Context) {
+	var req request.BlackContactRequest
+	if err := c.BindJSON(&req); err != nil {
+		zlog.Error(err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": error_info.SYSTEM_ERROR,
+		})
+		return
+	}
+	message, ret := gorm.UserContactService.CancelBlackContact(req.OwnerId, req.ContactId)
 	JsonBack(c, message, ret, nil)
 }

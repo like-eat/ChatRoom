@@ -129,7 +129,7 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 			}, 0
 		} else {
 			zlog.Error("该群聊处于禁用状态")
-			return "该群聊处于禁用状态", nil, -1
+			return "该群聊处于禁用状态", nil, -2
 		}
 	} else {
 		var user model.UserInfo
@@ -150,7 +150,7 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 			}, 0
 		} else {
 			zlog.Info("该用户处于禁用状态")
-			return "该用户处于禁用状态", nil, -1
+			return "该用户处于禁用状态", nil, -2
 		}
 	}
 }
@@ -200,7 +200,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 		if res := dao.GormDB.First(&user, "uuid = ?", req.ContactId); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("用户不存在/已被禁用")
-				return "用户不存在/已被禁用", -1
+				return "用户不存在/已被禁用", -2
 			} else {
 				zlog.Error(res.Error.Error())
 				return error_info.SYSTEM_ERROR, -1
@@ -239,7 +239,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 		if res := dao.GormDB.First(&group, "uuid = ?", req.ContactId); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				zlog.Error("群聊不存在/已被禁用")
-				return "群聊不存在/已被禁用", -1
+				return "群聊不存在/已被禁用", -2
 			} else {
 				zlog.Error(res.Error.Error())
 				return error_info.SYSTEM_ERROR, -1
@@ -274,7 +274,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 		}
 		return "申请成功", 0
 	} else {
-		return "用户/群聊不存在", -1
+		return "用户/群聊不存在", -2
 	}
 
 }
@@ -325,7 +325,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 	}
 	if contactApply.DeletedAt.Valid {
 		zlog.Error("联系人已被禁用")
-		return "联系人已被禁用", -1
+		return "联系人已被禁用", -2
 	}
 	contactApply.Status = contact_apply_status_enum.AGREE
 	if res := dao.GormDB.Save(&contactApply); res.Error != nil {
@@ -361,27 +361,63 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 
 // BlackContact 拉黑联系人
 func (u *userContactService) BlackContact(ownerId string, contactId string) (string, int) {
+	// 拉黑
+	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", ownerId, contactId).Updates(map[string]interface{}{
+		"status":    contact_status_enum.BLACK,
+		"update_at": time.Now(),
+	}); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, -1
+	}
+	// 被拉黑
+	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", contactId, ownerId).Updates(map[string]interface{}{
+		"status":    contact_status_enum.BE_BLACK,
+		"update_at": time.Now(),
+	}); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, -1
+	}
+	// 删除会话
+	var deletedAt gorm.DeletedAt
+	deletedAt.Time = time.Now()
+	deletedAt.Valid = true
+	if res := dao.GormDB.Model(&model.Session{}).Where("send_id = ? AND receive_id = ?", ownerId, contactId).Update("deleted_at", deletedAt); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, -1
+	}
+	return "已拉黑该联系人", 0
+}
+
+// CancelBlackContact 取消拉黑联系人
+func (u *userContactService) CancelBlackContact(ownerId string, contactId string) (string, int) {
+	// 因为前端的设定，这里需要判断一下ownerId和contactId是不是有拉黑和被拉黑的状态
 	var blackContact model.UserContact
 	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", ownerId, contactId).First(&blackContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return error_info.SYSTEM_ERROR, -1
 	}
-	// 拉黑
-	blackContact.Status = contact_status_enum.BLACK
-	if res := dao.GormDB.Save(&blackContact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+	if blackContact.Status != contact_status_enum.BLACK {
+		return "未拉黑该联系人，无需解除拉黑", -2
 	}
 	var beBlackContact model.UserContact
 	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", contactId, ownerId).First(&beBlackContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return error_info.SYSTEM_ERROR, -1
 	}
-	// 被拉黑
-	beBlackContact.Status = contact_status_enum.BE_BLACK
+	if beBlackContact.Status != contact_status_enum.BE_BLACK {
+		return "该联系人未被拉黑，无需解除拉黑", -2
+	}
+
+	// 取消拉黑
+	blackContact.Status = contact_status_enum.NORMAL
+	beBlackContact.Status = contact_status_enum.NORMAL
+	if res := dao.GormDB.Save(&blackContact); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return error_info.SYSTEM_ERROR, -1
+	}
 	if res := dao.GormDB.Save(&beBlackContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return error_info.SYSTEM_ERROR, -1
 	}
-	return "已拉黑该联系人", 0
+	return "已解除拉黑该联系人", 0
 }

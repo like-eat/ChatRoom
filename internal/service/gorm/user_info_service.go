@@ -57,7 +57,7 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			message := "用户不存在，请注册"
 			zlog.Error(message)
-			return message, "", -1
+			return message, "", -2
 		}
 		zlog.Error(res.Error.Error())
 		return error_info.SYSTEM_ERROR, "", 0
@@ -65,7 +65,7 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 	if user.Password != password {
 		message := "密码不正确，请重试"
 		zlog.Error(message)
-		return message, "", -1
+		return message, "", -2
 	}
 	// 手机号验证，最后一步才调用api，省钱hhh
 	//if err := sms.VerificationCode(loginReq.Telephone); err != nil {
@@ -106,7 +106,7 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 		// 用户已经存在，注册失败
 		message := "用户已经存在，注册失败"
 		zlog.Error(message)
-		return message, "", -1
+		return message, "", -2
 	} else {
 		// 其他报错
 		if !errors.Is(res.Error, gorm.ErrRecordNotFound) {

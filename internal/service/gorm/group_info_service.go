@@ -2,9 +2,7 @@ package gorm
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
@@ -92,26 +90,26 @@ func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) (str
 }
 
 // GetAllMembers 获取所有成员信息
-func (g *groupInfoService) GetAllMembers(groupId string) ([]string, int) {
-	var group model.GroupInfo
-	res := dao.GormDB.Preload("Members").First(&group, "uuid = ?", groupId)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Error("群组不存在")
-			return nil, -1
-		} else {
-			zlog.Error(res.Error.Error())
-			return nil, -1
-		}
-	} else {
-		var members []string
-		if err := json.Unmarshal(group.Members, members); err != nil {
-			zlog.Error(err.Error())
-			return nil, -1
-		}
-		return members, 0
-	}
-}
+//func (g *groupInfoService) GetAllMembers(groupId string) ([]string, int) {
+//	var group model.GroupInfo
+//	res := dao.GormDB.Preload("Members").First(&group, "uuid = ?", groupId)
+//	if res.Error != nil {
+//		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+//			zlog.Error("群组不存在")
+//			return nil, -1
+//		} else {
+//			zlog.Error(res.Error.Error())
+//			return nil, -1
+//		}
+//	} else {
+//		var members []string
+//		if err := json.Unmarshal(group.Members, members); err != nil {
+//			zlog.Error(err.Error())
+//			return nil, -1
+//		}
+//		return members, 0
+//	}
+//}
 
 // LoadMyGroup 获取我创建的群聊
 func (g *groupInfoService) LoadMyGroup(ownerId string) (string, []respond.LoadMyGroupRespond, int) {

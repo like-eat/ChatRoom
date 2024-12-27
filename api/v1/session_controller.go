@@ -15,7 +15,7 @@ func OpenSession(c *gin.Context) {
 	if err := c.BindJSON(&openSessionReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -30,7 +30,7 @@ func GetUserSessionList(c *gin.Context) {
 	if err := c.BindJSON(&getUserSessionListReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -45,7 +45,7 @@ func GetGroupSessionList(c *gin.Context) {
 	if err := c.BindJSON(&getGroupListReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -60,7 +60,7 @@ func DeleteSession(c *gin.Context) {
 	if err := c.BindJSON(&deleteSessionReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return
@@ -75,7 +75,7 @@ func CheckOpenSessionAllowed(c *gin.Context) {
 	if err := c.BindJSON(&req); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
-			"code":    400,
+			"code":    500,
 			"message": error_info.SYSTEM_ERROR,
 		})
 		return

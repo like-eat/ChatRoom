@@ -213,9 +213,20 @@
                               <el-button class="action-btn"> 去处理 </el-button>
                               <template #dropdown>
                                 <el-dropdown-menu>
-                                  <el-dropdown-item @click="handleAgree(newContact.contact_id)">同意</el-dropdown-item>
-                                  <el-dropdown-item @click="handleReject(newContact.contact_id)"> 拒绝 </el-dropdown-item>
-                                  <el-dropdown-item @click="handleBlack(newContact.contact_id)"> 拉黑 </el-dropdown-item>
+                                  <el-dropdown-item
+                                    @click="handleAgree(newContact.contact_id)"
+                                    >同意</el-dropdown-item
+                                  >
+                                  <el-dropdown-item
+                                    @click="handleReject(newContact.contact_id)"
+                                  >
+                                    拒绝
+                                  </el-dropdown-item>
+                                  <el-dropdown-item
+                                    @click="handleBlack(newContact.contact_id)"
+                                  >
+                                    拉黑
+                                  </el-dropdown-item>
                                 </el-dropdown-menu>
                               </template>
                             </el-dropdown>
@@ -225,8 +236,7 @@
                     </div>
                   </template>
                   <template v-slot:footer>
-                    <div class="newcontact-modal-footer">
-                    </div>
+                    <div class="newcontact-modal-footer"></div>
                   </template>
                 </SmallModal>
                 <SmallModal :isVisible="isApplyContactModalVisible">
@@ -383,7 +393,7 @@
             </div>
             <div class="contactlist-body">
               <div class="contactlist-user">
-                <el-menu
+              <el-menu
                   router
                   unique-opened
                   @open="handleShowUserList"
@@ -398,11 +408,29 @@
                     v-for="user in contactUserList"
                     :key="user.user_id"
                     @click="handleToChatUser(user)"
+                    class="contactlist-user-menu-item"
                   >
-                    <img :src="user.avatar" class="contactlist-avatar" />
+                  <el-dropdown trigger="contextmenu" class="contactlist-dropdown"
+                  placement="right">
+                    <div class="contactlist-user-item">
+                  <img :src="user.avatar" class="contactlist-user-avatar" />
                     {{ user.user_name }}
+                  </div>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="handleCancelBlack(user)"
+                        >解除拉黑</el-dropdown-item
+                      >
+                      <!-- 其他菜单项 -->
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                  
+                    
                   </el-menu-item>
                 </el-menu>
+                
+                
                 <el-menu
                   router
                   unique-opened
@@ -747,7 +775,6 @@ export default {
       data.newContactList = [];
     };
 
-
     const handleApplyContact = async () => {
       try {
         data.applyContactReq.owner_id = data.userInfo.uuid;
@@ -828,13 +855,16 @@ export default {
           send_id: data.userInfo.uuid,
           receive_id: user.user_id,
         };
-        const rsp = await axios.post(store.state.backendUrl + "/session/checkOpenSessionAllowed", req);
+        const rsp = await axios.post(
+          store.state.backendUrl + "/session/checkOpenSessionAllowed",
+          req
+        );
         if (rsp.data.code == 200) {
           if (rsp.data.data == true) {
             router.push("/chat/" + user.user_id);
           } else {
             ElMessage.warning(rsp.data.message);
-            console.warning(rsp.data.message);
+            console.error(rsp.data.message);
           }
         } else {
           ElMessage.error(rsp.data.message);
@@ -869,17 +899,23 @@ export default {
         console.error(error);
       }
     };
+
     const handleAgree = async (contactId) => {
       try {
         const req = {
           owner_id: data.userInfo.uuid,
           contact_id: contactId,
         };
-        const rsp = await axios.post(store.state.backendUrl + "/contact/passContactApply", req);
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/passContactApply",
+          req
+        );
         console.log(rsp);
         if (rsp.data.code == 200) {
           ElMessage.success(rsp.data.message);
-          data.newContactList = data.newContactList.filter(c => c.contact_id !== contactId);
+          data.newContactList = data.newContactList.filter(
+            (c) => c.contact_id !== contactId
+          );
         } else {
           ElMessage.error(rsp.data.message);
         }
@@ -887,6 +923,30 @@ export default {
         console.error(error);
       }
     };
+
+    const handleCancelBlack = async (user) => {
+      try {
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: user.user_id,
+        };
+        const rsp = await axios.post(store.state.backendUrl + "/contact/cancelBlackContact", req);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          console.log(rsp.data.message);
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+          console.log(rsp.data.message);
+        } else if (rsp.data.code == 500) {
+          ElMessage.error(rsp.data.message);
+          console.log(rsp.data.message);
+        }
+      } catch (error) {
+        ElMessage.error(error);
+        console.error(error);
+      }
+    };
+    
     return {
       ...toRefs(data),
       router,
@@ -911,6 +971,7 @@ export default {
       handleToChatGroup,
       handleNewContactList,
       handleAgree,
+      handleCancelBlack,
     };
   },
 };
@@ -1077,4 +1138,26 @@ h3 {
   align-items: center;
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.contactlist-user-menu-item {
+  justify-content: center;
+  align-items: center;
+}
+
+.contactlist-user-item {
+  width: 221px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  color: rgba(43, 42, 42, 0.893);
+}
+
+.contactlist-user-avatar {
+  width: 30px;
+  height: 30px;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+
 </style>

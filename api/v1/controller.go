@@ -19,9 +19,14 @@ func JsonBack(c *gin.Context, message string, ret int, data interface{}) {
 				"message": message,
 			})
 		}
-	} else {
+	} else if ret == -2 {
 		c.JSON(http.StatusOK, gin.H{
 			"code":    400,
+			"message": message,
+		})
+	} else if ret == -1 {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
 			"message": message,
 		})
 	}
