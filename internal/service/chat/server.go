@@ -3,11 +3,11 @@ package chat
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/zlog"
 	"sync"
-
-	"github.com/gorilla/websocket"
 )
 
 type Server struct {
@@ -20,14 +20,14 @@ type Server struct {
 
 var ChatServer *Server
 
-func InitServer() {
+func init() {
 	if ChatServer == nil {
 		ChatServer = &Server{
 			Clients:  make(map[string]*Client),
 			mutex:    &sync.Mutex{},
-			Transmit: make(chan []byte),
-			Login:    make(chan *Client),
-			Logout:   make(chan *Client),
+			Transmit: make(chan []byte, constants.CHANNEL_SIZE),
+			Login:    make(chan *Client, constants.CHANNEL_SIZE),
+			Logout:   make(chan *Client, constants.CHANNEL_SIZE),
 		}
 	}
 }
@@ -44,21 +44,21 @@ func (s *Server) Start() {
 		case client := <-s.Login:
 			{
 				s.mutex.Lock()
-				s.Clients[client.Id] = client
+				s.Clients[client.Uuid] = client
 				s.mutex.Unlock()
-				err := client.Conn.WriteMessage(websocket.BinaryMessage, []byte("welcome to chat server"))
+				zlog.Debug(fmt.Sprintf("欢迎来到kama聊天服务器，亲爱的用户%s\n", client.Uuid))
+				err := client.Conn.WriteMessage(websocket.BinaryMessage, []byte("欢迎来到kama聊天服务器"))
 				if err != nil {
 					zlog.Error(err.Error())
 				}
-				zlog.Info(fmt.Sprintf("Client %s logged in\n", client.Id))
 			}
 
 		case client := <-s.Logout:
 			{
 				s.mutex.Lock()
-				delete(s.Clients, client.Id)
+				delete(s.Clients, client.Uuid)
 				s.mutex.Unlock()
-				zlog.Info(fmt.Sprintf("Client %s logged out\n", client.Id))
+				zlog.Info(fmt.Sprintf("Client %s logged out\n", client.Uuid))
 			}
 
 		case data := <-s.Transmit:

@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
-	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/zlog"
 	"log"
 	"net/http"
@@ -17,7 +17,7 @@ func GetUserList(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 	}
 	message, userList, ret := gorm.UserContactService.GetUserList(myUserListReq.OwnerId)
@@ -31,7 +31,7 @@ func LoadMyJoinedGroup(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -46,7 +46,7 @@ func GetContactInfo(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -62,7 +62,7 @@ func DeleteContact(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -77,7 +77,7 @@ func ApplyContact(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -92,7 +92,7 @@ func GetNewContactList(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -107,7 +107,7 @@ func PassContactApply(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -122,7 +122,7 @@ func BlackContact(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -137,7 +137,7 @@ func CancelBlackContact(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}

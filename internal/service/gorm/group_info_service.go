@@ -7,7 +7,7 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
-	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
@@ -80,11 +80,11 @@ func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) (str
 	group.Members, err = json.Marshal(members)
 	if err != nil {
 		zlog.Error(err.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	if res := dao.GormDB.Create(&group); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	return "创建成功", 0
 }
@@ -116,7 +116,7 @@ func (g *groupInfoService) LoadMyGroup(ownerId string) (string, []respond.LoadMy
 	var groupList []model.GroupInfo
 	if res := dao.GormDB.Order("created_at DESC").Where("owner_id = ?", ownerId).Find(&groupList); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, nil, -1
+		return constants.SYSTEM_ERROR, nil, -1
 	}
 	var groupListRsp []respond.LoadMyGroupRespond
 	for _, group := range groupList {
@@ -135,12 +135,12 @@ func (g *groupInfoService) GetGroupInfo(userId string, groupId string) (string, 
 	var user model.UserInfo
 	if res := dao.GormDB.First(&user, "uuid = ?", userId); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, nil, -1
+		return constants.SYSTEM_ERROR, nil, -1
 	}
 	var group model.GroupInfo
 	if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, nil, -1
+		return constants.SYSTEM_ERROR, nil, -1
 	}
 	return "获取成功", &group, 0
 }

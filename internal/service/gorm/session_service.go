@@ -8,8 +8,8 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/contact/contact_status_enum"
-	"kama_chat_server/pkg/enum/error_info"
 	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
@@ -27,7 +27,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 	var user model.UserInfo
 	if res := dao.GormDB.Where("uuid = ?", req.SendId).First(&user); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, "", -1
+		return constants.SYSTEM_ERROR, "", -1
 	}
 	var session model.Session
 	session.Uuid = fmt.Sprintf("S%s", random.GetNowAndLenRandomString(11))
@@ -38,7 +38,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 		var receiveUser model.UserInfo
 		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&receiveUser); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, "", -1
+			return constants.SYSTEM_ERROR, "", -1
 		}
 		if receiveUser.Status == user_status_enum.DISABLE {
 			zlog.Error("该用户被禁用了")
@@ -51,7 +51,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 		var receiveGroup model.GroupInfo
 		if res := dao.GormDB.Where("uuid = ?", req.ReceiveId).First(&receiveGroup); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, "", -1
+			return constants.SYSTEM_ERROR, "", -1
 		}
 		if receiveGroup.Status == group_status_enum.DISABLE {
 			zlog.Error("该群聊被禁用了")
@@ -64,7 +64,7 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 
 	if res := dao.GormDB.Create(&session); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, "", -1
+		return constants.SYSTEM_ERROR, "", -1
 	}
 	return "会话创建成功", session.Uuid, 0
 }
@@ -74,7 +74,7 @@ func (s *sessionService) CheckOpenSessionAllowed(sendId, receiveId string) (stri
 	var contact model.UserContact
 	if res := dao.GormDB.Where("user_id = ? and contact_id = ?", sendId, receiveId).First(&contact); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, false, -1
+		return constants.SYSTEM_ERROR, false, -1
 	}
 	if contact.Status == contact_status_enum.BE_BLACK {
 		return "已被对方拉黑，无法发起会话", false, 0
@@ -111,7 +111,7 @@ func (s *sessionService) GetUserSessionList(ownerId string) (string, []respond.U
 			return "未创建用户会话", nil, 0
 		} else {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 	}
 	var sessionListRsp []respond.UserSessionListRespond
@@ -137,7 +137,7 @@ func (s *sessionService) GetGroupSessionList(ownerId string) (string, []respond.
 			return "未创建群聊会话", nil, 0
 		} else {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 	}
 	var sessionListRsp []respond.GroupSessionListRespond
@@ -159,13 +159,13 @@ func (s *sessionService) DeleteSession(sessionId string) (string, int) {
 	var session model.Session
 	if res := dao.GormDB.Where("uuid = ?", sessionId).Find(&session); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	session.DeletedAt.Valid = true
 	session.DeletedAt.Time = time.Now()
 	if res := dao.GormDB.Save(&session); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	return "删除成功", 0
 }

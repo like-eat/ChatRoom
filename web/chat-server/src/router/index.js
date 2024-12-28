@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import store from '../store/index.js'
 
 const routes = [
   {
@@ -45,10 +46,19 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
-})
+});
+
 
 router.beforeEach((to, from, next) => {
-  next()
+  if (!store.state.userInfo.uuid) {
+    if (to.path === '/login' || to.path === '/register') {
+      next()
+      return
+    }
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

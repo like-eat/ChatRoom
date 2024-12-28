@@ -73,6 +73,7 @@ import { reactive, toRefs } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import { ElMessage } from 'element-plus';
+import { useStore } from 'vuex';
 export default {
   name: "Register",
   setup() {
@@ -84,6 +85,7 @@ export default {
       },
     });
     const router = useRouter();
+    const store = useStore();
     const handleRegister = async () => {
       try {
         if (
@@ -106,13 +108,13 @@ export default {
           return;
         }
         const response = await axios.post(
-          "http://127.0.0.1:8000/register",
+          store.state.backendUrl + "/register",
           data.registerData
         ); // 发送POST请求
         if (response.data.code == 200) {
           ElMessage.success(response.data.message);
           console.log(response.data.message);
-          sessionStorage.setItem("userInfo", response.data.data);
+          store.commit("setUserInfo", response.data.data);
           router.push("/chat/sessionlist");
         } else {
           ElMessage.error(response.data.message);

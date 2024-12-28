@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
-	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/zlog"
 	"net/http"
 )
@@ -17,7 +17,7 @@ func Register(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
@@ -33,7 +33,7 @@ func Login(c *gin.Context) {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
-			"message": error_info.SYSTEM_ERROR,
+			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}

@@ -10,4 +10,6 @@ type LoginRespond struct {
 	Birthday  string `json:"birthday"`
 	Signature string `json:"signature"`
 	CreatedAt string `json:"created_at"`
+	IsAdmin   int8   `json:"is_admin"`
+	Status    int8   `json:"status"`
 }

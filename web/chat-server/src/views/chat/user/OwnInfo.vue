@@ -91,11 +91,20 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Setting />
-                  </el-icon>
-                </button>
+                <el-dropdown trigger="click" placement="right">
+                  <button class="icon-btn">
+                    <el-icon>
+                      <Setting />
+                    </el-icon>
+                  </button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="logout"
+                        >退出登录</el-dropdown-item
+                      >
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </el-tooltip>
               <el-tooltip
                 effect="customized"
@@ -464,7 +473,7 @@
           <p class="owner-prefix">昵称：{{ userInfo.nickname }}</p>
           <p class="owner-prefix">电话：{{ userInfo.telephone }}</p>
           <p class="owner-prefix">邮箱：{{ userInfo.email }}</p>
-          <p class="owner-prefix">性别：{{ userInfo.gender }}</p>
+          <p class="owner-prefix">性别：{{ userInfo.gender === 0 ? '男' : '女' }}</p>
           <p class="owner-prefix">生日：{{ userInfo.birthday }}</p>
           <p class="owner-prefix">个性签名：{{ userInfo.signature }}</p>
           <p class="owner-prefix">
@@ -560,18 +569,10 @@ export default {
     SmallModal,
   },
   setup() {
+    const router = useRouter();
+    const store = useStore();
     const data = reactive({
-      userInfo: {
-        uuid: "",
-        nickname: "",
-        telephone: "",
-        avatar: "",
-        email: "",
-        gender: null,
-        birthday: "",
-        signature: "",
-        created_at: "",
-      },
+      userInfo: store.state.userInfo,
       updateInfo: {
         nickname: "",
         avatar: "",
@@ -582,7 +583,7 @@ export default {
       isMyInfoModalVisible: false,
       isCreateGroupModalVisible: false,
       isNewContactModalVisible: false,
-      isApplyJoinGroupModalVisible: false,
+      isApplyContactModalVisible: false,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -604,27 +605,6 @@ export default {
       },
       newContactList: [],
       applyContent: "",
-    });
-    const router = useRouter();
-    const store = useStore();
-    onMounted(() => {
-      const userInfoStr = sessionStorage.getItem("userInfo");
-      if (userInfoStr) {
-        try {
-          data.userInfo = JSON.parse(userInfoStr);
-          if (data.userInfo.gender == 0) {
-            data.userInfo.gender = "男";
-          } else {
-            data.userInfo.gender = "女";
-          }
-          console.log("反序列化用户信息成功:", data.userInfo);
-        } catch (error) {
-          console.error("反序列化用户信息时出错:", error);
-          data.userInfo = {};
-        }
-      } else {
-        data.userInfo = {};
-      }
     });
     const showMyInfoModal = () => {
       data.isMyInfoModalVisible = true;
@@ -670,8 +650,7 @@ export default {
       if (data.updateInfo.signature != "") {
         data.userInfo.signature = data.updateInfo.signature;
       }
-      const userInfoStr = JSON.stringify(data.userInfo);
-      localStorage.setItem("userInfo", userInfoStr);
+      store.commit("setUserInfo", data.userInfo);
       data.isMyInfoModalVisible = false;
     };
     const quitMyInfoModal = () => {

@@ -91,11 +91,20 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Setting />
-                  </el-icon>
-                </button>
+                <el-dropdown trigger="click" placement="right">
+                  <button class="icon-btn">
+                    <el-icon>
+                      <Setting />
+                    </el-icon>
+                  </button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="logout"
+                        >退出登录</el-dropdown-item
+                      >
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </el-tooltip>
               <el-tooltip
                 effect="customized"
@@ -354,15 +363,14 @@ export default {
   components: {
     Modal,
   },
+  
   setup() {
+    const router = useRouter();
+    const store = useStore();
     const data = reactive({
       chatMessage: "",
       chatName: "",
-      userInfo: {
-        uuid: "",
-        nickname: "",
-        telephone: "",
-      },
+      userInfo: store.state.userInfo,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -378,22 +386,8 @@ export default {
       userSessionList: [],
       groupSessionList: [],
     });
-
-    onMounted(() => {
-      const userInfoStr = sessionStorage.getItem("userInfo");
-      if (userInfoStr) {
-        try {
-          data.userInfo = JSON.parse(userInfoStr);
-        } catch (error) {
-          console.error("反序列化用户信息时出错:", error);
-          data.userInfo = {};
-        }
-      } else {
-        data.userInfo = {};
-      }
-    });
-    const router = useRouter();
-    const store = useStore();
+    
+    
     const handleToOwnInfo = () => {
       router.push("/chat/owninfo");
     };

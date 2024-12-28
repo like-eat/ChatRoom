@@ -1,7 +1,6 @@
 package gorm
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -10,7 +9,8 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
-	"kama_chat_server/pkg/enum/error_info"
+	"kama_chat_server/pkg/constants"
+	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
 	"regexp"
@@ -49,7 +49,7 @@ func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) int8 {
 }
 
 // Login 登录
-func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, string, int) {
+func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, *respond.LoginRespond, int) {
 	password := loginReq.Password
 	var user model.UserInfo
 	res := dao.GormDB.First(&user, "telephone = ?", loginReq.Telephone)
@@ -57,26 +57,23 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			message := "用户不存在，请注册"
 			zlog.Error(message)
-			return message, "", -2
+			return message, nil, -2
 		}
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, "", 0
+		return constants.SYSTEM_ERROR, nil, -1
 	}
 	if user.Password != password {
 		message := "密码不正确，请重试"
 		zlog.Error(message)
-		return message, "", -2
+		return message, nil, -2
 	}
 	// 手机号验证，最后一步才调用api，省钱hhh
 	//if err := sms.VerificationCode(loginReq.Telephone); err != nil {
 	//	zlog.Error(err.Error())
 	//	return "", err
 	//}
-	// 登录成功，chat client建立
-	//if err := chat.NewClientInit(c, user.Uuid); err != nil {
-	//	return "", err
-	//}
-	loginRsp := respond.LoginRespond{
+
+	loginRsp := &respond.LoginRespond{
 		Uuid:      user.Uuid,
 		Telephone: user.Telephone,
 		Nickname:  user.Nickname,
@@ -85,19 +82,17 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 		Gender:    user.Gender,
 		Birthday:  user.Birthday,
 		Signature: user.Signature,
+		IsAdmin:   user.IsAdmin,
+		Status:    user.Status,
 	}
 	year, month, day := user.CreatedAt.Date()
 	loginRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
-	loginRspStr, err := json.Marshal(loginRsp)
-	if err != nil {
-		zlog.Error(err.Error())
-		return error_info.SYSTEM_ERROR, "", -1
-	}
-	return "登陆成功!", string(loginRspStr), 0
+
+	return "登陆成功!", loginRsp, 0
 }
 
 // Register 注册，返回(message, register_respond_string, error)
-func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, string, int) {
+func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, *respond.RegisterRespond, int) {
 	// 不用校验手机号，前端校验
 
 	var newUser model.UserInfo
@@ -106,12 +101,12 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 		// 用户已经存在，注册失败
 		message := "用户已经存在，注册失败"
 		zlog.Error(message)
-		return message, "", -2
+		return message, nil, -2
 	} else {
 		// 其他报错
 		if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, "", -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 		// 可以继续注册
 	}
@@ -122,6 +117,7 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 	newUser.Avatar = "https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
 	newUser.CreatedAt = time.Now()
 	newUser.IsAdmin = u.checkUserIsAdminOrNot(newUser)
+	newUser.Status = user_status_enum.NORMAL
 	// 手机号验证，最后一步才调用api，省钱hhh
 	//err := sms.VerificationCode(registerReq.Telephone)
 	//if err != nil {
@@ -131,14 +127,14 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 	res = dao.GormDB.Create(&newUser)
 	if res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, "", -1
+		return constants.SYSTEM_ERROR, nil, -1
 	}
 	// 注册成功，chat client建立
 	//if err := chat.NewClientInit(c, newUser.Uuid); err != nil {
 	//	return "", err
 	//}
 	newUser.LastOnlineAt = time.Now()
-	registerRsp := respond.LoginRespond{
+	registerRsp := &respond.RegisterRespond{
 		Uuid:      newUser.Uuid,
 		Telephone: newUser.Telephone,
 		Nickname:  newUser.Nickname,
@@ -147,13 +143,11 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 		Gender:    newUser.Gender,
 		Birthday:  newUser.Birthday,
 		Signature: newUser.Signature,
+		IsAdmin:   newUser.IsAdmin,
+		Status:    newUser.Status,
 	}
 	year, month, day := newUser.CreatedAt.Date()
 	registerRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
-	registerRspStr, err := json.Marshal(registerRsp)
-	if err != nil {
-		zlog.Error(err.Error())
-		return error_info.SYSTEM_ERROR, "", -1
-	}
-	return "注册成功!", string(registerRspStr), 0
+
+	return "注册成功!", registerRsp, 0
 }

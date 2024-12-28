@@ -8,10 +8,10 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/contact/contact_status_enum"
 	"kama_chat_server/pkg/enum/contact/contact_type_enum"
 	"kama_chat_server/pkg/enum/contact_apply/contact_apply_status_enum"
-	"kama_chat_server/pkg/enum/error_info"
 	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
@@ -38,7 +38,7 @@ func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUs
 			return message, nil, 0
 		} else {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 	}
 	// dto
@@ -51,7 +51,7 @@ func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUs
 			if res := dao.GormDB.First(&user, "uuid = ?", contact.ContactId); res.Error != nil {
 				// 肯定是存在的，不可能无缘无故删掉，目前不用加notfound的判断
 				zlog.Error(res.Error.Error())
-				return error_info.SYSTEM_ERROR, nil, -1
+				return constants.SYSTEM_ERROR, nil, -1
 			}
 			userListRsp = append(userListRsp, respond.MyUserListRespond{
 				UserId:   user.Uuid,
@@ -75,7 +75,7 @@ func (u *userContactService) LoadMyJoinedGroup(ownerId string) (string, []respon
 			return message, nil, 0
 		} else {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 	}
 	var groupList []model.GroupInfo
@@ -85,7 +85,7 @@ func (u *userContactService) LoadMyJoinedGroup(ownerId string) (string, []respon
 			var group model.GroupInfo
 			if res := dao.GormDB.First(&group, "uuid = ?", contact.ContactId); res.Error != nil {
 				zlog.Error(res.Error.Error())
-				return error_info.SYSTEM_ERROR, nil, -1
+				return constants.SYSTEM_ERROR, nil, -1
 			}
 			// 群没被删除，同时群主不是自己
 			// 群主删除或admin删除群聊，status为7，即被踢出群聊，所以不用判断群是否被删除，删除了到不了这步
@@ -113,7 +113,7 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 		var group model.GroupInfo
 		if res := dao.GormDB.First(&group, "uuid = ?", contactId); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 		// 没被禁用
 		if group.Status != group_status_enum.DISABLE {
@@ -135,7 +135,7 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 		var user model.UserInfo
 		if res := dao.GormDB.First(&user, "uuid = ?", contactId); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 		if user.Status != user_status_enum.DISABLE {
 			return "获取联系人信息成功", &respond.GetContactInfoRespond{
@@ -166,7 +166,7 @@ func (u *userContactService) DeleteContact(ownerId, contactId string) (string, i
 		"status":     contact_status_enum.DELETE,
 	}); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 
 	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", contactId, ownerId).Updates(map[string]interface{}{
@@ -174,21 +174,21 @@ func (u *userContactService) DeleteContact(ownerId, contactId string) (string, i
 		"status":     contact_status_enum.BE_DELETE,
 	}); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 
 	if res := dao.GormDB.Model(&model.Session{}).Where("send_id = ? AND receive_id = ?", ownerId, contactId).Update("deleted_at", deletedAt); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	// 联系人添加的记录得删，这样之后再添加就看新的申请记录，如果申请记录结果是拉黑就没法再添加，如果是拒绝可以再添加
 	if res := dao.GormDB.Model(&model.ContactApply{}).Where("contact_id = ? AND user_id = ?", ownerId, contactId).Update("deleted_at", deletedAt); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	if res := dao.GormDB.Model(&model.ContactApply{}).Where("contact_id = ? AND user_id = ?", contactId, ownerId).Update("deleted_at", deletedAt); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	return "删除联系人成功", 0
 }
@@ -203,7 +203,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 				return "用户不存在/已被禁用", -2
 			} else {
 				zlog.Error(res.Error.Error())
-				return error_info.SYSTEM_ERROR, -1
+				return constants.SYSTEM_ERROR, -1
 			}
 		}
 		var contactApply model.ContactApply
@@ -220,18 +220,18 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 				}
 				if res := dao.GormDB.Create(&contactApply); res.Error != nil {
 					zlog.Error(res.Error.Error())
-					return error_info.SYSTEM_ERROR, -1
+					return constants.SYSTEM_ERROR, -1
 				}
 			} else {
 				zlog.Error(res.Error.Error())
-				return error_info.SYSTEM_ERROR, -1
+				return constants.SYSTEM_ERROR, -1
 			}
 		}
 		contactApply.LastApplyAt = time.Now()
 
 		if res := dao.GormDB.Save(&contactApply); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, -1
+			return constants.SYSTEM_ERROR, -1
 		}
 		return "申请成功", 0
 	} else if req.ContactId[0] == 'G' {
@@ -242,7 +242,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 				return "群聊不存在/已被禁用", -2
 			} else {
 				zlog.Error(res.Error.Error())
-				return error_info.SYSTEM_ERROR, -1
+				return constants.SYSTEM_ERROR, -1
 			}
 		}
 		var contactApply model.ContactApply
@@ -259,18 +259,18 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 				}
 				if res := dao.GormDB.Create(&contactApply); res.Error != nil {
 					zlog.Error(res.Error.Error())
-					return error_info.SYSTEM_ERROR, -1
+					return constants.SYSTEM_ERROR, -1
 				}
 			} else {
 				zlog.Error(res.Error.Error())
-				return error_info.SYSTEM_ERROR, -1
+				return constants.SYSTEM_ERROR, -1
 			}
 		}
 		contactApply.LastApplyAt = time.Now()
 
 		if res := dao.GormDB.Save(&contactApply); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return error_info.SYSTEM_ERROR, -1
+			return constants.SYSTEM_ERROR, -1
 		}
 		return "申请成功", 0
 	} else {
@@ -306,7 +306,7 @@ func (u *userContactService) GetNewContactList(ownerId string) (string, []respon
 		}
 		var user model.UserInfo
 		if res := dao.GormDB.First(&user, "uuid = ?", contactApply.UserId); res.Error != nil {
-			return error_info.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 		newContact.ContactId = user.Uuid
 		newContact.ContactName = user.Nickname
@@ -321,7 +321,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 	var contactApply model.ContactApply
 	if res := dao.GormDB.Where("contact_id = ? AND user_id = ?", ownerId, contactId).First(&contactApply); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	if contactApply.DeletedAt.Valid {
 		zlog.Error("联系人已被禁用")
@@ -330,7 +330,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 	contactApply.Status = contact_apply_status_enum.AGREE
 	if res := dao.GormDB.Save(&contactApply); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	newContact := model.UserContact{
 		UserId:      ownerId,
@@ -342,7 +342,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 	}
 	if res := dao.GormDB.Create(&newContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	anotherContact := model.UserContact{
 		UserId:      contactId,
@@ -354,7 +354,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 	}
 	if res := dao.GormDB.Create(&anotherContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	return "已添加该联系人", 0
 }
@@ -367,7 +367,7 @@ func (u *userContactService) BlackContact(ownerId string, contactId string) (str
 		"update_at": time.Now(),
 	}); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	// 被拉黑
 	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", contactId, ownerId).Updates(map[string]interface{}{
@@ -375,7 +375,7 @@ func (u *userContactService) BlackContact(ownerId string, contactId string) (str
 		"update_at": time.Now(),
 	}); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	// 删除会话
 	var deletedAt gorm.DeletedAt
@@ -383,7 +383,7 @@ func (u *userContactService) BlackContact(ownerId string, contactId string) (str
 	deletedAt.Valid = true
 	if res := dao.GormDB.Model(&model.Session{}).Where("send_id = ? AND receive_id = ?", ownerId, contactId).Update("deleted_at", deletedAt); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	return "已拉黑该联系人", 0
 }
@@ -394,7 +394,7 @@ func (u *userContactService) CancelBlackContact(ownerId string, contactId string
 	var blackContact model.UserContact
 	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", ownerId, contactId).First(&blackContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	if blackContact.Status != contact_status_enum.BLACK {
 		return "未拉黑该联系人，无需解除拉黑", -2
@@ -402,7 +402,7 @@ func (u *userContactService) CancelBlackContact(ownerId string, contactId string
 	var beBlackContact model.UserContact
 	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", contactId, ownerId).First(&beBlackContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	if beBlackContact.Status != contact_status_enum.BE_BLACK {
 		return "该联系人未被拉黑，无需解除拉黑", -2
@@ -413,11 +413,11 @@ func (u *userContactService) CancelBlackContact(ownerId string, contactId string
 	beBlackContact.Status = contact_status_enum.NORMAL
 	if res := dao.GormDB.Save(&blackContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	if res := dao.GormDB.Save(&beBlackContact); res.Error != nil {
 		zlog.Error(res.Error.Error())
-		return error_info.SYSTEM_ERROR, -1
+		return constants.SYSTEM_ERROR, -1
 	}
 	return "已解除拉黑该联系人", 0
 }

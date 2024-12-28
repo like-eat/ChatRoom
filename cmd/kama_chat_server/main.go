@@ -6,7 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	v1 "kama_chat_server/api/v1"
 	"kama_chat_server/config"
-	"log"
+	"kama_chat_server/internal/service/chat"
+	"kama_chat_server/pkg/zlog"
 )
 
 func main() {
@@ -36,12 +37,16 @@ func main() {
 	r.POST("/contact/passContactApply", v1.PassContactApply)
 	r.POST("/contact/blackContact", v1.BlackContact)
 	r.POST("/contact/cancelBlackContact", v1.CancelBlackContact)
+	r.GET("/ws", v1.WsHandler)
 	conf := config.GetConfig()
 	host := conf.MainConfig.Host
 	port := conf.MainConfig.Port
 
+	go chat.ChatServer.Start()
+
 	if err := r.Run(fmt.Sprintf("%s:%d", host, port)); err != nil {
-		log.Fatal("server running fault")
+		zlog.Fatal("server running fault")
 		return
 	}
+
 }

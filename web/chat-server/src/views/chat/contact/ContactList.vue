@@ -91,11 +91,20 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Setting />
-                  </el-icon>
-                </button>
+                <el-dropdown trigger="click" placement="right">
+                  <button class="icon-btn">
+                    <el-icon>
+                      <Setting />
+                    </el-icon>
+                  </button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="logout"
+                        >退出登录</el-dropdown-item
+                      >
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </el-tooltip>
               <el-tooltip
                 effect="customized"
@@ -393,7 +402,7 @@
             </div>
             <div class="contactlist-body">
               <div class="contactlist-user">
-              <el-menu
+                <el-menu
                   router
                   unique-opened
                   @open="handleShowUserList"
@@ -410,27 +419,30 @@
                     @click="handleToChatUser(user)"
                     class="contactlist-user-menu-item"
                   >
-                  <el-dropdown trigger="contextmenu" class="contactlist-dropdown"
-                  placement="right">
-                    <div class="contactlist-user-item">
-                  <img :src="user.avatar" class="contactlist-user-avatar" />
-                    {{ user.user_name }}
-                  </div>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item @click="handleCancelBlack(user)"
-                        >解除拉黑</el-dropdown-item
-                      >
-                      <!-- 其他菜单项 -->
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-                  
-                    
+                    <el-dropdown
+                      trigger="contextmenu"
+                      class="contactlist-dropdown"
+                      placement="right"
+                    >
+                      <div class="contactlist-user-item">
+                        <img
+                          :src="user.avatar"
+                          class="contactlist-user-avatar"
+                        />
+                        {{ user.user_name }}
+                      </div>
+                      <template #dropdown>
+                        <el-dropdown-menu>
+                          <el-dropdown-item @click="handleCancelBlack(user)"
+                            >解除拉黑</el-dropdown-item
+                          >
+                          <!-- 其他菜单项 -->
+                        </el-dropdown-menu>
+                      </template>
+                    </el-dropdown>
                   </el-menu-item>
                 </el-menu>
-                
-                
+
                 <el-menu
                   router
                   unique-opened
@@ -666,14 +678,12 @@ export default {
     SmallModal,
   },
   setup() {
+    const router = useRouter();
+    const store = useStore();
     const data = reactive({
       chatMessage: "",
       chatName: "",
-      userInfo: {
-        uuid: "",
-        nickname: "",
-        telephone: "",
-      },
+      userInfo: store.state.userInfo,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -700,26 +710,6 @@ export default {
       applyContent: "",
     });
 
-    onMounted(() => {
-      const userInfoStr = sessionStorage.getItem("userInfo");
-      if (userInfoStr) {
-        try {
-          data.userInfo = JSON.parse(userInfoStr);
-          if (data.userInfo.gender == 0) {
-            data.userInfo.gender = "男";
-          } else {
-            data.userInfo.gender = "女";
-          }
-        } catch (error) {
-          console.error("反序列化用户信息时出错:", error);
-          data.userInfo = {};
-        }
-      } else {
-        data.userInfo = {};
-      }
-    });
-    const router = useRouter();
-    const store = useStore();
     const handleToOwnInfo = () => {
       router.push("/chat/owninfo");
     };
@@ -930,7 +920,10 @@ export default {
           owner_id: data.userInfo.uuid,
           contact_id: user.user_id,
         };
-        const rsp = await axios.post(store.state.backendUrl + "/contact/cancelBlackContact", req);
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/cancelBlackContact",
+          req
+        );
         if (rsp.data.code == 200) {
           ElMessage.success(rsp.data.message);
           console.log(rsp.data.message);
@@ -946,7 +939,12 @@ export default {
         console.error(error);
       }
     };
-    
+
+    const logout = () => {
+      store.commit("cleanUserInfo");
+      router.push("/login");
+    };
+
     return {
       ...toRefs(data),
       router,
@@ -972,6 +970,7 @@ export default {
       handleNewContactList,
       handleAgree,
       handleCancelBlack,
+      logout,
     };
   },
 };
@@ -1158,6 +1157,4 @@ h3 {
   margin-left: 20px;
   margin-right: 20px;
 }
-
-
 </style>

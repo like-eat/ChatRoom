@@ -56,7 +56,8 @@
 import { reactive, toRefs } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
-import { ElMessage } from 'element-plus';
+import { ElMessage } from "element-plus";
+import { useStore } from "vuex";
 export default {
   name: "Login",
   setup() {
@@ -67,6 +68,7 @@ export default {
       },
     });
     const router = useRouter();
+    const store = useStore();
     const handleLogin = async () => {
       try {
         if (!data.loginData.telephone || !data.loginData.password) {
@@ -78,14 +80,36 @@ export default {
           return;
         }
         const response = await axios.post(
-          "http://127.0.0.1:8000/login",
+          store.state.backendUrl + "/login",
           data.loginData
         );
         console.log(response);
         if (response.data.code == 200) {
-          ElMessage.success(response.data.message);
-          sessionStorage.setItem("userInfo", response.data.data);
-          router.push("/chat/sessionlist");
+          try {
+            ElMessage.success(response.data.message);
+            store.commit("setUserInfo", response.data.data);
+            // 准备创建websocket连接
+            // const wsUrl =
+            //   store.state.wsUrl + "/ws?client_id=" + response.data.data.uuid;
+            const wsUrl = store.state.wsUrl + "/ws";
+            console.log(wsUrl);
+            store.state.socket = new WebSocket(wsUrl);
+            store.state.socket.onopen = () => {
+              console.log("WebSocket连接已打开");
+            };
+            store.state.socket.onmessage = (message) => {
+              console.log("收到消息：", JSON.parse(message.data));
+            };
+            store.state.socket.onclose = () => {
+              console.log("WebSocket连接已关闭");
+            };
+            store.state.socket.onerror = () => {
+              console.log("WebSocket连接发生错误");
+            };
+            router.push("/chat/sessionlist");
+          } catch (error) {
+            console.log(error);
+          }
         } else {
           ElMessage.error(response.data.message);
         }

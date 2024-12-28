@@ -91,11 +91,20 @@
                 hide-after="0"
                 enterable="false"
               >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Setting />
-                  </el-icon>
-                </button>
+                <el-dropdown trigger="click" placement="right">
+                  <button class="icon-btn">
+                    <el-icon>
+                      <Setting />
+                    </el-icon>
+                  </button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="logout"
+                        >退出登录</el-dropdown-item
+                      >
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </el-tooltip>
               <el-tooltip
                 effect="customized"
@@ -511,14 +520,12 @@ export default {
     Modal,
   },
   setup() {
+    const router = useRouter();
+    const store = useStore();
     const data = reactive({
       chatMessage: "",
       chatName: "",
-      userInfo: {
-        uuid: "",
-        nickname: "",
-        telephone: "",
-      },
+      userInfo: store.state.userInfo,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -566,8 +573,6 @@ export default {
       groupSessionList: [],
       sessionId: "",
     });
-    const router = useRouter();
-    const store = useStore();
     //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate((to, from, next) => {
       getChatContactInfo(to.params.id);
@@ -617,17 +622,6 @@ export default {
 
     // 这是刚渲染/chat/:id页面的时候会调用
     onMounted(() => {
-      const userInfoStr = sessionStorage.getItem("userInfo");
-      if (userInfoStr) {
-        try {
-          data.userInfo = JSON.parse(userInfoStr);
-        } catch (error) {
-          console.error("反序列化用户信息时出错:", error);
-          data.userInfo = {};
-        }
-      } else {
-        data.userInfo = {};
-      }
       try {
         getChatContactInfo(router.currentRoute.value.params.id);
         getSessionId(router.currentRoute.value.params.id);
@@ -636,6 +630,7 @@ export default {
         console.error(error);
       }
     });
+
 
     const handleToContactList = () => {
       router.push("/chat/contactlist");

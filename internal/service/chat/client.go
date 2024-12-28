@@ -3,13 +3,15 @@ package chat
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/zlog"
 	"net/http"
+	"time"
 )
 
 type Client struct {
 	Conn *websocket.Conn
-	Id   string
+	Uuid string
 	Send chan []byte
 }
 
@@ -26,7 +28,7 @@ var upgrader = websocket.Upgrader{
 func (c *Client) Read() {
 	defer func() {
 		if err := c.Conn.Close(); err != nil {
-			zlog.Fatal(err.Error())
+			zlog.Error(err.Error())
 		}
 		close(c.Send)
 	}()
@@ -37,6 +39,7 @@ func (c *Client) Read() {
 		} else {
 			c.Send <- message
 		}
+		time.Sleep(1)
 	}
 }
 
@@ -44,7 +47,7 @@ func (c *Client) Read() {
 func (c *Client) Write() {
 	defer func() {
 		if err := c.Conn.Close(); err != nil {
-			zlog.Fatal(err.Error())
+			zlog.Error(err.Error())
 		}
 	}()
 	for message := range c.Send {
@@ -57,25 +60,24 @@ func (c *Client) Write() {
 }
 
 // NewClientInit 当接受到前端有登录消息时，会调用该函数
-func NewClientInit(c *gin.Context, clientId string) error {
+func NewClientInit(c *gin.Context, clientId string) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		zlog.Fatal(err.Error())
-		return err
+		zlog.Error(err.Error())
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			zlog.Fatal(err.Error())
+			zlog.Error(err.Error())
 		}
 	}()
 
 	client := &Client{
 		Conn: conn,
-		Id:   clientId,
-		Send: make(chan []byte),
+		Uuid: clientId,
+		Send: make(chan []byte, constants.CHANNEL_SIZE),
 	}
 	ChatServer.Login <- client
-	go client.Read()
-	go client.Write()
-	return nil
+	//go client.Read()
+	//go client.Write()
+	zlog.Info("ws连接成功")
 }
