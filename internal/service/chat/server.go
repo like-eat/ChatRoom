@@ -47,7 +47,7 @@ func (s *Server) Start() {
 				s.Clients[client.Uuid] = client
 				s.mutex.Unlock()
 				zlog.Debug(fmt.Sprintf("欢迎来到kama聊天服务器，亲爱的用户%s\n", client.Uuid))
-				err := client.Conn.WriteMessage(websocket.BinaryMessage, []byte("欢迎来到kama聊天服务器"))
+				err := client.Conn.WriteMessage(websocket.TextMessage, []byte("欢迎来到kama聊天服务器"))
 				if err != nil {
 					zlog.Error(err.Error())
 				}
@@ -69,7 +69,7 @@ func (s *Server) Start() {
 				}
 				if message.ReceiveId[0] == 'U' { // 发送给User
 					receiveClient := s.Clients[message.ReceiveId]
-					receiveClient.Send <- data // 向client.Send发送
+					receiveClient.SendBack <- data // 向client.Send发送
 				} else if message.ReceiveId[0] == 'G' { // 发送给Group
 					var members []model.UserInfo
 					for _, member := range members {
@@ -85,7 +85,7 @@ func (s *Server) Start() {
 								break // 不转发了，直接结束
 							}
 							client := s.Clients[member.Uuid]
-							client.Send <- sendData // 可以使用Kafka
+							client.SendBack <- sendData // 可以使用Kafka
 						}
 
 					}
@@ -93,4 +93,22 @@ func (s *Server) Start() {
 			}
 		}
 	}
+}
+
+func (s *Server) SendClientToLogin(client *Client) {
+	s.mutex.Lock()
+	s.Login <- client
+	s.mutex.Unlock()
+}
+
+func (s *Server) SendClientToLogout(client *Client) {
+	s.mutex.Lock()
+	s.Logout <- client
+	s.mutex.Unlock()
+}
+
+func (s *Server) SendMessageToTransmit(message []byte) {
+	s.mutex.Lock()
+	s.Transmit <- message
+	s.mutex.Unlock()
 }

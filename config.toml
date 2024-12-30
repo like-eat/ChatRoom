@@ -25,4 +25,7 @@ templateCode = "SMS_154950909"
 [logConfig]
 logPath = "your log path"
 
+[kafkaConfig]
+messageMode = "channel" # 消息模式 channel or kafka
+
 

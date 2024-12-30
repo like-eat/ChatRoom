@@ -37,12 +37,17 @@ type LogConfig struct {
 	LogPath string `toml:"logPath"`
 }
 
+type KafkaConfig struct {
+	MessageMode string `toml:"messageMode"`
+}
+
 type Config struct {
 	MainConfig     `toml:"mainConfig"`
 	MysqlConfig    `toml:"mysqlConfig"`
 	RedisConfig    `toml:"redisConfig"`
 	AuthCodeConfig `toml:"authCodeConfig"`
 	LogConfig      `toml:"logConfig"`
+	KafkaConfig    `toml:"kafkaConfig"`
 }
 
 var config *Config

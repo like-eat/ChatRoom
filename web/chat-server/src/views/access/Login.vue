@@ -89,16 +89,16 @@ export default {
             ElMessage.success(response.data.message);
             store.commit("setUserInfo", response.data.data);
             // 准备创建websocket连接
-            // const wsUrl =
-            //   store.state.wsUrl + "/ws?client_id=" + response.data.data.uuid;
-            const wsUrl = store.state.wsUrl + "/ws";
+            const wsUrl =
+              store.state.wsUrl + "/ws?client_id=" + response.data.data.uuid;
+            // const wsUrl = store.state.wsUrl + "/ws";
             console.log(wsUrl);
             store.state.socket = new WebSocket(wsUrl);
             store.state.socket.onopen = () => {
               console.log("WebSocket连接已打开");
             };
             store.state.socket.onmessage = (message) => {
-              console.log("收到消息：", JSON.parse(message.data));
+              console.log("收到消息：", message.data);
             };
             store.state.socket.onclose = () => {
               console.log("WebSocket连接已关闭");
