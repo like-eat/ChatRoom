@@ -4,10 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"kama_chat_server/internal/dao"
+	"kama_chat_server/internal/dto/request"
+	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
 	"kama_chat_server/pkg/constants"
+	"kama_chat_server/pkg/enum/message/message_status_enum"
+	"kama_chat_server/pkg/enum/message/message_type_enum"
+	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -15,7 +22,7 @@ type Server struct {
 	mutex    *sync.Mutex
 	Transmit chan []byte  // 转发通道
 	Login    chan *Client // 登录通道
-	Logout   chan *Client // 推出登录通道
+	Logout   chan *Client // 退出登录通道
 }
 
 var ChatServer *Server
@@ -58,38 +65,86 @@ func (s *Server) Start() {
 				s.mutex.Lock()
 				delete(s.Clients, client.Uuid)
 				s.mutex.Unlock()
-				zlog.Info(fmt.Sprintf("Client %s logged out\n", client.Uuid))
+				zlog.Info(fmt.Sprintf("用户%s退出登录\n", client.Uuid))
 			}
 
 		case data := <-s.Transmit:
 			{
-				var message model.Message
-				if err := json.Unmarshal(data, &message); err != nil {
+				var chatMessageReq request.ChatMessageRequest
+				if err := json.Unmarshal(data, &chatMessageReq); err != nil {
 					zlog.Error(err.Error())
 				}
-				if message.ReceiveId[0] == 'U' { // 发送给User
-					receiveClient := s.Clients[message.ReceiveId]
-					receiveClient.SendBack <- data // 向client.Send发送
-				} else if message.ReceiveId[0] == 'G' { // 发送给Group
-					var members []model.UserInfo
-					for _, member := range members {
-						// message是sendUserId给GroupId发送的
-						// sendMessage是GroupId给除sendUserId之外的群成员发送的
-						if member.Uuid != message.SendId {
-							sendMessage := message
-							sendMessage.SendId = message.ReceiveId
-							sendMessage.ReceiveId = member.Uuid
-							sendData, err := json.Marshal(sendMessage)
-							if err != nil {
-								zlog.Error(err.Error())
-								break // 不转发了，直接结束
-							}
-							client := s.Clients[member.Uuid]
-							client.SendBack <- sendData // 可以使用Kafka
+				if chatMessageReq.Type == message_type_enum.Text {
+					// 存message
+					message := model.Message{
+						Uuid:      fmt.Sprintf("M%s", random.GetNowAndLenRandomString(11)),
+						SessionId: chatMessageReq.SessionId,
+						Type:      chatMessageReq.Type,
+						Content:   chatMessageReq.Content,
+						Url:       "",
+						SendId:    chatMessageReq.SendId,
+						ReceiveId: chatMessageReq.ReceiveId,
+						FileSize:  0,
+						FileType:  "",
+						FileName:  "",
+						Status:    message_status_enum.Unsent,
+						CreatedAt: time.Now(),
+					}
+					if res := dao.GormDB.Create(&message); res.Error != nil {
+						zlog.Error(res.Error.Error())
+					}
+					if message.ReceiveId[0] == 'U' { // 发送给User
+						// 如果能找到ReceiveId，说明在线，可以发送，否则存表后跳过
+						// 因为在线的时候是通过websocket更新消息记录的，离线后通过存表，登录时只调用一次数据库操作
+						// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
+						messageRsp := respond.GetMessageListRespond{
+							SendId:    message.SendId,
+							ReceiveId: message.ReceiveId,
+							Type:      message.Type,
+							Content:   message.Content,
+							Url:       message.Url,
+							FileSize:  message.FileSize,
+							FileName:  message.FileName,
+							FileType:  message.FileType,
+							CreatedAt: message.CreatedAt.Format("2006-01-02 15:04:05"),
 						}
-
+						jsonMessage, err := json.Marshal(messageRsp)
+						if err != nil {
+							zlog.Error(err.Error())
+						}
+						var messageBack = &MessageBack{}
+						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
+							messageBack.Message = jsonMessage
+							messageBack.Uuid = message.Uuid
+							receiveClient.SendBack <- messageBack // 向client.Send发送
+						}
+						// 因为send_id肯定在线，所以这里在后端进行在线回显message，其实优化的话前端可以直接回显
+						// 问题在于前后端的req和rsp结构不同，前端存储message的messageList不能存req，只能存rsp
+						// 所以这里后端进行回显，前端不回显
+						sendClient := s.Clients[message.SendId]
+						sendClient.SendBack <- messageBack
+					} else if message.ReceiveId[0] == 'G' { // 发送给Group
+						//var members []model.UserInfo
+						//for _, member := range members {
+						//	// message是sendUserId给GroupId发送的
+						//	// sendMessage是GroupId给除sendUserId之外的群成员发送的
+						//	if member.Uuid != message.SendId {
+						//		sendMessage := message
+						//		sendMessage.SendId = message.ReceiveId
+						//		sendMessage.ReceiveId = member.Uuid
+						//		sendData, err := json.Marshal(sendMessage)
+						//		if err != nil {
+						//			zlog.Error(err.Error())
+						//			break // 不转发了，直接结束
+						//		}
+						//		client := s.Clients[member.Uuid]
+						//		client.SendBack <- sendData // 可以使用Kafka
+						//	}
+						//
+						//}
 					}
 				}
+
 			}
 		}
 	}
@@ -110,5 +165,11 @@ func (s *Server) SendClientToLogout(client *Client) {
 func (s *Server) SendMessageToTransmit(message []byte) {
 	s.mutex.Lock()
 	s.Transmit <- message
+	s.mutex.Unlock()
+}
+
+func (s *Server) RemoveClient(uuid string) {
+	s.mutex.Lock()
+	delete(s.Clients, uuid)
 	s.mutex.Unlock()
 }

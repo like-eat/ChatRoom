@@ -318,7 +318,9 @@
                     <el-dropdown-item @click="preToDeleteContact"
                       >删除联系人</el-dropdown-item
                     >
-                    <el-dropdown-item @click="preToBlackContact">拉黑联系人</el-dropdown-item>
+                    <el-dropdown-item @click="preToBlackContact"
+                      >拉黑联系人</el-dropdown-item
+                    >
                   </el-dropdown-menu>
                   <el-dropdown-menu
                     v-else-if="contactInfo.contact_id[0] === 'G'"
@@ -336,7 +338,90 @@
             </div>
           </el-header>
           <el-main>
-            <div class="chat-screen"></div>
+            <el-scrollbar max-height="332px">
+              <div
+                v-for="(messageItem, index) in messageList"
+                :key="index"
+                class="message-item"
+              >
+                <div
+                  v-if="messageItem.send_id == contactInfo.contact_id"
+                  class="left-message"
+                >
+                  <div class="left-message-left">
+                    <el-image
+                      :src="contactInfo.contact_avatar"
+                      style="
+                        width: 40px;
+                        height: 40px;
+                        margin-left: 10px;
+                        margin-right: 10px;
+                        margin-top: 10px;
+                      "
+                    >
+                    </el-image>
+                  </div>
+
+                  <div class="left-message-right">
+                    <div class="left-message-right-top">
+                      <div class="left-message-contactname">
+                        {{ contactInfo.contact_name }}
+                      </div>
+                      <div class="left-message-time">
+                        {{ messageItem.created_at }}
+                      </div>
+                    </div>
+
+                    <div class="left-message-content">
+                      {{ messageItem.content }}
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: row-reverse;
+                  "
+                >
+                  <div
+                    v-if="messageItem.send_id == userInfo.uuid"
+                    class="right-message"
+                  >
+                    <div class="right-message-right">
+                      <el-image
+                        :src="userInfo.avatar"
+                        style="
+                          width: 40px;
+                          height: 40px;
+                          margin-left: 10px;
+                          margin-right: 10px;
+                          margin-top: 10px;
+                        "
+                      >
+                      </el-image>
+                    </div>
+
+                    <div class="right-message-left">
+                      <div class="right-message-left-top">
+                        <div class="right-message-contactname">
+                          {{ userInfo.nickname }}
+                        </div>
+                        <div class="right-message-time">
+                          {{ messageItem.created_at }}
+                        </div>
+                      </div>
+                      <div style="display: flex; flex-direction: row-reverse">
+                        <div class="right-message-content">
+                          {{ messageItem.content }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-scrollbar>
             <div class="tool-bar">
               <div class="tool-bar-left">
                 <el-tooltip
@@ -498,7 +583,7 @@
               />
             </div>
             <div class="chat-send">
-              <el-button class="send-btn">发送</el-button>
+              <el-button class="send-btn" @click="sendMessage">发送</el-button>
             </div>
           </el-footer>
         </el-container>
@@ -572,13 +657,47 @@ export default {
       userSessionList: [],
       groupSessionList: [],
       sessionId: "",
+      messageList: [],
     });
     //这是/chat/:id 的id改变时会调用
-    onBeforeRouteUpdate((to, from, next) => {
-      getChatContactInfo(to.params.id);
-      getSessionId(router.currentRoute.value.params.id);
+    onBeforeRouteUpdate(async (to, from, next) => {
+      await getChatContactInfo(to.params.id);
+      await getSessionId(router.currentRoute.value.params.id);
+      await getMessageList();
       console.log(data.sessionId);
+      store.state.socket.onmessage = (jsonMessage) => {
+        const message = JSON.parse(jsonMessage.data);
+        console.log("收到消息：", message);
+        data.messageList.push(message);
+        // scrollToBottom();
+      };
+      // scrollToBottom();
       next();
+    });
+    // 这是刚渲染/chat/:id页面的时候会调用
+    onMounted(async () => {
+      try {
+        console.log(router.currentRoute.value.params.id);
+        await getChatContactInfo(router.currentRoute.value.params.id);
+        await getSessionId(router.currentRoute.value.params.id);
+        console.log(data.contactInfo);
+        await getMessageList();
+        console.log(data.sessionId);
+        store.state.socket.onmessage = (jsonMessage) => {
+          try {
+            console.log("收到消息：", jsonMessage.data);
+            const message = JSON.parse(jsonMessage.data);
+            data.messageList.push(message);
+          } catch (error) {
+            console.error(error);
+          }
+
+          // scrollToBottom();
+        };
+        // scrollToBottom();
+      } catch (error) {
+        console.error(error);
+      }
     });
     const getChatContactInfo = async (id) => {
       try {
@@ -588,17 +707,19 @@ export default {
           data.getContactInfoReq
         );
         data.contactInfo = rsp.data.data;
-        if (data.contactInfo.contact_gender == 0) {
-          data.contactInfo.contact_gender = "男";
-        } else {
-          data.contactInfo.contact_gender = "女";
-        }
-        if (data.contactInfo.contact_add_mode == 0) {
-          data.contactInfo.contact_add_mode = "直接加入";
-        } else {
-          data.contactInfo.contact_add_mode = "需要审核";
-        }
+        console.log(rsp);
         console.log(data.contactInfo);
+        // if (data.contactInfo.contact_gender == 0) {
+        //   data.contactInfo.contact_gender = "男";
+        // } else {
+        //   data.contactInfo.contact_gender = "女";
+        // }
+        // if (data.contactInfo.contact_add_mode == 0) {
+        //   data.contactInfo.contact_add_mode = "直接加入";
+        // } else {
+        //   data.contactInfo.contact_add_mode = "需要审核";
+        // }
+        console.log(rsp);
       } catch (error) {
         console.log(error);
       }
@@ -619,18 +740,6 @@ export default {
         console.error(error);
       }
     };
-
-    // 这是刚渲染/chat/:id页面的时候会调用
-    onMounted(() => {
-      try {
-        getChatContactInfo(router.currentRoute.value.params.id);
-        getSessionId(router.currentRoute.value.params.id);
-        console.log(data.sessionId);
-      } catch (error) {
-        console.error(error);
-      }
-    });
-
 
     const handleToContactList = () => {
       router.push("/chat/contactlist");
@@ -872,6 +981,41 @@ export default {
       }
       router.push("/chat/sessionlist");
     };
+    const sendMessage = () => {
+      const chatMessageRequest = {
+        session_id: data.sessionId,
+        type: 0,
+        content: data.chatMessage,
+        send_id: data.userInfo.uuid,
+        receive_id: data.contactInfo.contact_id,
+      };
+      store.state.socket.send(JSON.stringify(chatMessageRequest));
+      data.chatMessage = "";
+      // scrollToBottom();
+    };
+
+    const getMessageList = async () => {
+      try {
+        console.log(data.contactInfo);
+        const req = {
+          user_one_id: data.userInfo.uuid,
+          user_two_id: data.contactInfo.contact_id,
+        };
+        console.log(req);
+        const rsp = await axios.post(
+          store.state.backendUrl + "/message/getMessageList",
+          req
+        );
+        data.messageList = rsp.data.data;
+        console.log(rsp);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    // const scrollToBottom = () => {
+    //   scrollRef.value.scrollTop = scrollRef.value.scrollHeight;
+    // };
     return {
       ...toRefs(data),
       router,
@@ -899,6 +1043,8 @@ export default {
       preToDeleteSession,
       preToDeleteContact,
       preToBlackContact,
+      sendMessage,
+      getMessageList,
     };
   },
 };
@@ -1012,5 +1158,101 @@ h3 {
   height: 270px;
   width: 90%;
   margin-top: 5px;
+}
+
+.left-message {
+  width: 67%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 10px;
+}
+
+.right-message {
+  width: 67%;
+  height: 100%;
+  display: flex;
+  flex-direction: row-reverse;
+  margin-bottom: 10px;
+}
+
+.left-message-left {
+  display: flex;
+  justify-content: center;
+}
+
+.right-message-right {
+  display: flex;
+  justify-content: center;
+}
+
+.left-message-right-top {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 5px;
+}
+
+.right-message-left-top {
+  display: flex;
+  flex-direction: row-reverse;
+  margin-bottom: 5px;
+}
+
+.left-message-contactname {
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(150, 130, 130);
+  font-weight: bold;
+  margin-top: 5px;
+  margin-right: 10px;
+  font-size: 15px;
+}
+
+.right-message-contactname {
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(150, 130, 130);
+  font-weight: bold;
+  margin-top: 5px;
+  margin-left: 10px;
+  font-size: 15px;
+}
+
+.left-message-time {
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(237, 161, 161);
+  margin-top: 5px;
+  font-size: 15px;
+}
+
+.right-message-time {
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(237, 161, 161);
+  margin-top: 5px;
+  font-size: 15px;
+}
+
+.left-message-content {
+  background-color: blanchedalmond;
+  color: rgb(74, 72, 72);
+  display: inline-block;
+  max-width: 400px;
+  white-space: normal; /* 允许文本换行 */
+  font-family: Arial, Helvetica, sans-serif;
+  border-radius: 6px;
+  padding: 3px;
+  padding-right: 5px;
+  font-size: 14px;
+}
+
+.right-message-content {
+  background-color: blanchedalmond;
+  color: rgb(74, 72, 72);
+  display: inline-block;
+  max-width: 400px;
+  white-space: normal; /* 允许文本换行 */
+  font-family: Arial, Helvetica, sans-serif;
+  border-radius: 6px;
+  padding: 3px;
+  padding-right: 5px;
+  font-size: 14px;
 }
 </style>

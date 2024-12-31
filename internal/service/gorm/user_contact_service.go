@@ -16,6 +16,7 @@ import (
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
+	"log"
 	"time"
 )
 
@@ -108,16 +109,16 @@ func (u *userContactService) LoadMyJoinedGroup(ownerId string) (string, []respon
 
 // GetContactInfo 获取联系人信息
 // 调用这个接口的前提是该联系人没有处在删除或被删除，或者该用户还在群聊中
-func (u *userContactService) GetContactInfo(contactId string) (string, *respond.GetContactInfoRespond, int) {
+func (u *userContactService) GetContactInfo(contactId string) (string, respond.GetContactInfoRespond, int) {
 	if contactId[0] == 'G' {
 		var group model.GroupInfo
 		if res := dao.GormDB.First(&group, "uuid = ?", contactId); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return constants.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, respond.GetContactInfoRespond{}, -1
 		}
 		// 没被禁用
 		if group.Status != group_status_enum.DISABLE {
-			return "获取联系人信息成功", &respond.GetContactInfoRespond{
+			return "获取联系人信息成功", respond.GetContactInfoRespond{
 				ContactId:        group.Uuid,
 				ContactName:      group.Name,
 				ContactAvatar:    group.Avatar,
@@ -129,16 +130,17 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 			}, 0
 		} else {
 			zlog.Error("该群聊处于禁用状态")
-			return "该群聊处于禁用状态", nil, -2
+			return "该群聊处于禁用状态", respond.GetContactInfoRespond{}, -2
 		}
 	} else {
 		var user model.UserInfo
 		if res := dao.GormDB.First(&user, "uuid = ?", contactId); res.Error != nil {
 			zlog.Error(res.Error.Error())
-			return constants.SYSTEM_ERROR, nil, -1
+			return constants.SYSTEM_ERROR, respond.GetContactInfoRespond{}, -1
 		}
+		log.Println(user)
 		if user.Status != user_status_enum.DISABLE {
-			return "获取联系人信息成功", &respond.GetContactInfoRespond{
+			return "获取联系人信息成功", respond.GetContactInfoRespond{
 				ContactId:        user.Uuid,
 				ContactName:      user.Nickname,
 				ContactAvatar:    user.Avatar,
@@ -150,7 +152,7 @@ func (u *userContactService) GetContactInfo(contactId string) (string, *respond.
 			}, 0
 		} else {
 			zlog.Info("该用户处于禁用状态")
-			return "该用户处于禁用状态", nil, -2
+			return "该用户处于禁用状态", respond.GetContactInfoRespond{}, -2
 		}
 	}
 }
