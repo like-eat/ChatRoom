@@ -157,7 +157,7 @@
                         添加用户/群聊
                       </el-dropdown-item>
                       <el-dropdown-item @click="showNewContactModal">
-                        新的朋友
+                        新的好友
                       </el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
@@ -944,6 +944,8 @@ export default {
       store.commit("cleanUserInfo");
       router.push("/login");
     };
+
+    
 
     return {
       ...toRefs(data),

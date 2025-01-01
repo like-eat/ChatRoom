@@ -13,6 +13,7 @@ import (
 	"kama_chat_server/pkg/enum/message/message_type_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
+	"log"
 	"sync"
 	"time"
 )
@@ -74,6 +75,7 @@ func (s *Server) Start() {
 				if err := json.Unmarshal(data, &chatMessageReq); err != nil {
 					zlog.Error(err.Error())
 				}
+				log.Println("原消息为：", data, "反序列化后为：", chatMessageReq)
 				if chatMessageReq.Type == message_type_enum.Text {
 					// 存message
 					message := model.Message{
@@ -112,10 +114,14 @@ func (s *Server) Start() {
 						if err != nil {
 							zlog.Error(err.Error())
 						}
-						var messageBack = &MessageBack{}
+						log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
+						var messageBack = &MessageBack{
+							Message: jsonMessage,
+							Uuid:    message.Uuid,
+						}
 						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
-							messageBack.Message = jsonMessage
-							messageBack.Uuid = message.Uuid
+							//messageBack.Message = jsonMessage
+							//messageBack.Uuid = message.Uuid
 							receiveClient.SendBack <- messageBack // 向client.Send发送
 						}
 						// 因为send_id肯定在线，所以这里在后端进行在线回显message，其实优化的话前端可以直接回显

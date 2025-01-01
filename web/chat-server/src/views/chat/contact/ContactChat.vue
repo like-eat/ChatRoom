@@ -289,7 +289,11 @@
                       contactInfo.contact_owner_id
                     }}</el-descriptions-item>
                     <el-descriptions-item label="入群方式" :width="140"
-                      >{{ contactInfo.contact_add_mode }}
+                      >{{
+                        contactInfo.contact_add_mode == 0
+                          ? "直接加入"
+                          : "群主审核"
+                      }}
                     </el-descriptions-item>
                     <el-descriptions-item label="群名称" :span="3">{{
                       contactInfo.contact_name
@@ -328,6 +332,11 @@
                     <el-dropdown-item @click="showGroupContactInfoModal"
                       >群聊信息</el-dropdown-item
                     >
+                    <el-dropdown-item
+                      v-if="contactInfo.contact_owner_id == userInfo.uuid"
+                      @click="showAddGroupModal"
+                      >加群申请</el-dropdown-item
+                    >
                     <el-dropdown-item @click="preToDeleteSession"
                       >删除该会话</el-dropdown-item
                     >
@@ -335,63 +344,102 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+              <SmallModal :isVisible="isAddGroupModalVisible">
+                <template v-slot:header>
+                  <div class="modal-header">
+                    <div class="modal-quit-btn-container">
+                      <button class="modal-quit-btn" @click="quitAddGroupModal">
+                        <el-icon><Close /></el-icon>
+                      </button>
+                    </div>
+                    <div class="modal-header-title">
+                      <h3>加群申请</h3>
+                    </div>
+                  </div>
+                </template>
+                <template v-slot:body>
+                  <div class="addGroup-modal-body">
+                    <el-scrollbar max-height="400px">
+                      <ul class="addGroup-list" style="list-style-type: none">
+                        <li
+                          v-for="addGroup in addGroupList"
+                          :key="addGroup.contact_id"
+                          class="addGroup-item"
+                        >
+                          <div
+                            style="
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                            "
+                          >
+                            <img
+                              :src="addGroup.contact_avatar"
+                              style="
+                                width: 30px;
+                                height: 30px;
+                                margin-right: 10px;
+                              "
+                            />
+
+                            <el-tooltip
+                              effect="customized"
+                              :content="addGroup.message"
+                              placement="top"
+                              hide-after="0"
+                              enterable="false"
+                            >
+                              <div>
+                                {{ addGroup.contact_name }}
+                              </div>
+                            </el-tooltip>
+                          </div>
+                          <el-dropdown placement="right" trigger="click">
+                            <el-button class="action-btn"> 去处理 </el-button>
+                            <template #dropdown>
+                              <el-dropdown-menu>
+                                <el-dropdown-item
+                                  @click="handleAgree(addGroup.contact_id)"
+                                  >同意</el-dropdown-item
+                                >
+                                <el-dropdown-item
+                                  @click="handleReject(addGroup.contact_id)"
+                                >
+                                  拒绝
+                                </el-dropdown-item>
+                              </el-dropdown-menu>
+                            </template>
+                          </el-dropdown>
+                        </li>
+                      </ul>
+                    </el-scrollbar>
+                  </div>
+                </template>
+                <template v-slot:footer>
+                  <div class="newcontact-modal-footer"></div>
+                </template>
+              </SmallModal>
             </div>
           </el-header>
           <el-main>
-            <el-scrollbar max-height="332px">
-              <div
-                v-for="(messageItem, index) in messageList"
-                :key="index"
-                class="message-item"
-              >
+            <el-scrollbar
+              max-height="332.5px"
+              style="height: 332.5px"
+              ref="scrollbarRef"
+            >
+              <div ref="innerRef">
                 <div
-                  v-if="messageItem.send_id == contactInfo.contact_id"
-                  class="left-message"
-                >
-                  <div class="left-message-left">
-                    <el-image
-                      :src="contactInfo.contact_avatar"
-                      style="
-                        width: 40px;
-                        height: 40px;
-                        margin-left: 10px;
-                        margin-right: 10px;
-                        margin-top: 10px;
-                      "
-                    >
-                    </el-image>
-                  </div>
-
-                  <div class="left-message-right">
-                    <div class="left-message-right-top">
-                      <div class="left-message-contactname">
-                        {{ contactInfo.contact_name }}
-                      </div>
-                      <div class="left-message-time">
-                        {{ messageItem.created_at }}
-                      </div>
-                    </div>
-
-                    <div class="left-message-content">
-                      {{ messageItem.content }}
-                    </div>
-                  </div>
-                </div>
-                <div
-                  style="
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: row-reverse;
-                  "
+                  v-for="(messageItem, index) in messageList"
+                  :key="index"
+                  class="message-item"
                 >
                   <div
-                    v-if="messageItem.send_id == userInfo.uuid"
-                    class="right-message"
+                    v-if="messageItem.send_id == contactInfo.contact_id"
+                    class="left-message"
                   >
-                    <div class="right-message-right">
+                    <div class="left-message-left">
                       <el-image
-                        :src="userInfo.avatar"
+                        :src="contactInfo.contact_avatar"
                         style="
                           width: 40px;
                           height: 40px;
@@ -403,18 +451,60 @@
                       </el-image>
                     </div>
 
-                    <div class="right-message-left">
-                      <div class="right-message-left-top">
-                        <div class="right-message-contactname">
-                          {{ userInfo.nickname }}
+                    <div class="left-message-right">
+                      <div class="left-message-right-top">
+                        <div class="left-message-contactname">
+                          {{ contactInfo.contact_name }}
                         </div>
-                        <div class="right-message-time">
+                        <div class="left-message-time">
                           {{ messageItem.created_at }}
                         </div>
                       </div>
-                      <div style="display: flex; flex-direction: row-reverse">
-                        <div class="right-message-content">
-                          {{ messageItem.content }}
+
+                      <div class="left-message-content">
+                        {{ messageItem.content }}
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style="
+                      width: 100%;
+                      height: 100%;
+                      display: flex;
+                      flex-direction: row-reverse;
+                    "
+                  >
+                    <div
+                      v-if="messageItem.send_id == userInfo.uuid"
+                      class="right-message"
+                    >
+                      <div class="right-message-right">
+                        <el-image
+                          :src="userInfo.avatar"
+                          style="
+                            width: 40px;
+                            height: 40px;
+                            margin-left: 10px;
+                            margin-right: 10px;
+                            margin-top: 10px;
+                          "
+                        >
+                        </el-image>
+                      </div>
+
+                      <div class="right-message-left">
+                        <div class="right-message-left-top">
+                          <div class="right-message-contactname">
+                            {{ userInfo.nickname }}
+                          </div>
+                          <div class="right-message-time">
+                            {{ messageItem.created_at }}
+                          </div>
+                        </div>
+                        <div style="display: flex; flex-direction: row-reverse">
+                          <div class="right-message-content">
+                            {{ messageItem.content }}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -593,17 +683,20 @@
 </template>
 
 <script>
-import { reactive, toRefs, onMounted } from "vue";
+import { reactive, toRefs, onMounted, ref, nextTick } from "vue";
 import { useRouter, onBeforeRouteUpdate } from "vue-router";
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import SmallModal from "@/components/SmallModal.vue";
+import { ElMessage, ElMessageBox, ElScrollbar } from "element-plus";
 export default {
   name: "ContactChat",
   components: {
     Modal,
+    SmallModal,
   },
+
   setup() {
     const router = useRouter();
     const store = useStore();
@@ -621,6 +714,7 @@ export default {
       },
       isUserContactInfoModalVisible: false,
       isGroupContactInfoModalVisible: false,
+      isAddGroupModalVisible: false,
       getUserListReq: {
         owner_id: "",
       },
@@ -658,6 +752,9 @@ export default {
       groupSessionList: [],
       sessionId: "",
       messageList: [],
+      innerRef: ref < HTMLDivElement > null,
+      scrollbarRef: ref(null),
+      addGroupList: [],
     });
     //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate(async (to, from, next) => {
@@ -668,15 +765,19 @@ export default {
       store.state.socket.onmessage = (jsonMessage) => {
         const message = JSON.parse(jsonMessage.data);
         console.log("收到消息：", message);
+        if (data.messageList == null) {
+          data.messageList = [];
+        }
         data.messageList.push(message);
-        // scrollToBottom();
+        scrollToBottom();
       };
-      // scrollToBottom();
+      scrollToBottom();
       next();
     });
     // 这是刚渲染/chat/:id页面的时候会调用
     onMounted(async () => {
       try {
+        /*  */
         console.log(router.currentRoute.value.params.id);
         await getChatContactInfo(router.currentRoute.value.params.id);
         await getSessionId(router.currentRoute.value.params.id);
@@ -687,14 +788,17 @@ export default {
           try {
             console.log("收到消息：", jsonMessage.data);
             const message = JSON.parse(jsonMessage.data);
+            if (data.messageList == null) {
+              data.messageList = [];
+            }
+            console.log(data.messageList);
             data.messageList.push(message);
           } catch (error) {
             console.error(error);
           }
-
-          // scrollToBottom();
+          scrollToBottom();
         };
-        // scrollToBottom();
+        scrollToBottom();
       } catch (error) {
         console.error(error);
       }
@@ -772,7 +876,35 @@ export default {
     const quitGroupContactInfoModal = () => {
       data.isGroupContactInfoModalVisible = false;
     };
-
+    const showAddGroupModal = () => {
+      handleAddGroupList();
+    };
+    const quitAddGroupModal = () => {
+      data.isAddGroupModalVisible = false;
+    };
+    const handleAddGroupList = async () => {
+      try {
+        const req = {
+          group_id: data.contactInfo.contact_id,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/getAddGroupList",
+          req
+        );
+        if (rsp.data.code == 200) {
+          data.addGroupList = rsp.data.data;
+          if (data.addGroupList == null) {
+            ElMessage.warning("没有新的加群申请");
+            return;
+          } else {
+            data.isAddGroupApplyModalVisible = true;
+            console.log(rsp);
+          }
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
     const handleShowUserList = async () => {
       try {
         data.getUserListReq.owner_id = data.userInfo.uuid;
@@ -991,7 +1123,7 @@ export default {
       };
       store.state.socket.send(JSON.stringify(chatMessageRequest));
       data.chatMessage = "";
-      // scrollToBottom();
+      scrollToBottom();
     };
 
     const getMessageList = async () => {
@@ -1013,9 +1145,37 @@ export default {
       }
     };
 
-    // const scrollToBottom = () => {
-    //   scrollRef.value.scrollTop = scrollRef.value.scrollHeight;
-    // };
+    const scrollToBottom = () => {
+      nextTick(() => {
+        const scrollHeight = data.innerRef.scrollHeight;
+        console.log(scrollHeight);
+        data.scrollbarRef.setScrollTop(scrollHeight);
+      });
+    };
+
+    const handleAgree = () => {
+      // try {
+      //   const req = {
+      //     owner_id: data.userInfo.uuid,
+      //     contact_id: contactId,
+      //   };
+      //   const rsp = await axios.post(
+      //     store.state.backendUrl + "/contact/passContactApply",
+      //     req
+      //   );
+      //   console.log(rsp);
+      //   if (rsp.data.code == 200) {
+      //     ElMessage.success(rsp.data.message);
+      //     data.newContactList = data.newContactList.filter(
+      //       (c) => c.contact_id !== contactId
+      //     );
+      //   } else {
+      //     ElMessage.error(rsp.data.message);
+      //   }
+      // } catch (error) {
+      //   console.error(error);
+      // }
+    };
     return {
       ...toRefs(data),
       router,
@@ -1025,6 +1185,8 @@ export default {
       quitUserContactInfoModal,
       showGroupContactInfoModal,
       quitGroupContactInfoModal,
+      showAddGroupModal,
+      quitAddGroupModal,
       handleToContactList,
       handleShowUserList,
       handleHideUserList,
@@ -1045,6 +1207,8 @@ export default {
       preToBlackContact,
       sendMessage,
       getMessageList,
+      handleAgree,
+      handleAddGroupList,
     };
   },
 };
@@ -1109,12 +1273,6 @@ h3 {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.contactlist-avatar {
-  width: 30px;
-  height: 30px;
-  margin-right: 20px;
 }
 
 .el-header {
@@ -1200,7 +1358,7 @@ h3 {
 
 .left-message-contactname {
   font-family: Arial, Helvetica, sans-serif;
-  color: rgb(150, 130, 130);
+  color: rgb(77, 61, 192);
   font-weight: bold;
   margin-top: 5px;
   margin-right: 10px;
@@ -1209,7 +1367,7 @@ h3 {
 
 .right-message-contactname {
   font-family: Arial, Helvetica, sans-serif;
-  color: rgb(150, 130, 130);
+  color: rgb(77, 61, 192);
   font-weight: bold;
   margin-top: 5px;
   margin-left: 10px;
@@ -1231,7 +1389,7 @@ h3 {
 }
 
 .left-message-content {
-  background-color: blanchedalmond;
+  background-color: rgb(239, 255, 174);
   color: rgb(74, 72, 72);
   display: inline-block;
   max-width: 400px;
@@ -1241,10 +1399,11 @@ h3 {
   padding: 3px;
   padding-right: 5px;
   font-size: 14px;
+  box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.2);
 }
 
 .right-message-content {
-  background-color: blanchedalmond;
+  background-color: rgb(252, 210.9, 210.9);
   color: rgb(74, 72, 72);
   display: inline-block;
   max-width: 400px;
@@ -1254,5 +1413,99 @@ h3 {
   padding: 3px;
   padding-right: 5px;
   font-size: 14px;
+  box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+.modal-quit-btn-container {
+  height: 30%;
+  width: 100%;
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.modal-quit-btn {
+  background-color: rgba(255, 255, 255, 0);
+  color: rgb(229, 25, 25);
+  padding: 15px;
+  border: none;
+  cursor: pointer;
+  position: fixed;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-header {
+  height: 20%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  /*background-color:aqua;*/
+}
+
+.modal-body {
+  height: 55%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.addGroup-modal-body {
+  height: 70%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.newcontact-modal-footer {
+  height: 10%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-footer {
+  height: 25%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-header-title {
+  height: 70%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.contactlist-avatar {
+  width: 30px;
+  height: 30px;
+  margin-right: 20px;
+}
+
+.addGroup-list {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.addGroup-item {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 40px;
 }
 </style>

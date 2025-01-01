@@ -37,6 +37,7 @@ func main() {
 	r.POST("/contact/passContactApply", v1.PassContactApply)
 	r.POST("/contact/blackContact", v1.BlackContact)
 	r.POST("/contact/cancelBlackContact", v1.CancelBlackContact)
+	r.POST("/contact/getAddGroupList", v1.GetAddGroupList)
 	r.POST("/message/getMessageList", v1.GetMessageList)
 	r.GET("/ws", v1.WsHandler)
 

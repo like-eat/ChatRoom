@@ -248,7 +248,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 			}
 		}
 		var contactApply model.ContactApply
-		if res := dao.GormDB.Where("group_id = ? AND contact_id = ?", req.OwnerId, req.ContactId).First(&contactApply); res.Error != nil {
+		if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", req.OwnerId, req.ContactId).First(&contactApply); res.Error != nil {
 			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 				contactApply = model.ContactApply{
 					Uuid:        fmt.Sprintf("A%s", random.GetNowAndLenRandomString(11)),
@@ -290,7 +290,7 @@ func (u *userContactService) GetNewContactList(ownerId string) (string, []respon
 			return "没有在申请的联系人", nil, 0
 		} else {
 			zlog.Error(res.Error.Error())
-			return "", nil, -1
+			return constants.SYSTEM_ERROR, nil, -1
 		}
 	}
 	var rsp []respond.NewContactListRespond
@@ -303,6 +303,43 @@ func (u *userContactService) GetNewContactList(ownerId string) (string, []respon
 			message = "申请理由：" + contactApply.Message
 		}
 		newContact := respond.NewContactListRespond{
+			ContactId: contactApply.Uuid,
+			Message:   message,
+		}
+		var user model.UserInfo
+		if res := dao.GormDB.First(&user, "uuid = ?", contactApply.UserId); res.Error != nil {
+			return constants.SYSTEM_ERROR, nil, -1
+		}
+		newContact.ContactId = user.Uuid
+		newContact.ContactName = user.Nickname
+		newContact.ContactAvatar = user.Avatar
+		rsp = append(rsp, newContact)
+	}
+	return "获取成功", rsp, 0
+}
+
+// GetAddGroupList 获取新的加群列表
+// 前端已经判断调用接口的用户是群主，也只有群主才能调用这个接口
+func (u *userContactService) GetAddGroupList(groupId string) (string, []respond.AddGroupListRespond, int) {
+	var contactApplyList []model.ContactApply
+	if res := dao.GormDB.Where("contact_id = ? AND status = ?", groupId, contact_apply_status_enum.PENDING).Find(&contactApplyList); res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			zlog.Info("没有在申请的联系人")
+			return "没有在申请的联系人", nil, 0
+		} else {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, nil, -1
+		}
+	}
+	var rsp []respond.AddGroupListRespond
+	for _, contactApply := range contactApplyList {
+		var message string
+		if contactApply.Message == "" {
+			message = "申请理由：无"
+		} else {
+			message = "申请理由：" + contactApply.Message
+		}
+		newContact := respond.AddGroupListRespond{
 			ContactId: contactApply.Uuid,
 			Message:   message,
 		}
