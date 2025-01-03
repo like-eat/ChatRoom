@@ -156,3 +156,13 @@ func (g *groupInfoService) GetGroupInfo(userId string, groupId string) (string, 
 //func (g *groupInfoService) LeaveGroup(userId string, groupId string) error {
 //	if userId ==
 //}
+
+// CheckGroupAddMode 检查群聊加群方式
+func (g *groupInfoService) CheckGroupAddMode(groupId string) (string, int8, int) {
+	var group model.GroupInfo
+	if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1, -1
+	}
+	return "加群方式获取成功", group.AddMode, 0
+}

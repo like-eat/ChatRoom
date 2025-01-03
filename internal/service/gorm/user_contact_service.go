@@ -1,6 +1,7 @@
 package gorm
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
@@ -357,45 +358,112 @@ func (u *userContactService) GetAddGroupList(groupId string) (string, []respond.
 
 // PassContactApply 通过联系人申请
 func (u *userContactService) PassContactApply(ownerId string, contactId string) (string, int) {
+	// ownerId 如果是用户的话就是登录用户，如果是群聊的话就是群聊id
 	var contactApply model.ContactApply
 	if res := dao.GormDB.Where("contact_id = ? AND user_id = ?", ownerId, contactId).First(&contactApply); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	if contactApply.DeletedAt.Valid {
-		zlog.Error("联系人已被禁用")
-		return "联系人已被禁用", -2
+	if contactId[0] == 'U' {
+		if contactApply.DeletedAt.Valid {
+			zlog.Error("联系人已被禁用")
+			return "联系人已被禁用", -2
+		}
+		contactApply.Status = contact_apply_status_enum.AGREE
+		if res := dao.GormDB.Save(&contactApply); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		newContact := model.UserContact{
+			UserId:      ownerId,
+			ContactId:   contactId,
+			ContactType: contact_type_enum.User,     // 用户
+			Status:      contact_status_enum.NORMAL, // 正常
+			CreatedAt:   time.Now(),
+			UpdateAt:    time.Now(),
+		}
+		if res := dao.GormDB.Create(&newContact); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		anotherContact := model.UserContact{
+			UserId:      contactId,
+			ContactId:   ownerId,
+			ContactType: contact_type_enum.User,     // 用户
+			Status:      contact_status_enum.NORMAL, // 正常
+			CreatedAt:   newContact.CreatedAt,
+			UpdateAt:    newContact.UpdateAt,
+		}
+		if res := dao.GormDB.Create(&anotherContact); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		return "已添加该联系人", 0
+	} else {
+		// 如果群聊被禁用或者已解散，则触发DeletedAt
+		if contactApply.DeletedAt.Valid {
+			zlog.Error("群聊已被禁用/群聊已解散")
+			return "群聊已被禁用/群聊已解散", -2
+		}
+		contactApply.Status = contact_apply_status_enum.AGREE
+		if res := dao.GormDB.Save(&contactApply); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		// 群聊就只用创建一个UserContact，因为一个UserContact足以表达双方的状态
+		newContact := model.UserContact{
+			UserId:      contactId,
+			ContactId:   ownerId,
+			ContactType: contact_type_enum.Group,    // 用户
+			Status:      contact_status_enum.NORMAL, // 正常
+			CreatedAt:   time.Now(),
+			UpdateAt:    time.Now(),
+		}
+		if res := dao.GormDB.Create(&newContact); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		var group model.GroupInfo
+		if res := dao.GormDB.First(&group, "uuid = ?", ownerId); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		var members []string
+		if err := json.Unmarshal(group.Members, &members); err != nil {
+			zlog.Error(err.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		members = append(members, contactId)
+		group.MemberCnt = len(members)
+		group.Members, _ = json.Marshal(members)
+		if res := dao.GormDB.Save(&group); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		return "已通过加群申请", 0
 	}
-	contactApply.Status = contact_apply_status_enum.AGREE
+
+}
+
+// RefuseContactApply 拒绝联系人申请
+func (u *userContactService) RefuseContactApply(ownerId string, contactId string) (string, int) {
+	// ownerId 如果是用户的话就是登录用户，如果是群聊的话就是群聊id
+	var contactApply model.ContactApply
+	if res := dao.GormDB.Where("contact_id = ? AND user_id = ?", ownerId, contactId).First(&contactApply); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	contactApply.Status = contact_apply_status_enum.REFUSE
 	if res := dao.GormDB.Save(&contactApply); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	newContact := model.UserContact{
-		UserId:      ownerId,
-		ContactId:   contactId,
-		ContactType: contact_type_enum.User,     // 用户
-		Status:      contact_status_enum.NORMAL, // 正常
-		CreatedAt:   time.Now(),
-		UpdateAt:    time.Now(),
+	if ownerId[0] == 'U' {
+		return "已拒绝该联系人申请", 0
+	} else {
+		return "已拒绝该加群申请", 0
 	}
-	if res := dao.GormDB.Create(&newContact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	anotherContact := model.UserContact{
-		UserId:      contactId,
-		ContactId:   ownerId,
-		ContactType: contact_type_enum.User,     // 用户
-		Status:      contact_status_enum.NORMAL, // 正常
-		CreatedAt:   newContact.CreatedAt,
-		UpdateAt:    newContact.UpdateAt,
-	}
-	if res := dao.GormDB.Create(&anotherContact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	return "已添加该联系人", 0
+
 }
 
 // BlackContact 拉黑联系人

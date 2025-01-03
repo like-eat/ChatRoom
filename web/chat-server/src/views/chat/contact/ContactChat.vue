@@ -249,15 +249,15 @@
               </Modal>
               <Modal :isVisible="isGroupContactInfoModalVisible">
                 <template v-slot:header>
-                  <div class="modal-quit-btn-container">
+                  <div class="groupcontactinfo-modal-quit-btn-container">
                     <button
-                      class="modal-quit-btn"
+                      class="groupcontactinfo-modal-quit-btn"
                       @click="quitGroupContactInfoModal"
                     >
                       <el-icon><Close /></el-icon>
                     </button>
                   </div>
-                  <div class="modal-header-title">
+                  <div class="groupcontactinfo-modal-header-title">
                     <h3>群聊主页</h3>
                   </div>
                 </template>
@@ -389,7 +389,7 @@
                               hide-after="0"
                               enterable="false"
                             >
-                              <div>
+                              <div style="color: black;">
                                 {{ addGroup.contact_name }}
                               </div>
                             </el-tooltip>
@@ -893,11 +893,11 @@ export default {
         );
         if (rsp.data.code == 200) {
           data.addGroupList = rsp.data.data;
-          if (data.addGroupList == null) {
+          if (data.addGroupList.length == 0) {
             ElMessage.warning("没有新的加群申请");
             return;
           } else {
-            data.isAddGroupApplyModalVisible = true;
+            data.isAddGroupModalVisible = true;
             console.log(rsp);
           }
         }
@@ -1153,29 +1153,53 @@ export default {
       });
     };
 
-    const handleAgree = () => {
-      // try {
-      //   const req = {
-      //     owner_id: data.userInfo.uuid,
-      //     contact_id: contactId,
-      //   };
-      //   const rsp = await axios.post(
-      //     store.state.backendUrl + "/contact/passContactApply",
-      //     req
-      //   );
-      //   console.log(rsp);
-      //   if (rsp.data.code == 200) {
-      //     ElMessage.success(rsp.data.message);
-      //     data.newContactList = data.newContactList.filter(
-      //       (c) => c.contact_id !== contactId
-      //     );
-      //   } else {
-      //     ElMessage.error(rsp.data.message);
-      //   }
-      // } catch (error) {
-      //   console.error(error);
-      // }
+    const handleAgree = async (contactId) => {
+      try {
+        const req = {
+          owner_id:  data.contactInfo.contact_id,
+          contact_id: contactId,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/passContactApply",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          data.addGroupList = data.addGroupList.filter(
+            (c) => c.contact_id !== contactId
+          );
+        } else {
+          ElMessage.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
     };
+
+    const handleReject = async (contactId) => {
+      try {
+        const req = {
+          owner_id: data.contactInfo.contact_id,
+          contact_id: contactId,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/refuseContactApply",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          data.addGroupList = data.addGroupList.filter(
+            (c) => c.contact_id !== contactId
+          );
+        } else {
+          ElMessage.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
     return {
       ...toRefs(data),
       router,
@@ -1208,6 +1232,7 @@ export default {
       sendMessage,
       getMessageList,
       handleAgree,
+      handleReject,
       handleAddGroupList,
     };
   },
@@ -1249,14 +1274,14 @@ h3 {
   color: rgb(69, 69, 68);
 }
 
-.modal-quit-btn-container {
+.groupcontactinfo-modal-quit-btn-container {
   height: 25px;
   width: 100%;
   display: flex;
   flex-direction: row-reverse;
 }
 
-.modal-quit-btn {
+.groupcontactinfo-modal-quit-btn {
   background-color: rgba(255, 255, 255, 0);
   color: rgb(229, 25, 25);
   padding: 15px;
@@ -1267,7 +1292,7 @@ h3 {
   align-items: center;
 }
 
-.modal-header-title {
+.groupcontactinfo-modal-header-title {
   height: 30px;
   width: 100%;
   display: flex;
@@ -1441,7 +1466,6 @@ h3 {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  /*background-color:aqua;*/
 }
 
 .modal-body {
@@ -1507,5 +1531,14 @@ h3 {
   align-items: center;
   width: 100%;
   height: 40px;
+}
+
+.action-btn {
+  background-color: rgb(252, 210.9, 210.9);
+  border: none;
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
 }
 </style>

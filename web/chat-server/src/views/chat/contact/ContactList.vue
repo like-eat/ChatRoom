@@ -767,8 +767,17 @@ export default {
 
     const handleApplyContact = async () => {
       try {
+        let req = {
+          group_id: data.applyContactReq.contact_id,
+        }
+        let rsp = await axios.post(store.state.backendUrl + "/group/checkGroupAddMode", req);
+        if (rsp.data.code == 200) {
+          if (rsp.data.data == 0) { // 直接加入
+            
+          }
+        }
         data.applyContactReq.owner_id = data.userInfo.uuid;
-        const rsp = await axios.post(
+        rsp = await axios.post(
           store.state.backendUrl + "/contact/applyContact",
           data.applyContactReq
         );
@@ -914,6 +923,30 @@ export default {
       }
     };
 
+    const handleReject = async (contactId) => {
+      try {
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: contactId,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/refuseContactApply",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          data.addGroupList = data.addGroupList.filter(
+            (c) => c.contact_id !== contactId
+          );
+        } else {
+          ElMessage.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
     const handleCancelBlack = async (user) => {
       try {
         const req = {
@@ -971,6 +1004,7 @@ export default {
       handleToChatGroup,
       handleNewContactList,
       handleAgree,
+      handleReject,
       handleCancelBlack,
       logout,
     };

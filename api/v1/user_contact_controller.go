@@ -115,6 +115,21 @@ func PassContactApply(c *gin.Context) {
 	JsonBack(c, message, ret, nil)
 }
 
+// // RefuseContactApply 拒绝联系人申请
+func RefuseContactApply(c *gin.Context) {
+	var passContactApplyReq request.PassContactApplyRequest
+	if err := c.BindJSON(&passContactApplyReq); err != nil {
+		zlog.Error(err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": constants.SYSTEM_ERROR,
+		})
+		return
+	}
+	message, ret := gorm.UserContactService.RefuseContactApply(passContactApplyReq.OwnerId, passContactApplyReq.ContactId)
+	JsonBack(c, message, ret, nil)
+}
+
 // BlackContact 拉黑联系人
 func BlackContact(c *gin.Context) {
 	var req request.BlackContactRequest

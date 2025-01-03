@@ -39,6 +39,7 @@ func main() {
 	r.POST("/contact/cancelBlackContact", v1.CancelBlackContact)
 	r.POST("/contact/getAddGroupList", v1.GetAddGroupList)
 	r.POST("/message/getMessageList", v1.GetMessageList)
+	r.POST("/contact/refuseContactApply", v1.RefuseContactApply)
 	r.GET("/ws", v1.WsHandler)
 
 	conf := config.GetConfig()
