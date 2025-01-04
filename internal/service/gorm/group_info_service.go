@@ -3,11 +3,14 @@ package gorm
 import (
 	"encoding/json"
 	"fmt"
+	"gorm.io/gorm"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
 	"kama_chat_server/pkg/constants"
+	"kama_chat_server/pkg/enum/contact/contact_status_enum"
+	"kama_chat_server/pkg/enum/contact/contact_type_enum"
 	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
@@ -153,9 +156,113 @@ func (g *groupInfoService) GetGroupInfo(userId string, groupId string) (string, 
 //}
 
 // LeaveGroup 退群
-//func (g *groupInfoService) LeaveGroup(userId string, groupId string) error {
-//	if userId ==
-//}
+func (g *groupInfoService) LeaveGroup(userId string, groupId string) (string, int) {
+	// 从群聊中清除该用户
+	var group model.GroupInfo
+	if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	var members []string
+	if err := json.Unmarshal(group.Members, &members); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	for i, member := range members {
+		if member == userId {
+			members = append(members[:i], members[i+1:]...)
+			break
+		}
+	}
+	if data, err := json.Marshal(members); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, -1
+	} else {
+		group.Members = data
+	}
+	group.MemberCnt -= 1
+	if res := dao.GormDB.Save(&group); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	// 删除会话
+	var deletedAt gorm.DeletedAt
+	deletedAt.Time = time.Now()
+	deletedAt.Valid = true
+	if res := dao.GormDB.Model(&model.Session{}).Where("send_id = ? AND receive_id = ?", userId, groupId).Update("deleted_at", deletedAt); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	// 删除联系人
+	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", userId, groupId).Updates(map[string]interface{}{
+		"deleted_at": deletedAt,
+		"status":     contact_status_enum.QUIT_GROUP, // 退群
+	}); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	// 删除申请记录，后面还可以加
+	if res := dao.GormDB.Model(&model.ContactApply{}).Where("contact_id = ? AND user_id = ?", groupId, userId).Update("deleted_at", deletedAt); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+
+	return "退群成功", 0
+}
+
+// DismissGroup 解散群聊
+func (g *groupInfoService) DismissGroup(groupId string) (string, int) {
+	var deletedAt gorm.DeletedAt
+	deletedAt.Time = time.Now()
+	deletedAt.Valid = true
+	if res := dao.GormDB.Model(&model.GroupInfo{}).Where("uuid = ?", groupId).Updates(
+		map[string]interface{}{
+			"deleted_at": deletedAt,
+			"updated_at": deletedAt.Time,
+		}); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+
+	var sessionList []model.Session
+	if res := dao.GormDB.Model(&model.Session{}).Where("receive_id = ?", groupId).Find(&sessionList); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	for _, session := range sessionList {
+		if res := dao.GormDB.Model(&session).Updates(
+			map[string]interface{}{
+				"deleted_at": deletedAt,
+			}); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+	}
+
+	var userContactList []model.UserContact
+	if res := dao.GormDB.Model(&model.UserContact{}).Where("contact_id = ?", groupId).Find(&userContactList); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+
+	for _, userContact := range userContactList {
+		if res := dao.GormDB.Model(&userContact).Update("deleted_at", deletedAt); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+	}
+
+	var contactApply model.ContactApply
+	if res := dao.GormDB.Model(&contactApply).Where("contact_id = ?", groupId).Update("deleted_at", deletedAt); res.Error != nil {
+		if res.Error != gorm.ErrRecordNotFound {
+			zlog.Info(res.Error.Error())
+			return "无响应的申请记录需要删除", 0
+		}
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	return "解散群聊成功", 0
+}
 
 // CheckGroupAddMode 检查群聊加群方式
 func (g *groupInfoService) CheckGroupAddMode(groupId string) (string, int8, int) {
@@ -165,4 +272,45 @@ func (g *groupInfoService) CheckGroupAddMode(groupId string) (string, int8, int)
 		return constants.SYSTEM_ERROR, -1, -1
 	}
 	return "加群方式获取成功", group.AddMode, 0
+}
+
+// EnterGroupDirectly 直接进群
+// ownerId 是群聊id
+func (g *groupInfoService) EnterGroupDirectly(ownerId, contactId string) (string, int) {
+
+	var group model.GroupInfo
+	if res := dao.GormDB.First(&group, "uuid = ?", ownerId); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	var members []string
+	if err := json.Unmarshal(group.Members, &members); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	members = append(members, contactId)
+	if data, err := json.Marshal(members); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, -1
+	} else {
+		group.Members = data
+	}
+	group.MemberCnt += 1
+	if res := dao.GormDB.Save(&group); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	newContact := model.UserContact{
+		UserId:      contactId,
+		ContactId:   ownerId,
+		ContactType: contact_type_enum.Group,    // 用户
+		Status:      contact_status_enum.NORMAL, // 正常
+		CreatedAt:   time.Now(),
+		UpdateAt:    time.Now(),
+	}
+	if res := dao.GormDB.Create(&newContact); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	return "进群成功", 0
 }

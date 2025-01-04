@@ -115,7 +115,7 @@ func PassContactApply(c *gin.Context) {
 	JsonBack(c, message, ret, nil)
 }
 
-// // RefuseContactApply 拒绝联系人申请
+// RefuseContactApply 拒绝联系人申请
 func RefuseContactApply(c *gin.Context) {
 	var passContactApplyReq request.PassContactApplyRequest
 	if err := c.BindJSON(&passContactApplyReq); err != nil {
@@ -173,4 +173,19 @@ func GetAddGroupList(c *gin.Context) {
 	}
 	message, data, ret := gorm.UserContactService.GetAddGroupList(req.GroupId)
 	JsonBack(c, message, ret, data)
+}
+
+// BlackApply 拉黑申请
+func BlackApply(c *gin.Context) {
+	var req request.BlackApplyRequest
+	if err := c.BindJSON(&req); err != nil {
+		zlog.Error(err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": constants.SYSTEM_ERROR,
+		})
+		return
+	}
+	message, ret := gorm.UserContactService.BlackApply(req.OwnerId, req.ContactId)
+	JsonBack(c, message, ret, nil)
 }

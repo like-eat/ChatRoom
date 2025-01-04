@@ -187,15 +187,15 @@
             <div class="chat-title-right">
               <Modal :isVisible="isUserContactInfoModalVisible">
                 <template v-slot:header>
-                  <div class="modal-quit-btn-container">
+                  <div class="userinfo-modal-quit-btn-container">
                     <button
-                      class="modal-quit-btn"
+                      class="userinfo-modal-quit-btn"
                       @click="quitUserContactInfoModal"
                     >
                       <el-icon><Close /></el-icon>
                     </button>
                   </div>
-                  <div class="modal-header-title">
+                  <div class="userinfo-modal-header-title">
                     <h3>个人主页</h3>
                   </div>
                 </template>
@@ -221,7 +221,7 @@
                       contactInfo.contact_id
                     }}</el-descriptions-item>
                     <el-descriptions-item label="性别">{{
-                      contactInfo.contact_gender
+                      contactInfo.contact_gender == 0 ? "男" : "女"
                     }}</el-descriptions-item>
                     <el-descriptions-item label="电话号码">{{
                       contactInfo.contact_phone
@@ -340,7 +340,16 @@
                     <el-dropdown-item @click="preToDeleteSession"
                       >删除该会话</el-dropdown-item
                     >
-                    <el-dropdown-item>退出群聊</el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="contactInfo.contact_owner_id == userInfo.uuid"
+                      @click="handleDismissGroup"
+                      >解散群聊</el-dropdown-item
+                    >
+                    <el-dropdown-item
+                      v-if="contactInfo.contact_owner_id != userInfo.uuid"
+                      @click="handleLeaveGroup"
+                      >退出群聊</el-dropdown-item
+                    >
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -389,7 +398,7 @@
                               hide-after="0"
                               enterable="false"
                             >
-                              <div style="color: black;">
+                              <div style="color: black">
                                 {{ addGroup.contact_name }}
                               </div>
                             </el-tooltip>
@@ -434,7 +443,7 @@
                   class="message-item"
                 >
                   <div
-                    v-if="messageItem.send_id == contactInfo.contact_id"
+                    v-if="messageItem.send_id != userInfo.uuid"
                     class="left-message"
                   >
                     <div class="left-message-left">
@@ -454,7 +463,7 @@
                     <div class="left-message-right">
                       <div class="left-message-right-top">
                         <div class="left-message-contactname">
-                          {{ contactInfo.contact_name }}
+                          {{ messageItem.send_name }}
                         </div>
                         <div class="left-message-time">
                           {{ messageItem.created_at }}
@@ -760,16 +769,38 @@ export default {
     onBeforeRouteUpdate(async (to, from, next) => {
       await getChatContactInfo(to.params.id);
       await getSessionId(router.currentRoute.value.params.id);
-      await getMessageList();
+      if (data.contactInfo.contact_id[0] == "U") {
+        await getMessageList();
+      } else {
+        await getGroupMessageList();
+      }
       console.log(data.sessionId);
       store.state.socket.onmessage = (jsonMessage) => {
         const message = JSON.parse(jsonMessage.data);
-        console.log("收到消息：", message);
-        if (data.messageList == null) {
-          data.messageList = [];
+        // 如果现在会话是群组
+        if (
+          message.receive_id[0] == "G" &&
+          message.receive_id == data.contactInfo.contact_id
+        ) {
+          console.log("收到消息：", message);
+          if (data.messageList == null) {
+            data.messageList = [];
+          }
+          data.messageList.push(message);
+          scrollToBottom();
         }
-        data.messageList.push(message);
-        scrollToBottom();
+        // 如果现在会话是用户
+        if (
+          message.receive_id[0] == "U" &&
+          message.receive_id == data.userInfo.uuid
+        ) {
+          console.log("收到消息：", message);
+          if (data.messageList == null) {
+            data.messageList = [];
+          }
+          data.messageList.push(message);
+          scrollToBottom();
+        }
       };
       scrollToBottom();
       next();
@@ -782,21 +813,38 @@ export default {
         await getChatContactInfo(router.currentRoute.value.params.id);
         await getSessionId(router.currentRoute.value.params.id);
         console.log(data.contactInfo);
-        await getMessageList();
+        if (data.contactInfo.contact_id[0] == "U") {
+          await getMessageList();
+        } else {
+          await getGroupMessageList();
+        }
         console.log(data.sessionId);
         store.state.socket.onmessage = (jsonMessage) => {
-          try {
-            console.log("收到消息：", jsonMessage.data);
-            const message = JSON.parse(jsonMessage.data);
+          const message = JSON.parse(jsonMessage.data);
+          // 如果现在会话是群组
+          if (
+            message.receive_id[0] == "G" &&
+            message.receive_id == data.contactInfo.contact_id
+          ) {
+            console.log("收到消息：", message);
             if (data.messageList == null) {
               data.messageList = [];
             }
-            console.log(data.messageList);
             data.messageList.push(message);
-          } catch (error) {
-            console.error(error);
+            scrollToBottom();
           }
-          scrollToBottom();
+          // 如果现在会话是用户
+          if (
+            message.receive_id[0] == "U" &&
+            message.receive_id == data.userInfo.uuid
+          ) {
+            console.log("收到消息：", message);
+            if (data.messageList == null) {
+              data.messageList = [];
+            }
+            data.messageList.push(message);
+            scrollToBottom();
+          }
         };
         scrollToBottom();
       } catch (error) {
@@ -893,7 +941,8 @@ export default {
         );
         if (rsp.data.code == 200) {
           data.addGroupList = rsp.data.data;
-          if (data.addGroupList.length == 0) {
+          console.log(rsp.data.data);
+          if (data.addGroupList == null) {
             ElMessage.warning("没有新的加群申请");
             return;
           } else {
@@ -1119,6 +1168,7 @@ export default {
         type: 0,
         content: data.chatMessage,
         send_id: data.userInfo.uuid,
+        send_name: data.userInfo.nickname,
         receive_id: data.contactInfo.contact_id,
       };
       store.state.socket.send(JSON.stringify(chatMessageRequest));
@@ -1145,6 +1195,24 @@ export default {
       }
     };
 
+    const getGroupMessageList = async () => {
+      try {
+        console.log(data.contactInfo);
+        const req = {
+          group_id: data.contactInfo.contact_id,
+        };
+        console.log(req);
+        const rsp = await axios.post(
+          store.state.backendUrl + "/message/getGroupMessageList",
+          req
+        );
+        data.messageList = rsp.data.data;
+        console.log(rsp);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
     const scrollToBottom = () => {
       nextTick(() => {
         const scrollHeight = data.innerRef.scrollHeight;
@@ -1156,7 +1224,7 @@ export default {
     const handleAgree = async (contactId) => {
       try {
         const req = {
-          owner_id:  data.contactInfo.contact_id,
+          owner_id: data.contactInfo.contact_id,
           contact_id: contactId,
         };
         const rsp = await axios.post(
@@ -1199,7 +1267,58 @@ export default {
       } catch (error) {
         console.error(error);
       }
-    }
+    };
+
+    const handleLeaveGroup = async () => {
+      try {
+        const req = {
+          user_id: data.userInfo.uuid,
+          group_id: data.contactInfo.contact_id,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/group/leaveGroup",
+          req
+        );
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          console.log(rsp.data.message);
+          router.push("/chat/sessionlist");
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+          console.log(rsp.data.message);
+        } else {
+          ElMessage.error(rsp.data.message);
+          console.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const handleDismissGroup = async () => {
+      try {
+        const req = {
+          group_id: data.contactInfo.contact_id,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/group/dismissGroup",
+          req
+        );
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          console.log(rsp.data.message);
+          router.push("/chat/sessionlist");
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+          console.log(rsp.data.message);
+        } else {
+          ElMessage.error(rsp.data.message);
+          console.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
     return {
       ...toRefs(data),
       router,
@@ -1231,9 +1350,12 @@ export default {
       preToBlackContact,
       sendMessage,
       getMessageList,
+      getGroupMessageList,
       handleAgree,
       handleReject,
       handleAddGroupList,
+      handleLeaveGroup,
+      handleDismissGroup,
     };
   },
 };
@@ -1293,6 +1415,32 @@ h3 {
 }
 
 .groupcontactinfo-modal-header-title {
+  height: 30px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.userinfo-modal-quit-btn-container {
+  height: 25px;
+  width: 100%;
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.userinfo-modal-quit-btn {
+  background-color: rgba(255, 255, 255, 0);
+  color: rgb(229, 25, 25);
+  padding: 15px;
+  border: none;
+  cursor: pointer;
+  position: fixed;
+  justify-content: center;
+  align-items: center;
+}
+
+.userinfo-modal-header-title {
   height: 30px;
   width: 100%;
   display: flex;

@@ -753,7 +753,11 @@ export default {
         ElMessage.error("请输入申请用户/群组id");
         return;
       }
-      handleApplyContact();
+      if (data.applyContactReq.contact_id[0] == 'G') {
+        handleApplyGroup();
+      } else {
+        handleApplyContact();
+      }
     };
 
     const showNewContactModal = () => {
@@ -764,8 +768,7 @@ export default {
       data.isNewContactModalVisible = false;
       data.newContactList = [];
     };
-
-    const handleApplyContact = async () => {
+    const handleApplyGroup = async () => {
       try {
         let req = {
           group_id: data.applyContactReq.contact_id,
@@ -773,8 +776,12 @@ export default {
         let rsp = await axios.post(store.state.backendUrl + "/group/checkGroupAddMode", req);
         if (rsp.data.code == 200) {
           if (rsp.data.data == 0) { // 直接加入
-            
+            handleEnterDirectly(data.applyContactReq.contact_id);
+            return;
           }
+        } else {
+          ElMessage.error("申请失败");
+          return;
         }
         data.applyContactReq.owner_id = data.userInfo.uuid;
         rsp = await axios.post(
@@ -793,6 +800,26 @@ export default {
         } else {
           ElMessage.error("申请失败");
         }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const handleApplyContact = async () => {
+      try {
+        data.applyContactReq.owner_id = data.userInfo.uuid;
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/applyContact",
+          data.applyContactReq
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          if (rsp.data.message == "申请成功") {
+            data.isApplyContactModalVisible = false;
+            ElMessage.success("申请成功");
+            return;
+          }
+        } 
+        ElMessage.error(rsp.data.message);
       } catch (error) {
         console.error(error);
       }
@@ -922,7 +949,27 @@ export default {
         console.error(error);
       }
     };
-
+    const handleEnterDirectly = async (groupId) => {
+      try {
+        const req = {
+          owner_id:  groupId,
+          contact_id: data.userInfo.uuid,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/group/enterGroupDirectly",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          data.isApplyContactModalVisible = false;
+        } else {
+          ElMessage.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
     const handleReject = async (contactId) => {
       try {
         const req = {
@@ -936,17 +983,49 @@ export default {
         console.log(rsp);
         if (rsp.data.code == 200) {
           ElMessage.success(rsp.data.message);
-          data.addGroupList = data.addGroupList.filter(
+          console.log(rsp.data.message);
+          data.newContactList = data.newContactList.filter(
             (c) => c.contact_id !== contactId
           );
-        } else {
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+          console.log(rsp.data.message);
+        } else if (rsp.data.code == 500) {
           ElMessage.error(rsp.data.message);
+          console.log(rsp.data.message);
         }
       } catch (error) {
         console.error(error);
       }
     }
-
+    const handleBlack = async (contactId) => {
+      try {
+        const req = {
+          owner_id: data.userInfo.uuid,
+          contact_id: contactId,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/contact/blackApply",
+          req
+        );
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          console.log(rsp.data.message);
+          data.newContactList = data.newContactList.filter(
+            (c) => c.contact_id !== contactId
+          );
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+          console.log(rsp.data.message);
+        } else if (rsp.data.code == 500) {
+          ElMessage.error(rsp.data.message);
+          console.log(rsp.data.message);
+        }
+      } catch (error) {
+        ElMessage.error(error);
+        console.error(error);
+      }
+    }
     const handleCancelBlack = async (user) => {
       try {
         const req = {
@@ -976,9 +1055,7 @@ export default {
     const logout = () => {
       store.commit("cleanUserInfo");
       router.push("/login");
-    };
-
-    
+    }
 
     return {
       ...toRefs(data),
@@ -1007,6 +1084,7 @@ export default {
       handleReject,
       handleCancelBlack,
       logout,
+      handleBlack,
     };
   },
 };

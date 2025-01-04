@@ -18,5 +18,5 @@ type ContactApply struct {
 }
 
 func (ContactApply) TableName() string {
-	return "user_contact_apply"
+	return "contact_apply"
 }

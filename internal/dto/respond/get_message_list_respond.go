@@ -2,6 +2,7 @@ package respond
 
 type GetMessageListRespond struct {
 	SendId    string `json:"send_id"`
+	SendName  string `json:"send_name"`
 	ReceiveId string `json:"receive_id"`
 	Type      int8   `json:"type"`
 	Content   string `json:"content"`

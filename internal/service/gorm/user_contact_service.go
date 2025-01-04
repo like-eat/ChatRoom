@@ -230,6 +230,10 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 				return constants.SYSTEM_ERROR, -1
 			}
 		}
+		// 如果存在申请记录，先看看有没有被拉黑
+		if contactApply.Status == contact_apply_status_enum.BLACK {
+			return "对方已将你拉黑", -2
+		}
 		contactApply.LastApplyAt = time.Now()
 
 		if res := dao.GormDB.Save(&contactApply); res.Error != nil {
@@ -364,7 +368,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	if contactId[0] == 'U' {
+	if ownerId[0] == 'U' {
 		if contactApply.DeletedAt.Valid {
 			zlog.Error("联系人已被禁用")
 			return "联系人已被禁用", -2
@@ -527,4 +531,19 @@ func (u *userContactService) CancelBlackContact(ownerId string, contactId string
 		return constants.SYSTEM_ERROR, -1
 	}
 	return "已解除拉黑该联系人", 0
+}
+
+// BlackApply 拉黑申请
+func (u *userContactService) BlackApply(ownerId string, contactId string) (string, int) {
+	var contactApply model.ContactApply
+	if res := dao.GormDB.Where("contact_id = ? AND user_id = ?", ownerId, contactId).First(&contactApply); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	contactApply.Status = contact_apply_status_enum.BLACK
+	if res := dao.GormDB.Save(&contactApply); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	return "已拉黑该申请", 0
 }

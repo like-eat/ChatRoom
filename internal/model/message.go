@@ -10,6 +10,7 @@ type Message struct {
 	Content   string    `gorm:"column:content;type:TEXT;comment:消息内容"`
 	Url       string    `gorm:"column:url;type:char(255);comment:消息url"`
 	SendId    string    `gorm:"column:send_id;index;type:char(20);not null;comment:发送者uuid"`
+	SendName  string    `gorm:"column:send_name;type:varchar(20);not null;comment:发送者昵称"`
 	ReceiveId string    `gorm:"column:receive_id;index;type:char(20);not null;comment:接受者uuid"`
 	FileType  string    `gorm:"column:file_type;type:char(10);comment:文件类型"`
 	FileName  string    `gorm:"column:file_name;type:varchar(50);comment:文件名"`

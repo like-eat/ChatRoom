@@ -85,6 +85,7 @@ func (s *Server) Start() {
 						Content:   chatMessageReq.Content,
 						Url:       "",
 						SendId:    chatMessageReq.SendId,
+						SendName:  chatMessageReq.SendName,
 						ReceiveId: chatMessageReq.ReceiveId,
 						FileSize:  0,
 						FileType:  "",
@@ -101,6 +102,7 @@ func (s *Server) Start() {
 						// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
 						messageRsp := respond.GetMessageListRespond{
 							SendId:    message.SendId,
+							SendName:  message.SendName,
 							ReceiveId: message.ReceiveId,
 							Type:      message.Type,
 							Content:   message.Content,
@@ -130,24 +132,45 @@ func (s *Server) Start() {
 						sendClient := s.Clients[message.SendId]
 						sendClient.SendBack <- messageBack
 					} else if message.ReceiveId[0] == 'G' { // 发送给Group
-						//var members []model.UserInfo
-						//for _, member := range members {
-						//	// message是sendUserId给GroupId发送的
-						//	// sendMessage是GroupId给除sendUserId之外的群成员发送的
-						//	if member.Uuid != message.SendId {
-						//		sendMessage := message
-						//		sendMessage.SendId = message.ReceiveId
-						//		sendMessage.ReceiveId = member.Uuid
-						//		sendData, err := json.Marshal(sendMessage)
-						//		if err != nil {
-						//			zlog.Error(err.Error())
-						//			break // 不转发了，直接结束
-						//		}
-						//		client := s.Clients[member.Uuid]
-						//		client.SendBack <- sendData // 可以使用Kafka
-						//	}
-						//
-						//}
+						messageRsp := respond.GetMessageListRespond{
+							SendId:    message.SendId,
+							SendName:  message.SendName,
+							ReceiveId: message.ReceiveId,
+							Type:      message.Type,
+							Content:   message.Content,
+							Url:       message.Url,
+							FileSize:  message.FileSize,
+							FileName:  message.FileName,
+							FileType:  message.FileType,
+							CreatedAt: message.CreatedAt.Format("2006-01-02 15:04:05"),
+						}
+						jsonMessage, err := json.Marshal(messageRsp)
+						if err != nil {
+							zlog.Error(err.Error())
+						}
+						log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
+						var messageBack = &MessageBack{
+							Message: jsonMessage,
+							Uuid:    message.Uuid,
+						}
+						var group model.GroupInfo
+						if res := dao.GormDB.Where("uuid = ?", message.ReceiveId).First(&group); res.Error != nil {
+							zlog.Error(res.Error.Error())
+						}
+						var members []string
+						if err := json.Unmarshal(group.Members, &members); err != nil {
+							zlog.Error(err.Error())
+						}
+						for _, member := range members {
+							if member != message.SendId {
+								if receiveClient, ok := s.Clients[member]; ok {
+									receiveClient.SendBack <- messageBack
+								}
+							} else {
+								sendClient := s.Clients[message.SendId]
+								sendClient.SendBack <- messageBack
+							}
+						}
 					}
 				}
 
