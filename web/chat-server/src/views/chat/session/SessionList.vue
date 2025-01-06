@@ -8,117 +8,7 @@
     >
       <el-container class="chat-window-container">
         <el-aside class="aside-container">
-          <div class="navigation-bar">
-            <div class="up-bar">
-              <button class="avatar-btn">
-                <el-avatar
-                  src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
-                />
-              </button>
-            </div>
-            <div class="middle-bar">
-              <el-tooltip
-                effect="customized"
-                content="会话聊天"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn">
-                  <el-icon>
-                    <ChatRound />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="通讯录管理"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn" @click="handleToContactList">
-                  <el-icon>
-                    <User />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="朋友圈"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Share />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="我的收藏"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Star />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="搜索"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Search />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-            </div>
-            <div class="down-bar">
-              <el-tooltip
-                effect="customized"
-                content="设置"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <el-dropdown trigger="click" placement="right">
-                  <button class="icon-btn">
-                    <el-icon>
-                      <Setting />
-                    </el-icon>
-                  </button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item @click="logout"
-                        >退出登录</el-dropdown-item
-                      >
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="我的主页"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn" @click="handleToOwnInfo">
-                  <el-icon><HomeFilled /></el-icon>
-                </button>
-              </el-tooltip>
-            </div>
-          </div>
+          <NavigationModal></NavigationModal>
           <div class="sessionlist-container">
             <div class="sessionlist-header">
               <el-input
@@ -354,14 +244,16 @@
 <script>
 import { reactive, toRefs, onMounted, ref } from "vue";
 import { onBeforeRouteUpdate, useRouter } from "vue-router";
-import { ElMessageBox } from 'element-plus';
+import { ElMessageBox, ElMessage } from 'element-plus';
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
+import NavigationModal from "@/components/NavigationModal.vue"
 export default {
   name: "ContactList",
   components: {
     Modal,
+    NavigationModal,
   },
   
   setup() {
@@ -379,97 +271,13 @@ export default {
         add_mode: null,
         avatar: "",
       },
-      isModalVisible: false,
       ownListReq: {
         owner_id: "",
       },
       userSessionList: [],
       groupSessionList: [],
     });
-    
-    
-    const handleToOwnInfo = () => {
-      router.push("/chat/owninfo");
-    };
-    const handleCreateGroup = async () => {
-      try {
-        data.createGroupReq.owner_id = data.userInfo.uuid;
-        const response = await axios.post(
-          store.state.backendUrl + "/group/createGroup",
-          data.createGroupReq
-        );
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    const showModal = () => {
-      data.isModalVisible = true;
-    };
-    const quitModal = () => {
-      data.isModalVisible = false;
-    };
-    const closeModal = () => {
-      if (data.createGroupReq.name == "") {
-        ElMessage("请输入群聊名称");
-        return;
-      }
-      if (data.createGroupReq.add_mode == null) {
-        ElMessage("请选择加群方式");
-        return;
-      }
-      data.isModalVisible = false;
-      handleCreateGroup();
-    };
 
-    const handleShowUserList = async () => {
-      try {
-        data.getUserListReq.owner_id = data.userInfo.uuid;
-        const getUserListRsp = await axios.post(
-          store.state.backendUrl + "/contact/getUserList",
-          data.getUserListReq
-        );
-        data.contactUserList = getUserListRsp.data.data;
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    const handleHideUserList = () => {
-      data.contactUserList = [];
-    };
-
-    const handleShowMyGroupList = async () => {
-      try {
-        data.loadMyGroupReq.owner_id = data.userInfo.uuid;
-        const loadMyGroupRsp = await axios.post(
-          store.state.backendUrl + "/group/loadMyGroup",
-          data.loadMyGroupReq
-        );
-        data.myGroupList = loadMyGroupRsp.data.data;
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    const handleHideMyGroupList = () => {
-      data.myGroupList = [];
-    };
-    const handleShowMyJoinedGroupList = async () => {
-      try {
-        data.loadMyJoinedGroupReq.owner_id = data.userInfo.uuid;
-        const loadMyJoinedGroupRsp = await axios.post(
-          store.state.backendUrl + "/contact/loadMyJoinedGroup",
-          data.loadMyJoinedGroupReq
-        );
-        data.myJoinedGroupList = loadMyJoinedGroupRsp.data.data;
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    const handleHideMyJoinedGroupList = () => {
-      data.myJoinedGroupList = [];
-    };
-    const handleToContactList = () => {
-      router.push("/chat/contactlist");
-    };
     const handleToChatUser = (user) => {
       router.push("/chat/" + user.user_id);
     };
@@ -521,24 +329,9 @@ export default {
         // 取消删除操作
       });
     };
-    const deleteSession = () => {
-      console.log("删除会话组");
-    };
     return {
       ...toRefs(data),
       router,
-      handleToOwnInfo,
-      handleCreateGroup,
-      showModal,
-      closeModal,
-      quitModal,
-      handleShowUserList,
-      handleHideUserList,
-      handleShowMyGroupList,
-      handleHideMyGroupList,
-      handleShowMyJoinedGroupList,
-      handleHideMyJoinedGroupList,
-      handleToContactList,
       handleToChatUser,
       handleToChatGroup,
       handleShowUserSessionList,

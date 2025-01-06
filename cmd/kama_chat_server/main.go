@@ -19,8 +19,10 @@ func main() {
 	corsConfig.ExposeHeaders = []string{"X-Custom-Header"}
 	corsConfig.AllowCredentials = true
 	r.Use(cors.New(corsConfig))
+	r.Static("/static/avatars", config.GetConfig().StaticAvatarPath)
 	r.POST("/login", v1.Login)
 	r.POST("/register", v1.Register)
+	r.POST("/user/updateUserInfo", v1.UpdateUserInfo)
 	r.POST("/group/createGroup", v1.CreateGroup)
 	r.POST("/group/loadMyGroup", v1.LoadMyGroup)
 	r.POST("/group/checkGroupAddMode", v1.CheckGroupAddMode)
@@ -46,6 +48,7 @@ func main() {
 	r.POST("/contact/blackApply", v1.BlackApply)
 	r.POST("/message/getMessageList", v1.GetMessageList)
 	r.POST("/message/getGroupMessageList", v1.GetGroupMessageList)
+	r.POST("/message/uploadAvatar", v1.UploadAvatar)
 	r.GET("/ws", v1.WsHandler)
 
 	conf := config.GetConfig()

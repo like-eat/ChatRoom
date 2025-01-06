@@ -151,3 +151,32 @@ func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterR
 
 	return "注册成功!", registerRsp, 0
 }
+
+// UpdateUserInfo 修改用户信息
+func (u *userInfoService) UpdateUserInfo(updateReq request.UpdateUserInfoRequest) (string, int) {
+	var user model.UserInfo
+	if res := dao.GormDB.First(&user, "uuid = ?", updateReq.Uuid); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	if updateReq.Email != "" {
+		user.Email = updateReq.Email
+	}
+	if updateReq.Nickname != "" {
+		user.Nickname = updateReq.Nickname
+	}
+	if updateReq.Birthday != "" {
+		user.Birthday = updateReq.Birthday
+	}
+	if updateReq.Signature != "" {
+		user.Signature = updateReq.Signature
+	}
+	if updateReq.Avatar != "" {
+		user.Avatar = updateReq.Avatar
+	}
+	if res := dao.GormDB.Save(&user); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	return "修改用户信息成功", 0
+}

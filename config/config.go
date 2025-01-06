@@ -41,13 +41,18 @@ type KafkaConfig struct {
 	MessageMode string `toml:"messageMode"`
 }
 
+type StaticSrcConfig struct {
+	StaticAvatarPath string `toml:"staticAvatarPath"`
+}
+
 type Config struct {
-	MainConfig     `toml:"mainConfig"`
-	MysqlConfig    `toml:"mysqlConfig"`
-	RedisConfig    `toml:"redisConfig"`
-	AuthCodeConfig `toml:"authCodeConfig"`
-	LogConfig      `toml:"logConfig"`
-	KafkaConfig    `toml:"kafkaConfig"`
+	MainConfig      `toml:"mainConfig"`
+	MysqlConfig     `toml:"mysqlConfig"`
+	RedisConfig     `toml:"redisConfig"`
+	AuthCodeConfig  `toml:"authCodeConfig"`
+	LogConfig       `toml:"logConfig"`
+	KafkaConfig     `toml:"kafkaConfig"`
+	StaticSrcConfig `toml:"staticSrcConfig"`
 }
 
 var config *Config

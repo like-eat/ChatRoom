@@ -8,117 +8,7 @@
     >
       <el-container class="chat-window-container">
         <el-aside class="aside-container">
-          <div class="navigation-bar">
-            <div class="up-bar">
-              <button class="avatar-btn">
-                <el-avatar
-                  src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
-                />
-              </button>
-            </div>
-            <div class="middle-bar">
-              <el-tooltip
-                effect="customized"
-                content="会话聊天"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn" @click="handleToSessionList">
-                  <el-icon>
-                    <ChatRound />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="通讯录管理"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn" @click="handleToContactList">
-                  <el-icon>
-                    <User />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="朋友圈"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Share />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="我的收藏"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Star />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="搜索"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn">
-                  <el-icon>
-                    <Search />
-                  </el-icon>
-                </button>
-              </el-tooltip>
-            </div>
-            <div class="down-bar">
-              <el-tooltip
-                effect="customized"
-                content="设置"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <el-dropdown trigger="click" placement="right">
-                  <button class="icon-btn">
-                    <el-icon>
-                      <Setting />
-                    </el-icon>
-                  </button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item @click="logout"
-                        >退出登录</el-dropdown-item
-                      >
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-              </el-tooltip>
-              <el-tooltip
-                effect="customized"
-                content="我的主页"
-                placement="left"
-                hide-after="0"
-                enterable="false"
-              >
-                <button class="icon-btn" @click="handleToOwnInfo">
-                  <el-icon><HomeFilled /></el-icon>
-                </button>
-              </el-tooltip>
-            </div>
-          </div>
+          <NavigationModal></NavigationModal>
           <div class="sessionlist-container">
             <div class="sessionlist-header">
               <el-input
@@ -177,7 +67,7 @@
         </el-aside>
         <el-container class="chat-container">
           <el-header>
-            <div class="chat-title">
+            <div class="chat-title" v-if="contactInfo">
               <img
                 :src="contactInfo.contact_avatar"
                 style="width: 40px; height: 40px; margin-right: 10px"
@@ -530,7 +420,7 @@
                   hide-after="0"
                   enterable="false"
                 >
-                  <button class="image-button">
+                  <button class="image-button" @click="downloadFile(backendUrl+'/static/avatars', '头像.jpg')">
                     <svg
                       t="1733502796507"
                       class="sticker-icon"
@@ -549,6 +439,7 @@
                     </svg>
                   </button>
                 </el-tooltip>
+
                 <el-tooltip
                   effect="customized"
                   content="文件上传"
@@ -557,29 +448,45 @@
                   enterable="false"
                 >
                   <button class="image-button">
-                    <svg
-                      t="1733503065264"
-                      class="upload-icon"
-                      viewBox="0 0 1024 1024"
-                      version="1.1"
-                      xmlns="http://www.w3.org/2000/svg"
-                      p-id="2430"
-                      width="128"
-                      height="128"
+                    <el-upload
+                      v-model:file-list="fileList"
+                      ref="uploadRef"
+                      :auto-upload="true"
+                      :show-file-list="false"
+                      :action="uploadPath"
+                      :on-success="handleUploadSuccess"
+                      :before-upload="beforeFileUpload"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                      "
                     >
-                      <path
-                        d="M543.7 157v534c0 16.6-13.4 30-30 30s-30-13.4-30-30V157c0-16.6 13.4-30 30-30 16.5 0 30 13.4 30 30z"
-                        fill=""
-                        p-id="2431"
-                      ></path>
-                      <path
-                        d="M323.1 331c11.8 11.8 30.7 11.8 42.5 0l119.9-119.9c15.6-15.6 40.9-15.6 56.6 0L662 331c11.7 11.7 30.7 11.7 42.4 0s11.7-30.7 0-42.4L541.7 126.1c-15.6-15.6-41-15.6-56.6 0L323 288.6c-11.6 11.8-11.6 30.7 0.1 42.4zM853.7 913h-680c-33.1 0-60-26.9-60-60V583.7c0-16.4 12.8-30.2 29.2-30.7 16.9-0.4 30.8 13.2 30.8 30v240c0 16.6 13.4 30 30 30h620c16.6 0 30-13.4 30-30V583.7c0-16.4 12.8-30.2 29.2-30.7 16.9-0.4 30.8 13.2 30.8 30v270c0 33.1-26.9 60-60 60z"
-                        fill=""
-                        p-id="2432"
-                      ></path>
-                    </svg>
+                      <svg
+                        t="1733503065264"
+                        class="upload-icon"
+                        viewBox="0 0 1024 1024"
+                        version="1.1"
+                        xmlns="http://www.w3.org/2000/svg"
+                        p-id="2430"
+                        width="128"
+                        height="128"
+                      >
+                        <path
+                          d="M543.7 157v534c0 16.6-13.4 30-30 30s-30-13.4-30-30V157c0-16.6 13.4-30 30-30 16.5 0 30 13.4 30 30z"
+                          fill=""
+                          p-id="2431"
+                        ></path>
+                        <path
+                          d="M323.1 331c11.8 11.8 30.7 11.8 42.5 0l119.9-119.9c15.6-15.6 40.9-15.6 56.6 0L662 331c11.7 11.7 30.7 11.7 42.4 0s11.7-30.7 0-42.4L541.7 126.1c-15.6-15.6-41-15.6-56.6 0L323 288.6c-11.6 11.8-11.6 30.7 0.1 42.4zM853.7 913h-680c-33.1 0-60-26.9-60-60V583.7c0-16.4 12.8-30.2 29.2-30.7 16.9-0.4 30.8 13.2 30.8 30v240c0 16.6 13.4 30 30 30h620c16.6 0 30-13.4 30-30V583.7c0-16.4 12.8-30.2 29.2-30.7 16.9-0.4 30.8 13.2 30.8 30v270c0 33.1-26.9 60-60 60z"
+                          fill=""
+                          p-id="2432"
+                        ></path>
+                      </svg>
+                    </el-upload>
                   </button>
                 </el-tooltip>
+
                 <el-tooltip
                   effect="customized"
                   content="聊天记录"
@@ -698,12 +605,14 @@ import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
 import SmallModal from "@/components/SmallModal.vue";
+import NavigationModal from "@/components/NavigationModal.vue";
 import { ElMessage, ElMessageBox, ElScrollbar } from "element-plus";
 export default {
   name: "ContactChat",
   components: {
     Modal,
     SmallModal,
+    NavigationModal,
   },
 
   setup() {
@@ -762,8 +671,12 @@ export default {
       sessionId: "",
       messageList: [],
       innerRef: ref < HTMLDivElement > null,
-      scrollbarRef: ref(null),
+      scrollbarRef: null,
       addGroupList: [],
+      uploadRef: null,
+      uploadPath: store.state.backendUrl + "/message/uploadAvatar",
+      fileList: [],
+      backendUrl: store.state.backendUrl,
     });
     //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate(async (to, from, next) => {
@@ -777,10 +690,15 @@ export default {
       console.log(data.sessionId);
       store.state.socket.onmessage = (jsonMessage) => {
         const message = JSON.parse(jsonMessage.data);
-        // 如果现在会话是群组
         if (
-          message.receive_id[0] == "G" &&
-          message.receive_id == data.contactInfo.contact_id
+          // 群聊过来的消息，且当前会话是该群聊
+          (message.receive_id[0] == "G" &&
+            message.receive_id == data.contactInfo.contact_id) ||
+          // 其他用户过来的消息，且当前会话是该用户
+          (message.receive_id[0] == "U" &&
+            message.receive_id == data.userInfo.uuid) ||
+          // 自己发送的消息
+          message.send_id == data.userInfo.uuid
         ) {
           console.log("收到消息：", message);
           if (data.messageList == null) {
@@ -789,18 +707,7 @@ export default {
           data.messageList.push(message);
           scrollToBottom();
         }
-        // 如果现在会话是用户
-        if (
-          message.receive_id[0] == "U" &&
-          message.receive_id == data.userInfo.uuid
-        ) {
-          console.log("收到消息：", message);
-          if (data.messageList == null) {
-            data.messageList = [];
-          }
-          data.messageList.push(message);
-          scrollToBottom();
-        }
+        // 其他接受的消息都不显示在messageList中，而是通过切换页面或刷新页面getMessageList来获取
       };
       scrollToBottom();
       next();
@@ -821,22 +728,15 @@ export default {
         console.log(data.sessionId);
         store.state.socket.onmessage = (jsonMessage) => {
           const message = JSON.parse(jsonMessage.data);
-          // 如果现在会话是群组
           if (
-            message.receive_id[0] == "G" &&
-            message.receive_id == data.contactInfo.contact_id
-          ) {
-            console.log("收到消息：", message);
-            if (data.messageList == null) {
-              data.messageList = [];
-            }
-            data.messageList.push(message);
-            scrollToBottom();
-          }
-          // 如果现在会话是用户
-          if (
-            message.receive_id[0] == "U" &&
-            message.receive_id == data.userInfo.uuid
+            // 群聊过来的消息，且当前会话是该群聊
+            (message.receive_id[0] == "G" &&
+              message.receive_id == data.contactInfo.contact_id) ||
+            // 其他用户过来的消息，且当前会话是该用户
+            (message.receive_id[0] == "U" &&
+              message.receive_id == data.userInfo.uuid) ||
+            // 自己发送的消息
+            message.send_id == data.userInfo.uuid
           ) {
             console.log("收到消息：", message);
             if (data.messageList == null) {
@@ -859,19 +759,7 @@ export default {
           data.getContactInfoReq
         );
         data.contactInfo = rsp.data.data;
-        console.log(rsp);
         console.log(data.contactInfo);
-        // if (data.contactInfo.contact_gender == 0) {
-        //   data.contactInfo.contact_gender = "男";
-        // } else {
-        //   data.contactInfo.contact_gender = "女";
-        // }
-        // if (data.contactInfo.contact_add_mode == 0) {
-        //   data.contactInfo.contact_add_mode = "直接加入";
-        // } else {
-        //   data.contactInfo.contact_add_mode = "需要审核";
-        // }
-        console.log(rsp);
       } catch (error) {
         console.log(error);
       }
@@ -891,14 +779,6 @@ export default {
       } catch (error) {
         console.error(error);
       }
-    };
-
-    const handleToContactList = () => {
-      router.push("/chat/contactlist");
-    };
-
-    const handleToOwnInfo = () => {
-      router.push("/chat/owninfo");
     };
 
     const handleCreateGroup = async () => {
@@ -999,10 +879,6 @@ export default {
     };
     const handleHideMyJoinedGroupList = () => {
       data.myJoinedGroupList = [];
-    };
-
-    const handleToSessionList = () => {
-      router.push("/chat/sessionlist");
     };
 
     const handleToChatUser = async (user) => {
@@ -1319,10 +1195,47 @@ export default {
         console.error(error);
       }
     };
+
+    const handleUploadSuccess = () => {
+      ElMessage.success("头像上传成功");
+    };
+    const beforeFileUpload = (file) => {
+      console.log("上传前file====>", file);
+      console.log(data.fileList);
+      console.log(file);
+      if (data.fileList.length > 1) {
+        ElMessage.error("只能上传一张头像");
+        return false;
+      }
+      const isLt50M = file.size / 1024 / 1024 < 50;
+      if (!isLt50M) {
+        ElMessage.error("上传头像图片大小不能超过 50MB!");
+        return false;
+      }
+    };
+    const downloadFile = (path, name) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", path, true);
+      xhr.responseType = "blob";
+      xhr.send();
+      xhr.onload = function () {
+        if (this.status === 200 || this.status === 304) {
+          const fileReader = new FileReader();
+          fileReader.readAsDataURL(this.response);
+          fileReader.onload = function () {
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = this.result;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+      }
+    };
     return {
       ...toRefs(data),
       router,
-      handleToOwnInfo,
       handleCreateGroup,
       showUserContactInfoModal,
       quitUserContactInfoModal,
@@ -1330,14 +1243,12 @@ export default {
       quitGroupContactInfoModal,
       showAddGroupModal,
       quitAddGroupModal,
-      handleToContactList,
       handleShowUserList,
       handleHideUserList,
       handleShowMyGroupList,
       handleHideMyGroupList,
       handleShowMyJoinedGroupList,
       handleHideMyJoinedGroupList,
-      handleToSessionList,
       handleToChatUser,
       handleToChatGroup,
       handleShowUserSessionList,
@@ -1356,7 +1267,11 @@ export default {
       handleAddGroupList,
       handleLeaveGroup,
       handleDismissGroup,
+      handleUploadSuccess,
+      beforeFileUpload,
+      downloadFile,
     };
+  };
   },
 };
 </script>

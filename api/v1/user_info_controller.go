@@ -40,3 +40,18 @@ func Login(c *gin.Context) {
 	message, userInfoStr, ret := gorm.UserInfoService.Login(c, loginReq)
 	JsonBack(c, message, ret, userInfoStr)
 }
+
+// UpdateUserInfo 修改用户信息
+func UpdateUserInfo(c *gin.Context) {
+	var req request.UpdateUserInfoRequest
+	if err := c.BindJSON(&req); err != nil {
+		zlog.Error(err.Error())
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": constants.SYSTEM_ERROR,
+		})
+		return
+	}
+	message, ret := gorm.UserInfoService.UpdateUserInfo(req)
+	JsonBack(c, message, ret, nil)
+}
