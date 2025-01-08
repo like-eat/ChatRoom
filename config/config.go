@@ -43,6 +43,7 @@ type KafkaConfig struct {
 
 type StaticSrcConfig struct {
 	StaticAvatarPath string `toml:"staticAvatarPath"`
+	StaticFilePath   string `toml:"staticFilePath"`
 }
 
 type Config struct {

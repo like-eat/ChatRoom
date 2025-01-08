@@ -172,6 +172,62 @@ func (s *Server) Start() {
 							}
 						}
 					}
+				} else if chatMessageReq.Type == message_type_enum.File {
+					// 存message
+					message := model.Message{
+						Uuid:      fmt.Sprintf("M%s", random.GetNowAndLenRandomString(11)),
+						SessionId: chatMessageReq.SessionId,
+						Type:      chatMessageReq.Type,
+						Content:   "",
+						Url:       chatMessageReq.Url,
+						SendId:    chatMessageReq.SendId,
+						SendName:  chatMessageReq.SendName,
+						ReceiveId: chatMessageReq.ReceiveId,
+						FileSize:  chatMessageReq.FileSize,
+						FileType:  chatMessageReq.FileType,
+						FileName:  chatMessageReq.FileName,
+						Status:    message_status_enum.Unsent,
+						CreatedAt: time.Now(),
+					}
+					if res := dao.GormDB.Create(&message); res.Error != nil {
+						zlog.Error(res.Error.Error())
+					}
+					if message.ReceiveId[0] == 'U' { // 发送给User
+						// 如果能找到ReceiveId，说明在线，可以发送，否则存表后跳过
+						// 因为在线的时候是通过websocket更新消息记录的，离线后通过存表，登录时只调用一次数据库操作
+						// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
+						messageRsp := respond.GetMessageListRespond{
+							SendId:    message.SendId,
+							SendName:  message.SendName,
+							ReceiveId: message.ReceiveId,
+							Type:      message.Type,
+							Content:   message.Content,
+							Url:       message.Url,
+							FileSize:  message.FileSize,
+							FileName:  message.FileName,
+							FileType:  message.FileType,
+							CreatedAt: message.CreatedAt.Format("2006-01-02 15:04:05"),
+						}
+						jsonMessage, err := json.Marshal(messageRsp)
+						if err != nil {
+							zlog.Error(err.Error())
+						}
+						log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
+						var messageBack = &MessageBack{
+							Message: jsonMessage,
+							Uuid:    message.Uuid,
+						}
+						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
+							//messageBack.Message = jsonMessage
+							//messageBack.Uuid = message.Uuid
+							receiveClient.SendBack <- messageBack // 向client.Send发送
+						}
+						// 因为send_id肯定在线，所以这里在后端进行在线回显message，其实优化的话前端可以直接回显
+						// 问题在于前后端的req和rsp结构不同，前端存储message的messageList不能存req，只能存rsp
+						// 所以这里后端进行回显，前端不回显
+						sendClient := s.Clients[message.SendId]
+						sendClient.SendBack <- messageBack
+					}
 				}
 
 			}

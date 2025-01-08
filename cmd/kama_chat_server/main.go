@@ -20,6 +20,7 @@ func main() {
 	corsConfig.AllowCredentials = true
 	r.Use(cors.New(corsConfig))
 	r.Static("/static/avatars", config.GetConfig().StaticAvatarPath)
+	r.Static("/static/files", config.GetConfig().StaticFilePath)
 	r.POST("/login", v1.Login)
 	r.POST("/register", v1.Register)
 	r.POST("/user/updateUserInfo", v1.UpdateUserInfo)

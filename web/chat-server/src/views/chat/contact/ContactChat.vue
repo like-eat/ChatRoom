@@ -67,7 +67,7 @@
         </el-aside>
         <el-container class="chat-container">
           <el-header>
-            <div class="chat-title" v-if="contactInfo">
+            <div class="chat-title" v-if="contactInfo.contact_avatar">
               <img
                 :src="contactInfo.contact_avatar"
                 style="width: 40px; height: 40px; margin-right: 10px"
@@ -374,7 +374,7 @@
                     "
                   >
                     <div
-                      v-if="messageItem.send_id == userInfo.uuid"
+                      v-if="messageItem.send_id == userInfo.uuid && messageItem.type == 0"
                       class="right-message"
                     >
                       <div class="right-message-right">
@@ -407,6 +407,43 @@
                         </div>
                       </div>
                     </div>
+                    <div
+                      v-if="messageItem.send_id == userInfo.uuid && messageItem.type == 2"
+                      class="right-message"
+                    >
+                      <div class="right-message-right">
+                        <el-image
+                          :src="userInfo.avatar"
+                          style="
+                            width: 40px;
+                            height: 40px;
+                            margin-left: 10px;
+                            margin-right: 10px;
+                            margin-top: 10px;
+                          "
+                        >
+                        </el-image>
+                      </div>
+
+                      <div class="right-message-left">
+                        <div class="right-message-left-top">
+                          <div class="right-message-contactname">
+                            {{ userInfo.nickname }}
+                          </div>
+                          <div class="right-message-time">
+                            {{ messageItem.created_at }}
+                          </div>
+                        </div>
+                        <div style="display: flex; flex-direction: row-reverse">
+                          <div class="right-message-file-container">
+                          <div class="right-message-file-name">
+                          {{ messageItem.file_name }}
+                          </div>
+                            
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -420,7 +457,12 @@
                   hide-after="0"
                   enterable="false"
                 >
-                  <button class="image-button" @click="downloadFile(backendUrl+'/static/avatars', '头像.jpg')">
+                  <button
+                    class="image-button"
+                    @click="
+                      downloadFile(backendUrl + '/static/avatars', '头像.jpg')
+                    "
+                  >
                     <svg
                       t="1733502796507"
                       class="sticker-icon"
@@ -671,7 +713,7 @@ export default {
       sessionId: "",
       messageList: [],
       innerRef: ref < HTMLDivElement > null,
-      scrollbarRef: null,
+      scrollbarRef: ref(null),
       addGroupList: [],
       uploadRef: null,
       uploadPath: store.state.backendUrl + "/message/uploadAvatar",
@@ -1043,12 +1085,33 @@ export default {
         session_id: data.sessionId,
         type: 0,
         content: data.chatMessage,
+        url: "",
         send_id: data.userInfo.uuid,
         send_name: data.userInfo.nickname,
         receive_id: data.contactInfo.contact_id,
+        file_size: 0,
+        file_name: "",
+        file_type: "",
       };
       store.state.socket.send(JSON.stringify(chatMessageRequest));
       data.chatMessage = "";
+      scrollToBottom();
+    };
+
+    const sendFileMessage = (fileUrl) => {
+      const chatFileMessageRequest = {
+        session_id: data.sessionId,
+        type: 2,
+        content: "",
+        url: fileUrl,
+        send_id: data.userInfo.uuid,
+        send_name: data.userInfo.nickname,
+        receive_id: data.contactInfo.contact_id,
+        file_size: data.fileList[0].size,
+        file_name: data.fileList[0].name,
+        file_type: data.fileList[0].type,
+      };
+      store.state.socket.send(JSON.stringify(chatFileMessageRequest));
       scrollToBottom();
     };
 
@@ -1198,6 +1261,10 @@ export default {
 
     const handleUploadSuccess = () => {
       ElMessage.success("头像上传成功");
+      sendFileMessage(
+        store.state.backendUrl + "/static/files/" + data.fileList[0].name
+      );
+      data.fileList = [];
     };
     const beforeFileUpload = (file) => {
       console.log("上传前file====>", file);
@@ -1230,8 +1297,9 @@ export default {
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-          }
-      }
+          };
+        }
+      };
     };
     return {
       ...toRefs(data),
@@ -1271,7 +1339,6 @@ export default {
       beforeFileUpload,
       downloadFile,
     };
-  };
   },
 };
 </script>
@@ -1502,6 +1569,24 @@ h3 {
   padding-right: 5px;
   font-size: 14px;
   box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+.right-message-file-container {
+  background-color: #f9f9f9; /* 浅灰色背景 */
+  border: 1px solid #ddd; /* 浅灰色边框 */
+  border-radius: 8px; /* 圆角边框 */
+  padding: 16px; /* 内边距 */
+  max-width: 400px; /* 最大宽度 */
+  margin: 0 auto; /* 水平居中 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 轻微阴影效果 */
+  
+}
+
+.right-message-file-name {
+  font-size: 8px; /* 字体大小 */
+  font-weight: bold; /* 字体加粗 */
+  color: #333; /* 深灰色字体 */
+  margin-bottom: 8px; /* 与下方内容保持间距 */
 }
 
 .modal-quit-btn-container {

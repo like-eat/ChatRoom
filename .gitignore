@@ -27,3 +27,6 @@ vendor/*
 
 *.log
 
+static/avatars/*
+
+static/files/*
