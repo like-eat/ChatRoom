@@ -374,7 +374,10 @@
                     "
                   >
                     <div
-                      v-if="messageItem.send_id == userInfo.uuid && messageItem.type == 0"
+                      v-if="
+                        messageItem.send_id == userInfo.uuid &&
+                        messageItem.type == 0
+                      "
                       class="right-message"
                     >
                       <div class="right-message-right">
@@ -408,7 +411,10 @@
                       </div>
                     </div>
                     <div
-                      v-if="messageItem.send_id == userInfo.uuid && messageItem.type == 2"
+                      v-if="
+                        messageItem.send_id == userInfo.uuid &&
+                        messageItem.type == 2
+                      "
                       class="right-message"
                     >
                       <div class="right-message-right">
@@ -436,10 +442,26 @@
                         </div>
                         <div style="display: flex; flex-direction: row-reverse">
                           <div class="right-message-file-container">
-                          <div class="right-message-file-name">
-                          {{ messageItem.file_name }}
-                          </div>
-                            
+                            <div class="right-message-file-name">
+                              {{ messageItem.file_name }}
+                            </div>
+                            <div class="right-message-file-size">
+                              {{ messageItem.file_size }}
+                            </div>
+                            <div class="right-message-file-download">
+                              <el-button
+                                type="primary"
+                                size="small"
+                                @click="
+                                  downloadFile(
+                                    backendUrl + messageItem.file_path,
+                                    messageItem.file_name
+                                  )
+                                "
+                              >
+                                下载
+                              </el-button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1089,7 +1111,7 @@ export default {
         send_id: data.userInfo.uuid,
         send_name: data.userInfo.nickname,
         receive_id: data.contactInfo.contact_id,
-        file_size: 0,
+        file_size: getFileSize(0),
         file_name: "",
         file_type: "",
       };
@@ -1107,10 +1129,11 @@ export default {
         send_id: data.userInfo.uuid,
         send_name: data.userInfo.nickname,
         receive_id: data.contactInfo.contact_id,
-        file_size: data.fileList[0].size,
+        file_size: getFileSize(data.fileList[0].size),
         file_name: data.fileList[0].name,
         file_type: data.fileList[0].type,
       };
+      console.log(chatFileMessageRequest);
       store.state.socket.send(JSON.stringify(chatFileMessageRequest));
       scrollToBottom();
     };
@@ -1301,6 +1324,17 @@ export default {
         }
       };
     };
+    const getFileSize = (size) => {
+      if (size < 1024) {
+        return size + "B";
+      } else if (size < 1024 * 1024) {
+        return (size / 1024).toFixed(2) + "KB";
+      } else if (size < 1024 * 1024 * 1024) {
+        return (size / 1024 / 1024).toFixed(2) + "MB";
+      } else {
+        return (size / 1024 / 1024 / 1024).toFixed(2) + "GB";
+      }
+    };
     return {
       ...toRefs(data),
       router,
@@ -1338,6 +1372,7 @@ export default {
       handleUploadSuccess,
       beforeFileUpload,
       downloadFile,
+      getFileSize,
     };
   },
 };
@@ -1576,10 +1611,10 @@ h3 {
   border: 1px solid #ddd; /* 浅灰色边框 */
   border-radius: 8px; /* 圆角边框 */
   padding: 16px; /* 内边距 */
-  max-width: 400px; /* 最大宽度 */
+  width: 250px; 
+  height: 100px;
   margin: 0 auto; /* 水平居中 */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 轻微阴影效果 */
-  
 }
 
 .right-message-file-name {

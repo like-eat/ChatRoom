@@ -87,7 +87,7 @@ func (s *Server) Start() {
 						SendId:    chatMessageReq.SendId,
 						SendName:  chatMessageReq.SendName,
 						ReceiveId: chatMessageReq.ReceiveId,
-						FileSize:  0,
+						FileSize:  "0B",
 						FileType:  "",
 						FileName:  "",
 						Status:    message_status_enum.Unsent,

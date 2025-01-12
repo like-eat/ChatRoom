@@ -9,6 +9,6 @@ type GetMessageListRespond struct {
 	Url       string `json:"url"`
 	FileType  string `json:"file_type"`
 	FileName  string `json:"file_name"`
-	FileSize  int    `json:"file_size"`
+	FileSize  string `json:"file_size"`
 	CreatedAt string `json:"created_at"` // 先用CreatedAt排序，后面考虑改成SentAt
 }
