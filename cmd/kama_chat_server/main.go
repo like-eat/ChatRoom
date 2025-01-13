@@ -50,6 +50,7 @@ func main() {
 	r.POST("/message/getMessageList", v1.GetMessageList)
 	r.POST("/message/getGroupMessageList", v1.GetGroupMessageList)
 	r.POST("/message/uploadAvatar", v1.UploadAvatar)
+	r.POST("/message/uploadFile", v1.UploadFile)
 	r.GET("/ws", v1.WsHandler)
 
 	conf := config.GetConfig()

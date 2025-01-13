@@ -42,6 +42,12 @@ func UploadAvatar(c *gin.Context) {
 	JsonBack(c, message, ret, nil)
 }
 
+// UploadFile 上传头像
+func UploadFile(c *gin.Context) {
+	message, ret := gorm.MessageService.UploadFile(c)
+	JsonBack(c, message, ret, nil)
+}
+
 /*downloadFile 通用API，比如，下载文件，大家都可以调用这个api*/
 func downloadFile(c *gin.Context) {
 	//fmt.Println(c.Request.URL)
