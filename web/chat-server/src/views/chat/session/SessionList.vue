@@ -69,7 +69,7 @@
           <el-header>
             <h2 class="chat-name"></h2>
           </el-header>
-          <el-main>
+          <el-main class="main-container">
             <div class="chat-screen"></div>
             <div class="tool-bar">
               <div class="tool-bar-left">

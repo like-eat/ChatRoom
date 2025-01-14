@@ -36,11 +36,11 @@ const routes = [
     name: 'SessionList',
     component: () => import('../views/chat/session/SessionList.vue')
   },
-  // {
-  //   path: '/chat/applyContact',
-  //   name: 'ApplyContact',
-  //   component: () => import('../views/chat/search/ApplyContact.vue')
-  // }
+  {
+    path: '/manager',
+    name: 'Manager',
+    component: () => import('../views/manager/Manager.vue')
+  },
 ]
 
 const router = createRouter({

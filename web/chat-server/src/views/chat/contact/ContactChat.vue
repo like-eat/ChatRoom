@@ -320,7 +320,7 @@
               </SmallModal>
             </div>
           </el-header>
-          <el-main>
+          <el-main class="main-container">
             <el-scrollbar
               max-height="332.5px"
               style="height: 332.5px"
@@ -333,7 +333,10 @@
                   class="message-item"
                 >
                   <div
-                    v-if="messageItem.send_id != userInfo.uuid"
+                    v-if="
+                      messageItem.send_id != userInfo.uuid &&
+                      messageItem.type == 0
+                    "
                     class="left-message"
                   >
                     <div class="left-message-left">
@@ -362,6 +365,62 @@
 
                       <div class="left-message-content">
                         {{ messageItem.content }}
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    v-if="
+                      messageItem.send_id != userInfo.uuid &&
+                      messageItem.type == 2
+                    "
+                    class="left-message"
+                  >
+                    <div class="left-message-left">
+                      <el-image
+                        :src="contactInfo.contact_avatar"
+                        style="
+                          width: 40px;
+                          height: 40px;
+                          margin-left: 10px;
+                          margin-right: 10px;
+                          margin-top: 10px;
+                        "
+                      >
+                      </el-image>
+                    </div>
+
+                    <div class="left-message-right">
+                      <div class="left-message-right-top">
+                        <div class="left-message-contactname">
+                          {{ messageItem.send_name }}
+                        </div>
+                        <div class="left-message-time">
+                          {{ messageItem.created_at }}
+                        </div>
+                      </div>
+
+                      <div class="left-message-file-container">
+                        <div style="display: flex; flex-direction: row">
+                          <div class="left-message-file-name">
+                            {{ messageItem.file_name }}
+                          </div>
+                          <div class="left-message-file-size">
+                            {{ messageItem.file_size }}
+                          </div>
+                        </div>
+
+                        <div class="left-message-file-download">
+                          <el-button
+                            style="
+                              background-color: rgb(252, 210.9, 210.9);
+                              margin-top: 20px;
+                            "
+                            size="small"
+                            @click="downloadFile(messageItem.file_name)"
+                          >
+                            下载
+                          </el-button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -442,25 +501,17 @@
                         </div>
                         <div style="display: flex; flex-direction: row-reverse">
                           <div class="right-message-file-container">
-                            <div class="right-message-file-name">
-                              {{ messageItem.file_name }}
+                            <div style="display: flex; flex-direction: row">
+                              <div class="right-message-file-name">
+                                {{ messageItem.file_name }}
+                              </div>
+                              <div class="right-message-file-size">
+                                {{ messageItem.file_size }}
+                              </div>
                             </div>
-                            <div class="right-message-file-size">
-                              {{ messageItem.file_size }}
-                            </div>
+
                             <div class="right-message-file-download">
-                              <el-button
-                                type="primary"
-                                size="small"
-                                @click="
-                                  downloadFile(
-                                    backendUrl + messageItem.file_path,
-                                    messageItem.file_name
-                                  )
-                                "
-                              >
-                                下载
-                              </el-button>
+                              已发送
                             </div>
                           </div>
                         </div>
@@ -738,7 +789,7 @@ export default {
       scrollbarRef: ref(null),
       addGroupList: [],
       uploadRef: null,
-      uploadPath: store.state.backendUrl + "/message/uploadAvatar",
+      uploadPath: store.state.backendUrl + "/message/uploadFile",
       fileList: [],
       backendUrl: store.state.backendUrl,
     });
@@ -1283,7 +1334,7 @@ export default {
     };
 
     const handleUploadSuccess = () => {
-      ElMessage.success("头像上传成功");
+      ElMessage.success("文件上传成功");
       sendFileMessage(
         store.state.backendUrl + "/static/files/" + data.fileList[0].name
       );
@@ -1303,26 +1354,27 @@ export default {
         return false;
       }
     };
-    const downloadFile = (path, name) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("GET", path, true);
-      xhr.responseType = "blob";
-      xhr.send();
-      xhr.onload = function () {
-        if (this.status === 200 || this.status === 304) {
-          const fileReader = new FileReader();
-          fileReader.readAsDataURL(this.response);
-          fileReader.onload = function () {
-            const a = document.createElement("a");
-            a.style.display = "none";
-            a.href = this.result;
-            a.download = name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          };
-        }
-      };
+    const downloadFile = async (fileName) => {
+      try {
+        const rsp = await axios.get(
+          store.state.backendUrl + "/static/files/" + fileName,
+          {
+            responseType: "blob",
+          }
+        );
+        console.log(rsp);
+        const blob = new Blob([rsp.data], {
+          type: rsp.headers["content-type"] || "application/octet-stream",
+        });
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error(error);
+      }
     };
     const getFileSize = (size) => {
       if (size < 1024) {
@@ -1606,22 +1658,75 @@ h3 {
   box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.2);
 }
 
-.right-message-file-container {
+.left-message-file-container  {
   background-color: #f9f9f9; /* 浅灰色背景 */
   border: 1px solid #ddd; /* 浅灰色边框 */
   border-radius: 8px; /* 圆角边框 */
   padding: 16px; /* 内边距 */
-  width: 250px; 
+  width: 250px;
+  height: 100px;
+  margin: 0 auto; /* 水平居中 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 轻微阴影效果 */
+}
+
+.right-message-file-container  {
+  background-color: #f9f9f9; /* 浅灰色背景 */
+  border: 1px solid #ddd; /* 浅灰色边框 */
+  border-radius: 8px; /* 圆角边框 */
+  padding: 16px; /* 内边距 */
+  width: 250px;
   height: 100px;
   margin: 0 auto; /* 水平居中 */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 轻微阴影效果 */
 }
 
 .right-message-file-name {
-  font-size: 8px; /* 字体大小 */
-  font-weight: bold; /* 字体加粗 */
-  color: #333; /* 深灰色字体 */
-  margin-bottom: 8px; /* 与下方内容保持间距 */
+  font-size: 12px;
+  font-weight: bold;
+  color: #333;
+  margin-right: 5px;
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.left-message-file-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: #333;
+  margin-right: 5px;
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.right-message-file-size {
+  font-size: 11px;
+  color: rgb(176, 172, 172);
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.left-message-file-size {
+  font-size: 11px;
+  color: rgb(176, 172, 172);
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.right-message-file-download {
+  font-size: 12px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(176, 172, 172);
+  margin-top: 20px;
 }
 
 .modal-quit-btn-container {
