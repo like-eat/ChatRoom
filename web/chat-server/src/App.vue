@@ -3,14 +3,43 @@
 </template>
 
 <script>
-import { onMounted } from 'vue';
+import { onMounted } from "vue";
 import { useStore } from "vuex";
+import axios from "axios";
 export default {
   name: "App",
   setup() {
     const store = useStore();
+    const getUserInfo = async () => {
+      try {
+        const req = {
+          uuid: store.state.userInfo.uuid,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/user/getUserInfo",
+          req
+        );
+        if (rsp.data.code == 200) {
+          store.commit("setUserInfo", rsp.data.data);
+        } else {
+          console.error(rsp.data.message);
+        }
+        console.log(rsp);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    const logout = () => {
+      store.commit("cleanUserInfo");
+      router.push("/login");
+      ElMessage.success("账号被封禁，退出登录");
+    };
     onMounted(() => {
       if (store.state.userInfo.uuid) {
+        getUserInfo();
+        if (store.state.userInfo.status == 1) {
+          logout();
+        }
         const wsUrl =
           store.state.wsUrl + "/ws?client_id=" + store.state.userInfo.uuid;
         store.state.socket = new WebSocket(wsUrl);

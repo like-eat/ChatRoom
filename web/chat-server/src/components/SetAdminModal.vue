@@ -1,7 +1,7 @@
 <template>
   <div style="height: 100%; width: 100%" v-if="isVisible">
     <el-table
-      :data="disableUserTableData"
+      :data="setAdminTableData"
       style="width: 100%; height: 90%"
       @selection-change="selectUsers"
     >
@@ -19,7 +19,7 @@
         width="120"
         show-overflow-tooltip
       />
-      <el-table-column prop="is_admin" label="管理员" width="80" >
+      <el-table-column prop="is_admin" label="管理员" width="120" >
         <template #default="scope">
           <el-button type="default" v-if="scope.row.is_admin == 0"
             >否</el-button
@@ -29,7 +29,7 @@
           >
         </template>
       </el-table-column>
-      <el-table-column label="删除状态" width="90">
+      <el-table-column label="删除状态" width="120">
         <template #default="scope">
           <el-button type="default" v-if="scope.row.is_deleted == false"
             >正常</el-button
@@ -39,24 +39,13 @@
           >
         </template>
       </el-table-column>
-      <el-table-column label="禁用状态" width="90">
-        <template #default="scope">
-          <el-button type="default" v-if="scope.row.status == 0"
-            >正常</el-button
-          >
-          <el-button type="success" v-if="scope.row.status == 1"
-            >禁用</el-button
-          >
-        </template>
-      </el-table-column>
     </el-table>
     <div class="main-able-button-container">
-      <el-button
-        style="background-color: rgb(252, 210.9, 210.9); margin-left: 20px" @click="disableUsers"
-        >禁用/全部禁用</el-button
+      <el-button style="background-color: rgb(252, 210.9, 210.9); margin-left: 20px;" @click="setAdmin(1)"
+        >设置/全部设置为管理员</el-button
       >
-      <el-button style="background-color: rgb(252, 210.9, 210.9)" @click="ableUsers"
-        >启用/全部启用</el-button
+      <el-button style="background-color: rgb(252, 210.9, 210.9)" @click="setAdmin(0)"
+        >取消/全部取消管理员</el-button
       >
     </div>
   </div>
@@ -69,7 +58,7 @@ import { useStore } from "vuex";
 import axios from "axios";
 import { useRouter } from 'vue-router';
 export default {
-  name: "DisableUserModal",
+  name: "SetAdminModal",
   props: {
     isVisible: false,
   },
@@ -77,7 +66,7 @@ export default {
     const store = useStore();
     const router = useRouter();
     const data = reactive({
-      disableUserTableData: [],
+      setAdminTableData: [],
       uuidList: [],
     });
     onMounted(() => {
@@ -91,7 +80,7 @@ export default {
         const rsp = await axios.post(
           store.state.backendUrl + "/user/getUserInfoList", req
         );
-        data.disableUserTableData = rsp.data.data;
+        data.setAdminTableData = rsp.data.data;
         console.log(rsp);
       } catch (error) {
         console.log(error);
@@ -103,13 +92,14 @@ export default {
       console.log(data.uuidList);
     };
 
-    const ableUsers = async () => {
+    const setAdmin = async (isAdmin) => {
       try {
         const req = {
           uuid_list: data.uuidList,
+          is_admin: isAdmin,
         }
         const rsp = await axios.post(
-          store.state.backendUrl + "/user/ableUsers", req);
+          store.state.backendUrl + "/user/setAdmin", req);
         console.log(rsp);
         // router.go(0);
         getUserList();
@@ -118,28 +108,13 @@ export default {
       }
     };
 
-    const disableUsers = async () => {
-      try {
-        const req = {
-          uuid_list: data.uuidList,
-        }
-        const rsp = await axios.post(
-          store.state.backendUrl + "/user/disableUsers", req);
-        console.log(rsp);
-        // router.go(0);
-        getUserList();
-      } catch (error) {
-        console.log(error);
-      }
-    }
 
     return {
       ...toRefs(data),
       router,
       getUserList,
       selectUsers,
-      ableUsers,
-      disableUsers,
+      setAdmin,
     };
   },
 };

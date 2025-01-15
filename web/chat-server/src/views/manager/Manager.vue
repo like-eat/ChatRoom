@@ -8,6 +8,7 @@
     >
       <el-container class="chat-window-container">
         <el-header class="header-container">
+        <div style="display: flex; align-items: center; flex-direction: row;">
           <svg
             t="1736782942164"
             class="header-icon"
@@ -24,7 +25,9 @@
               fill="#2c2c2c"
             ></path>
           </svg>
-          <div class="header-title">admin管理员操作界面</div>
+          <div class="header-title">admin</div>
+          </div>
+          <el-button @click="backToChat">返回</el-button>
         </el-header>
 
         <el-container>
@@ -67,7 +70,7 @@
                       p-id="4646"
                     ></path>
                   </svg>
-                  禁用
+                  启用/禁用
                 </el-menu-item>
                 <el-menu-item index="1-2" @click="showDeleteUserTable">
                   <svg
@@ -102,7 +105,7 @@
                     ></path></svg
                   >删除
                 </el-menu-item>
-                <el-menu-item index="1-3">
+                <el-menu-item index="1-3" @click="showSetAdminTable">
                   <svg
                     t="1736825411779"
                     class="menu-item-icon"
@@ -170,6 +173,7 @@
           <el-main class="manager-main-container"> 
             <DeleteUserModal :isVisible="isDeleteUserModalVisible"></DeleteUserModal>
             <DisableUserModal :isVisible="isDisableUserModalVisible"></DisableUserModal>
+            <SetAdminModal :isVisible="isSetAdminModalVisible"></SetAdminModal>
           </el-main>
         </el-container>
       </el-container>
@@ -187,34 +191,50 @@ import { checkEmailValid } from "@/assets/js/valid.js";
 import { generateString } from "@/assets/js/random.js";
 import DisableUserModal from "@/components/DisableUserModal.vue";
 import DeleteUserModal from "@/components/DeleteUserModal.vue";
+import SetAdminModal from "@/components/SetAdminModal.vue";
 import { ElMessage } from "element-plus";
 export default {
   name: "Manager",
   components: {
     DisableUserModal,
     DeleteUserModal,
+    SetAdminModal,
   },
   setup() {
+    const router = useRouter();
     const data = reactive({
       isDisableUserModalVisible: false,
       isDeleteUserModalVisible: false,
+      isSetAdminModalVisible: false,
     });
-
     const showDisableUserTable = () => {
       data.isDisableUserModalVisible = true;
       data.isDeleteUserModalVisible = false;
-      console.log(data.isDisableUserModalVisible, data.isDeleteUserModalVisible)
+      data.isSetAdminModalVisible = false;
     };
 
     const showDeleteUserTable = () => {
       data.isDeleteUserModalVisible = true;
-      data.isDisableUserModalVisible = false;console.log(data.isDisableUserModalVisible, data.isDeleteUserModalVisible)
+      data.isDisableUserModalVisible = false;
+      data.isSetAdminModalVisible = false;
+    }
+
+    const showSetAdminTable = () => {
+      data.isSetAdminModalVisible = true;
+      data.isDeleteUserModalVisible = false;
+      data.isDisableUserModalVisible = false;
+    }
+    const backToChat = () => {
+      router.push("/chat/sessionlist");
     }
 
     return {
       ...toRefs(data),
+      router,
       showDisableUserTable,
       showDeleteUserTable,
+      showSetAdminTable,
+      backToChat,
     };
   },
 };
@@ -229,6 +249,7 @@ export default {
   border-top-left-radius: 30px;
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
   align-items: center;
 }
 
@@ -247,7 +268,6 @@ export default {
   display: flex;
   flex-direction: column;
   border-bottom-left-radius: 30px;
-  background-color: white;
 }
 
 .header-icon {
@@ -295,4 +315,5 @@ export default {
   width: 20px;
   margin-right: 10px;
 }
+
 </style>

@@ -2,9 +2,7 @@
   <div class="navigation-bar">
     <div class="up-bar">
       <button class="avatar-btn">
-        <el-avatar
-          :src="userInfo.avatar"
-        />
+        <el-avatar :src="userInfo.avatar" />
       </button>
     </div>
     <div class="middle-bar">
@@ -90,6 +88,9 @@
           </button>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item v-if="userInfo.is_admin == 1" @click="handleToManager">
+                管理员模式
+              </el-dropdown-item>
               <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -102,7 +103,7 @@
         hide-after="0"
         enterable="false"
       >
-        <button class="icon-btn" @click='handleToOwnInfo'>
+        <button class="icon-btn" @click="handleToOwnInfo">
           <el-icon><HomeFilled /></el-icon>
         </button>
       </el-tooltip>
@@ -113,8 +114,8 @@
 <script>
 import { useRouter } from "vue-router";
 import { useStore } from "vuex";
-import { ElMessage } from 'element-plus';
-import { reactive, toRefs } from 'vue';
+import { ElMessage } from "element-plus";
+import { reactive, toRefs } from "vue";
 export default {
   name: "NavigationModal",
   setup() {
@@ -122,13 +123,19 @@ export default {
     const store = useStore();
     const data = reactive({
       userInfo: store.state.userInfo,
-    })
+    });
+    
     const handleToContactList = () => {
       router.push("/chat/contactlist");
     };
 
     const handleToSessionList = () => {
       router.push("/chat/sessionlist");
+    };
+
+    const handleToManager = () => {
+      console.log(data.userInfo);
+      router.push("/manager");
     };
     const logout = () => {
       store.commit("cleanUserInfo");
@@ -145,6 +152,7 @@ export default {
       handleToSessionList,
       handleToOwnInfo,
       logout,
+      handleToManager,
     };
   },
 };

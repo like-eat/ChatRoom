@@ -85,6 +85,10 @@ export default {
         );
         console.log(response);
         if (response.data.code == 200) {
+          if (response.data.data.status == 1) {
+            ElMessage.error("该账号已被封禁，请联系管理员。");
+            return;
+          }
           try {
             ElMessage.success(response.data.message);
             store.commit("setUserInfo", response.data.data);
