@@ -1,6 +1,6 @@
 package respond
 
-type GetMessageListRespond struct {
+type GetGroupMessageListRespond struct {
 	SendId     string `json:"send_id"`
 	SendName   string `json:"send_name"`
 	SendAvatar string `json:"send_avatar"`

@@ -14,6 +14,7 @@ import (
 	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
+	"log"
 	"time"
 )
 
@@ -89,6 +90,21 @@ func (g *groupInfoService) CreateGroup(groupReq request.CreateGroupRequest) (str
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
+
+	// 添加联系人
+	contact := model.UserContact{
+		UserId:      groupReq.OwnerId,
+		ContactId:   group.Uuid,
+		ContactType: contact_type_enum.GROUP,
+		Status:      contact_status_enum.NORMAL,
+		CreatedAt:   time.Now(),
+		UpdateAt:    time.Now(),
+	}
+	if res := dao.GormDB.Create(&contact); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+
 	return "创建成功", 0
 }
 
@@ -134,18 +150,53 @@ func (g *groupInfoService) LoadMyGroup(ownerId string) (string, []respond.LoadMy
 }
 
 // GetGroupInfo 获取聊天详情
-func (g *groupInfoService) GetGroupInfo(userId string, groupId string) (string, *model.GroupInfo, int) {
-	var user model.UserInfo
-	if res := dao.GormDB.First(&user, "uuid = ?", userId); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, nil, -1
-	}
+func (g *groupInfoService) GetGroupInfo(groupId string) (string, *respond.GetGroupInfoRespond, int) {
 	var group model.GroupInfo
 	if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, nil, -1
 	}
-	return "获取成功", &group, 0
+	rsp := &respond.GetGroupInfoRespond{
+		Uuid:      group.Uuid,
+		Name:      group.Name,
+		Notice:    group.Notice,
+		Avatar:    group.Avatar,
+		MemberCnt: group.MemberCnt,
+		OwnerId:   group.OwnerId,
+		AddMode:   group.AddMode,
+		Status:    group.Status,
+	}
+	if group.DeletedAt.Valid {
+		rsp.IsDeleted = true
+	} else {
+		rsp.IsDeleted = false
+	}
+	return "获取成功", rsp, 0
+}
+
+// GetGroupInfoList 获取群聊列表 - 管理员
+func (g *groupInfoService) GetGroupInfoList() (string, []respond.GetGroupListRespond, int) {
+	var groupList []model.GroupInfo
+	if res := dao.GormDB.Unscoped().Find(&groupList); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+	var rsp []respond.GetGroupListRespond
+	for _, group := range groupList {
+		rp := respond.GetGroupListRespond{
+			Uuid:    group.Uuid,
+			Name:    group.Name,
+			OwnerId: group.OwnerId,
+			Status:  group.Status,
+		}
+		if group.DeletedAt.Valid {
+			rp.IsDeleted = true
+		} else {
+			rp.IsDeleted = false
+		}
+		rsp = append(rsp, rp)
+	}
+	return "获取成功", rsp, 0
 }
 
 //func (g *groupInfoService) checkUserAndGroupValid(userId string, groupId string)
@@ -252,8 +303,8 @@ func (g *groupInfoService) DismissGroup(groupId string) (string, int) {
 		}
 	}
 
-	var contactApply model.ContactApply
-	if res := dao.GormDB.Model(&contactApply).Where("contact_id = ?", groupId).Update("deleted_at", deletedAt); res.Error != nil {
+	var contactApplys []model.ContactApply
+	if res := dao.GormDB.Model(&contactApplys).Where("contact_id = ?", groupId).Find(&contactApplys); res.Error != nil {
 		if res.Error != gorm.ErrRecordNotFound {
 			zlog.Info(res.Error.Error())
 			return "无响应的申请记录需要删除", 0
@@ -261,7 +312,68 @@ func (g *groupInfoService) DismissGroup(groupId string) (string, int) {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
+	for _, contactApply := range contactApplys {
+		if res := dao.GormDB.Model(&contactApply).Update("deleted_at", deletedAt); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+	}
 	return "解散群聊成功", 0
+}
+
+// DeleteGroups 删除列表中群聊 - 管理员
+func (g *groupInfoService) DeleteGroups(uuidList []string) (string, int) {
+	for _, uuid := range uuidList {
+		var deletedAt gorm.DeletedAt
+		deletedAt.Time = time.Now()
+		deletedAt.Valid = true
+		if res := dao.GormDB.Model(&model.GroupInfo{}).Where("uuid = ?", uuid).Update("deleted_at", deletedAt); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		// 删除会话
+		var sessionList []model.Session
+		if res := dao.GormDB.Model(&model.Session{}).Where("receive_id = ?", uuid).Find(&sessionList); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		for _, session := range sessionList {
+			if res := dao.GormDB.Model(&session).Update("deleted_at", deletedAt); res.Error != nil {
+				zlog.Error(res.Error.Error())
+				return constants.SYSTEM_ERROR, -1
+			}
+		}
+		// 删除联系人
+		var userContactList []model.UserContact
+		if res := dao.GormDB.Model(&model.UserContact{}).Where("contact_id = ?", uuid).Find(&userContactList); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+
+		for _, userContact := range userContactList {
+			if res := dao.GormDB.Model(&userContact).Update("deleted_at", deletedAt); res.Error != nil {
+				zlog.Error(res.Error.Error())
+				return constants.SYSTEM_ERROR, -1
+			}
+		}
+
+		var contactApplys []model.ContactApply
+		if res := dao.GormDB.Model(&contactApplys).Where("contact_id = ?", uuid).Find(&contactApplys); res.Error != nil {
+			if res.Error != gorm.ErrRecordNotFound {
+				zlog.Info(res.Error.Error())
+				return "无响应的申请记录需要删除", 0
+			}
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		for _, contactApply := range contactApplys {
+			if res := dao.GormDB.Model(&contactApply).Update("deleted_at", deletedAt); res.Error != nil {
+				zlog.Error(res.Error.Error())
+				return constants.SYSTEM_ERROR, -1
+			}
+		}
+	}
+	return "解散/删除群聊成功", 0
 }
 
 // CheckGroupAddMode 检查群聊加群方式
@@ -303,7 +415,7 @@ func (g *groupInfoService) EnterGroupDirectly(ownerId, contactId string) (string
 	newContact := model.UserContact{
 		UserId:      contactId,
 		ContactId:   ownerId,
-		ContactType: contact_type_enum.Group,    // 用户
+		ContactType: contact_type_enum.GROUP,    // 用户
 		Status:      contact_status_enum.NORMAL, // 正常
 		CreatedAt:   time.Now(),
 		UpdateAt:    time.Now(),
@@ -313,4 +425,72 @@ func (g *groupInfoService) EnterGroupDirectly(ownerId, contactId string) (string
 		return constants.SYSTEM_ERROR, -1
 	}
 	return "进群成功", 0
+}
+
+// SetGroupsStatus 设置群聊是否启用
+func (g *groupInfoService) SetGroupsStatus(uuidList []string, status int8) (string, int) {
+	var deletedAt gorm.DeletedAt
+	deletedAt.Time = time.Now()
+	deletedAt.Valid = true
+	for _, uuid := range uuidList {
+		if res := dao.GormDB.Model(&model.GroupInfo{}).Where("uuid = ?", uuid).Update("status", status); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		if status == group_status_enum.DISABLE {
+			var sessionList []model.Session
+			if res := dao.GormDB.Model(&sessionList).Where("receive_id = ?", uuid).Find(&sessionList); res.Error != nil {
+				zlog.Error(res.Error.Error())
+				return constants.SYSTEM_ERROR, -1
+			}
+			for _, session := range sessionList {
+				if res := dao.GormDB.Model(&session).Update("deleted_at", deletedAt); res.Error != nil {
+					zlog.Error(res.Error.Error())
+					return constants.SYSTEM_ERROR, -1
+				}
+			}
+		}
+	}
+	return "设置成功", 0
+}
+
+// UpdateGroupInfo 更新群聊消息
+func (g *groupInfoService) UpdateGroupInfo(req request.UpdateGroupInfoRequest) (string, int) {
+	var group model.GroupInfo
+	if res := dao.GormDB.First(&group, "uuid = ?", req.Uuid); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	if req.Name != "" {
+		group.Name = req.Name
+	}
+	if req.AddMode != -1 {
+		group.AddMode = req.AddMode
+	}
+	if req.Notice != "" {
+		group.Notice = req.Notice
+	}
+	if req.Avatar != "" {
+		group.Avatar = req.Avatar
+	}
+	if res := dao.GormDB.Save(&group); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	// 修改会话
+	var sessionList []model.Session
+	if res := dao.GormDB.Where("receive_id = ?", req.Uuid).Find(&sessionList); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	for _, session := range sessionList {
+		session.ReceiveName = group.Name
+		session.Avatar = group.Avatar
+		log.Println(session)
+		if res := dao.GormDB.Save(&session); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+	}
+	return "更新成功", 0
 }

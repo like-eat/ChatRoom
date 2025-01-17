@@ -47,7 +47,7 @@ func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUs
 	var userListRsp []respond.MyUserListRespond
 	for _, contact := range contactList {
 		// 联系人中是用户的
-		if contact.ContactType == contact_type_enum.User {
+		if contact.ContactType == contact_type_enum.USER {
 			// 获取用户信息
 			var user model.UserInfo
 			if res := dao.GormDB.First(&user, "uuid = ?", contact.ContactId); res.Error != nil {
@@ -216,7 +216,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 					Uuid:        fmt.Sprintf("A%s", random.GetNowAndLenRandomString(11)),
 					UserId:      req.OwnerId,
 					ContactId:   req.ContactId,
-					ContactType: contact_type_enum.User,
+					ContactType: contact_type_enum.USER,
 					Status:      contact_apply_status_enum.PENDING,
 					Message:     req.Message,
 					LastApplyAt: time.Now(),
@@ -259,7 +259,7 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 					Uuid:        fmt.Sprintf("A%s", random.GetNowAndLenRandomString(11)),
 					UserId:      req.OwnerId,
 					ContactId:   req.ContactId,
-					ContactType: contact_type_enum.Group,
+					ContactType: contact_type_enum.GROUP,
 					Status:      contact_apply_status_enum.PENDING,
 					Message:     req.Message,
 					LastApplyAt: time.Now(),
@@ -381,7 +381,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 		newContact := model.UserContact{
 			UserId:      ownerId,
 			ContactId:   contactId,
-			ContactType: contact_type_enum.User,     // 用户
+			ContactType: contact_type_enum.USER,     // 用户
 			Status:      contact_status_enum.NORMAL, // 正常
 			CreatedAt:   time.Now(),
 			UpdateAt:    time.Now(),
@@ -393,7 +393,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 		anotherContact := model.UserContact{
 			UserId:      contactId,
 			ContactId:   ownerId,
-			ContactType: contact_type_enum.User,     // 用户
+			ContactType: contact_type_enum.USER,     // 用户
 			Status:      contact_status_enum.NORMAL, // 正常
 			CreatedAt:   newContact.CreatedAt,
 			UpdateAt:    newContact.UpdateAt,
@@ -418,7 +418,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 		newContact := model.UserContact{
 			UserId:      contactId,
 			ContactId:   ownerId,
-			ContactType: contact_type_enum.Group,    // 用户
+			ContactType: contact_type_enum.GROUP,    // 用户
 			Status:      contact_status_enum.NORMAL, // 正常
 			CreatedAt:   time.Now(),
 			UpdateAt:    time.Now(),

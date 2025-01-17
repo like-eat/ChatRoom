@@ -224,6 +224,18 @@
                     >
                     <el-dropdown-item
                       v-if="contactInfo.contact_owner_id == userInfo.uuid"
+                      @click="showUpdateGroupInfoModal"
+                    >
+                      修改群聊信息
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="contactInfo.contact_owner_id == userInfo.uuid"
+                      @click="showRemoveGroupMemberModal"
+                    >
+                      移除群组人员
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="contactInfo.contact_owner_id == userInfo.uuid"
                       @click="showAddGroupModal"
                       >加群申请</el-dropdown-item
                     >
@@ -243,6 +255,103 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+              <Modal :isVisible="isUpdateGroupInfoModalVisible">
+                <template v-slot:header>
+                  <div class="updategroupinfo-modal-quit-btn-container">
+                    <button
+                      class="updategroupinfo-modal-quit-btn"
+                      @click="quitUpdateGroupInfoModal"
+                    >
+                      <el-icon><Close /></el-icon>
+                    </button>
+                  </div>
+                  <div class="updategroupinfo-modal-header-title">
+                    <h3>修改群聊信息</h3>
+                  </div>
+                </template>
+                <template v-slot:body>
+                  <el-scrollbar
+                    max-height="255px"
+                    style="
+                      width: 400px;
+                      height: 255px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      margin-top: 20px;
+                    "
+                  >
+                    <div class="modal-body">
+                      <el-form
+                        ref="formRef"
+                        :model="updateGroupInfo"
+                        label-width="80px"
+                      >
+                        <el-form-item
+                          prop="name"
+                          label="群名称"
+                          :rules="[
+                            {
+                              min: 3,
+                              max: 10,
+                              message: '群名称长度在 3 到 10 个字符',
+                              trigger: 'blur',
+                            },
+                          ]"
+                        >
+                          <el-input
+                            v-model="updateGroupInfo.name"
+                            placeholder="选填"
+                          />
+                        </el-form-item>
+                        <el-form-item prop="add_mode" label="入群方式">
+                          <el-radio-group v-model="updateGroupInfo.add_mode">
+                            <el-radio :value="0">直接加入</el-radio>
+                            <el-radio :value="1">群主审核</el-radio>
+                          </el-radio-group>
+                        </el-form-item>
+                        <el-form-item prop="notice" label="群公告">
+                          <el-input
+                            v-model="updateGroupInfo.notice"
+                            type="textarea"
+                            show-word-limit
+                            maxlength="500"
+                            :autosize="{ minRows: 3, maxRows: 3 }"
+                            placeholder="选填"
+                          />
+                        </el-form-item>
+                        <el-form-item prop="avatar" label="群头像">
+                          <el-upload
+                            v-model:file-list="avatarList"
+                            ref="uploadAvatarRef"
+                            :auto-upload="false"
+                            :action="uploadAvatarPath"
+                            :on-success="handleAvatarUploadSuccess"
+                            :before-upload="beforeAvatarUpload"
+                          >
+                            <template #trigger>
+                              <el-button
+                                style="background-color: rgb(252, 210.9, 210.9)"
+                                >上传图片</el-button
+                              >
+                            </template>
+                          </el-upload>
+                        </el-form-item>
+                      </el-form>
+                    </div>
+                  </el-scrollbar>
+                </template>
+                <template v-slot:footer>
+                  <div class="updategroupinfo-modal-footer">
+                    <el-button
+                      style="background-color: rgb(252, 210.9, 210.9)"
+                      @click="closeUpdateGroupInfoModal"
+                    >
+                      完成
+                    </el-button>
+                  </div>
+                </template>
+              </Modal>
               <SmallModal :isVisible="isAddGroupModalVisible">
                 <template v-slot:header>
                   <div class="modal-header">
@@ -314,9 +423,6 @@
                     </el-scrollbar>
                   </div>
                 </template>
-                <template v-slot:footer>
-                  <div class="newcontact-modal-footer"></div>
-                </template>
               </SmallModal>
             </div>
           </el-header>
@@ -341,7 +447,7 @@
                   >
                     <div class="left-message-left">
                       <el-image
-                        :src="contactInfo.contact_avatar"
+                        :src="messageItem.send_avatar"
                         style="
                           width: 40px;
                           height: 40px;
@@ -377,7 +483,7 @@
                   >
                     <div class="left-message-left">
                       <el-image
-                        :src="contactInfo.contact_avatar"
+                        :src="messageItem.send_avatar"
                         style="
                           width: 40px;
                           height: 40px;
@@ -748,6 +854,7 @@ export default {
       isUserContactInfoModalVisible: false,
       isGroupContactInfoModalVisible: false,
       isAddGroupModalVisible: false,
+      isUpdateGroupInfoModalVisible: false,
       getUserListReq: {
         owner_id: "",
       },
@@ -791,7 +898,17 @@ export default {
       uploadRef: null,
       uploadPath: store.state.backendUrl + "/message/uploadFile",
       fileList: [],
+      uploadAvatarRef: null,
+      uploadAvatarPath: store.state.backendUrl + "/message/uploadAvatar",
+      avatarList: [],
       backendUrl: store.state.backendUrl,
+      updateGroupInfo: {
+        uuid: "",
+        avatar: "",
+        add_mode: -1,
+        name: "",
+        notice: "",
+      },
     });
     //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate(async (to, from, next) => {
@@ -915,6 +1032,12 @@ export default {
     };
     const showGroupContactInfoModal = () => {
       data.isGroupContactInfoModalVisible = true;
+    };
+    const showUpdateGroupInfoModal = () => {
+      data.isUpdateGroupInfoModalVisible = true;
+    };
+    const quitUpdateGroupInfoModal = () => {
+      data.isUpdateGroupInfoModalVisible = false;
     };
     const quitGroupContactInfoModal = () => {
       data.isGroupContactInfoModalVisible = false;
@@ -1161,6 +1284,7 @@ export default {
         url: "",
         send_id: data.userInfo.uuid,
         send_name: data.userInfo.nickname,
+        send_avatar: data.userInfo.avatar,
         receive_id: data.contactInfo.contact_id,
         file_size: getFileSize(0),
         file_name: "",
@@ -1171,7 +1295,7 @@ export default {
       scrollToBottom();
     };
 
-    const sendFileMessage = (fileUrl) => {
+    const sendFileMessage = async (fileUrl) => {
       const chatFileMessageRequest = {
         session_id: data.sessionId,
         type: 2,
@@ -1179,6 +1303,7 @@ export default {
         url: fileUrl,
         send_id: data.userInfo.uuid,
         send_name: data.userInfo.nickname,
+        send_avatar: data.userInfo.avatar,
         receive_id: data.contactInfo.contact_id,
         file_size: getFileSize(data.fileList[0].size),
         file_name: data.fileList[0].name,
@@ -1188,6 +1313,25 @@ export default {
       store.state.socket.send(JSON.stringify(chatFileMessageRequest));
       scrollToBottom();
     };
+
+    const sendAvatarMessage = (avatarUrl) => {
+      const chatAvatarMessageRequest = {
+        session_id: data.sessionId,
+        type: 2,
+        content: "",
+        url: avatarUrl,
+        send_id: data.userInfo.uuid,
+        send_name: data.userInfo.nickname,
+        send_avatar: data.userInfo.avatar,
+        receive_id: data.contactInfo.contact_id,
+        file_size: getFileSize(data.avatarList[0].size),
+        file_name: data.avatarList[0].name,
+        file_type: data.avatarList[0].type,
+      };
+      console.log(chatAvatarMessageRequest);
+      store.state.socket.send(JSON.stringify(chatAvatarMessageRequest));
+      scrollToBottom();
+    }
 
     const getMessageList = async () => {
       try {
@@ -1340,6 +1484,30 @@ export default {
       );
       data.fileList = [];
     };
+
+    const handleAvatarUploadSuccess = () => {
+      ElMessage.success("头像上传成功");
+      // sendAvatarMessage(
+      //   store.state.backendUrl + "/static/avatars/" + data.avatarList[0].name
+      // );
+      data.avatarList = [];
+    };
+
+    const beforeAvatarUpload = (avatar) => {
+      console.log("上传前avatar====>", avatar);
+      console.log(data.avatarList);
+      console.log(avatar);
+      if (data.avatarList.length > 1) {
+        ElMessage.error("只能上传一张头像");
+        return false;
+      }
+      const isLt50M = avatar.size / 1024 / 1024 < 50;
+      if (!isLt50M) {
+        ElMessage.error("上传头像图片大小不能超过 50MB!");
+        return false;
+      }
+    };
+
     const beforeFileUpload = (file) => {
       console.log("上传前file====>", file);
       console.log(data.fileList);
@@ -1387,6 +1555,46 @@ export default {
         return (size / 1024 / 1024 / 1024).toFixed(2) + "GB";
       }
     };
+
+    const handleUpdateGroupInfo = async () => {
+      try {
+        if (
+          data.updateGroupInfo.name == "" &&
+          data.updateGroupInfo.notice == "" &&
+          data.updateGroupInfo.add_mode == -1 &&
+          data.avatarList.length == 0
+        ) {
+          ElMessage.error("请至少修改一项");
+          return;
+        }
+        if (data.avatarList.length > 0) {
+          data.updateGroupInfo.avatar =
+            store.state.backendUrl +
+            "/static/avatars/" +
+            data.avatarList[0].name;
+          data.uploadAvatarRef.submit();
+        }
+        data.updateGroupInfo.uuid = data.contactInfo.contact_id;
+        const rsp = await axios.post(
+          store.state.backendUrl + "/group/updateGroupInfo",
+          data.updateGroupInfo
+        );
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          data.isUpdateGroupInfoModalVisible = false;
+          await getChatContactInfo(router.currentRoute.value.params.id);
+        } else {
+          ElMessage.error(rsp.data.message);
+          console.log(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const closeUpdateGroupInfoModal = () => {
+      handleUpdateGroupInfo();
+    };
     return {
       ...toRefs(data),
       router,
@@ -1425,6 +1633,12 @@ export default {
       beforeFileUpload,
       downloadFile,
       getFileSize,
+      showUpdateGroupInfoModal,
+      quitUpdateGroupInfoModal,
+      beforeAvatarUpload,
+      handleAvatarUploadSuccess,
+      handleUpdateGroupInfo,
+      closeUpdateGroupInfoModal,
     };
   },
 };
@@ -1465,14 +1679,18 @@ h3 {
   color: rgb(69, 69, 68);
 }
 
-.groupcontactinfo-modal-quit-btn-container {
+.groupcontactinfo-modal-quit-btn-container,
+.userinfo-modal-quit-btn-container,
+.updategroupinfo-modal-quit-btn-container {
   height: 25px;
   width: 100%;
   display: flex;
   flex-direction: row-reverse;
 }
 
-.groupcontactinfo-modal-quit-btn {
+.groupcontactinfo-modal-quit-btn,
+.userinfo-modal-quit-btn,
+.updategroupinfo-modal-quit-btn {
   background-color: rgba(255, 255, 255, 0);
   color: rgb(229, 25, 25);
   padding: 15px;
@@ -1483,7 +1701,8 @@ h3 {
   align-items: center;
 }
 
-.groupcontactinfo-modal-header-title {
+.groupcontactinfo-modal-header-title,
+.userinfo-modal-header-title {
   height: 30px;
   width: 100%;
   display: flex;
@@ -1491,25 +1710,8 @@ h3 {
   align-items: center;
 }
 
-.userinfo-modal-quit-btn-container {
-  height: 25px;
-  width: 100%;
-  display: flex;
-  flex-direction: row-reverse;
-}
-
-.userinfo-modal-quit-btn {
-  background-color: rgba(255, 255, 255, 0);
-  color: rgb(229, 25, 25);
-  padding: 15px;
-  border: none;
-  cursor: pointer;
-  position: fixed;
-  justify-content: center;
-  align-items: center;
-}
-
-.userinfo-modal-header-title {
+.updategroupinfo-modal-header-title {
+  margin-top: 10px;
   height: 30px;
   width: 100%;
   display: flex;
@@ -1658,7 +1860,7 @@ h3 {
   box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.2);
 }
 
-.left-message-file-container  {
+.left-message-file-container {
   background-color: #f9f9f9; /* 浅灰色背景 */
   border: 1px solid #ddd; /* 浅灰色边框 */
   border-radius: 8px; /* 圆角边框 */
@@ -1669,7 +1871,7 @@ h3 {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 轻微阴影效果 */
 }
 
-.right-message-file-container  {
+.right-message-file-container {
   background-color: #f9f9f9; /* 浅灰色背景 */
   border: 1px solid #ddd; /* 浅灰色边框 */
   border-radius: 8px; /* 圆角边框 */
@@ -1774,7 +1976,8 @@ h3 {
   justify-content: center;
 }
 
-.newcontact-modal-footer {
+.newcontact-modal-footer,
+.updategroupinfo-modal-footer {
   height: 10%;
   width: 100%;
   display: flex;

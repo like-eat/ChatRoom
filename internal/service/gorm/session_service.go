@@ -77,17 +77,30 @@ func (s *sessionService) CheckOpenSessionAllowed(sendId, receiveId string) (stri
 		return constants.SYSTEM_ERROR, false, -1
 	}
 	if contact.Status == contact_status_enum.BE_BLACK {
-		return "已被对方拉黑，无法发起会话", false, 0
+		return "已被对方拉黑，无法发起会话", false, -2
 	} else if contact.Status == contact_status_enum.BLACK {
-		return "已拉黑对方，先解除拉黑状态才能发起会话", false, 0
+		return "已拉黑对方，先解除拉黑状态才能发起会话", false, -2
 	}
-	var user model.UserInfo
-	if res := dao.GormDB.Where("uuid = ?", receiveId).First(&user); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, false, -1
-	}
-	if user.Status == user_status_enum.DISABLE {
-		return "对方已被禁用，无法发起会话", false, 0
+	if receiveId[0] == 'U' {
+		var user model.UserInfo
+		if res := dao.GormDB.Where("uuid = ?", receiveId).First(&user); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, false, -1
+		}
+		if user.Status == user_status_enum.DISABLE {
+			zlog.Info("对方已被禁用，无法发起会话")
+			return "对方已被禁用，无法发起会话", false, -2
+		}
+	} else {
+		var group model.GroupInfo
+		if res := dao.GormDB.Where("uuid = ?", receiveId).First(&group); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, false, -1
+		}
+		if group.Status == group_status_enum.DISABLE {
+			zlog.Info("对方已被禁用，无法发起会话")
+			return "对方已被禁用，无法发起会话", false, -2
+		}
 	}
 	return "可以发起会话", true, 0
 }

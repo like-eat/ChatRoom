@@ -45,6 +45,9 @@
           >登录</el-button
         >
       </div>
+      <div>
+      <button class="go--btn" @click="handleRegister">验证码登录</button>
+      </div>
       <div class="go-register-button-container">
         <button class="go-register-btn" @click="handleRegister">注册</button>
       </div>

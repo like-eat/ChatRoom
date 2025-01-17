@@ -143,7 +143,26 @@
                   </svg>
                   <span class="manager-group-title">群聊</span>
                 </template>
-                <el-menu-item index="2-1">
+                <el-menu-item index="2-1" @click="showDisableGroupTable">
+                  <svg
+                    t="1736825139556"
+                    class="menu-item-icon"
+                    viewBox="0 0 1024 1024"
+                    version="1.1"
+                    xmlns="http://www.w3.org/2000/svg"
+                    p-id="4645"
+                    width="200"
+                    height="200"
+                  >
+                    <path
+                      d="M512 853.333333c-187.733333 0-341.333333-153.6-341.333333-341.333333s153.6-341.333333 341.333333-341.333333 341.333333 153.6 341.333333 341.333333-153.6 341.333333-341.333333 341.333333z m0-85.333333c140.8 0 256-115.2 256-256s-115.2-256-256-256-256 115.2-256 256 115.2 256 256 256zM401.066667 341.333333l273.066666 273.066667-59.733333 59.733333L341.333333 401.066667 401.066667 341.333333z"
+                      fill="#444444"
+                      p-id="4646"
+                    ></path>
+                  </svg>
+                  启用/禁用</el-menu-item
+                >
+                <el-menu-item index="2-2" @click="showDeleteGroupTable">
                   <svg
                     t="1736825642071"
                     class="menu-item-icon"
@@ -174,6 +193,8 @@
             <DeleteUserModal :isVisible="isDeleteUserModalVisible"></DeleteUserModal>
             <DisableUserModal :isVisible="isDisableUserModalVisible"></DisableUserModal>
             <SetAdminModal :isVisible="isSetAdminModalVisible"></SetAdminModal>
+            <DeleteGroupModal :isVisible="isDeleteGroupModalVisible"></DeleteGroupModal>
+            <DisableGroupModal :isVisible="isDisableGroupModalVisible"></DisableGroupModal>
           </el-main>
         </el-container>
       </el-container>
@@ -192,6 +213,8 @@ import { generateString } from "@/assets/js/random.js";
 import DisableUserModal from "@/components/DisableUserModal.vue";
 import DeleteUserModal from "@/components/DeleteUserModal.vue";
 import SetAdminModal from "@/components/SetAdminModal.vue";
+import DeleteGroupModal from "@/components/DeleteGroupModal.vue";
+import DisableGroupModal from "@/components/DisableGroupModal.vue";
 import { ElMessage } from "element-plus";
 export default {
   name: "Manager",
@@ -199,6 +222,8 @@ export default {
     DisableUserModal,
     DeleteUserModal,
     SetAdminModal,
+    DeleteGroupModal,
+    DisableGroupModal,
   },
   setup() {
     const router = useRouter();
@@ -206,24 +231,49 @@ export default {
       isDisableUserModalVisible: false,
       isDeleteUserModalVisible: false,
       isSetAdminModalVisible: false,
+      isDeleteGroupModalVisible: false,
+      isDisableGroupModalVisible: false,
     });
     const showDisableUserTable = () => {
       data.isDisableUserModalVisible = true;
       data.isDeleteUserModalVisible = false;
       data.isSetAdminModalVisible = false;
+      data.isDeleteGroupModalVisible = false;
+      data.isDisableGroupModalVisible = false;
     };
 
     const showDeleteUserTable = () => {
       data.isDeleteUserModalVisible = true;
       data.isDisableUserModalVisible = false;
       data.isSetAdminModalVisible = false;
+      data.isDeleteGroupModalVisible = false;
+      data.isDisableGroupModalVisible = false;
     }
 
     const showSetAdminTable = () => {
       data.isSetAdminModalVisible = true;
       data.isDeleteUserModalVisible = false;
       data.isDisableUserModalVisible = false;
+      data.isDeleteGroupModalVisible = false;
+      data.isDisableGroupModalVisible = false;
     }
+
+    const showDeleteGroupTable = () => {
+      data.isSetAdminModalVisible = false;
+      data.isDeleteUserModalVisible = false;
+      data.isDisableUserModalVisible = false;
+      data.isDeleteGroupModalVisible = true;
+      data.isDisableGroupModalVisible = false;
+    };
+
+    const showDisableGroupTable = () => {
+      data.isSetAdminModalVisible = false;
+      data.isDeleteUserModalVisible = false;
+      data.isDisableUserModalVisible = false;
+      data.isDeleteGroupModalVisible = false;
+      data.isDisableGroupModalVisible = true;
+    };
+
     const backToChat = () => {
       router.push("/chat/sessionlist");
     }
@@ -234,6 +284,8 @@ export default {
       showDisableUserTable,
       showDeleteUserTable,
       showSetAdminTable,
+      showDeleteGroupTable,
+      showDisableGroupTable,
       backToChat,
     };
   },

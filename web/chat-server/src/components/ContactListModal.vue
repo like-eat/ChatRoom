@@ -193,7 +193,7 @@
             </div>
           </template>
           <template v-slot:body>
-            <div class="modal-body">
+            <div class="creatgroup-modal-body">
               <el-form
                 ref="formRef"
                 :model="createGroupReq"
@@ -240,16 +240,27 @@
                   </el-radio-group>
                 </el-form-item>
                 <el-form-item prop="avatar" label="群头像">
-                  <el-input
-                    v-model="createGroupReq.avatar"
-                    placeholder="选填"
-                  />
+                  <el-upload
+                    v-model:file-list="fileList"
+                    ref="uploadRef"
+                    :auto-upload="false"
+                    :action="uploadPath"
+                    :on-success="handleUploadSuccess"
+                    :before-upload="beforeFileUpload"
+                  >
+                    <template #trigger>
+                      <el-button
+                        style="background-color: rgb(252, 210.9, 210.9)"
+                        >上传图片</el-button
+                      >
+                    </template>
+                  </el-upload>
                 </el-form-item>
               </el-form>
             </div>
           </template>
           <template v-slot:footer>
-            <div class="modal-footer">
+            <div class="creategroup-modal-footer">
               <el-button class="modal-close-btn" @click="closeCreateGroupModal">
                 完成
               </el-button>
@@ -364,7 +375,7 @@ export default {
     const router = useRouter();
     const store = useStore();
     const data = reactive({
-        chatMessage: "",
+      chatMessage: "",
       chatName: "",
       userInfo: store.state.userInfo,
       contactSearch: "",
@@ -391,10 +402,38 @@ export default {
       },
       newContactList: [],
       applyContent: "",
-    })
+      uploadRef: null,
+      uploadPath: store.state.backendUrl + "/message/uploadAvatar",
+      fileList: [],
+      cnt: 0,
+    });
+    const handleUploadSuccess = () => {
+      ElMessage.success("头像上传成功");
+      data.fileList = [];
+    };
+    const beforeFileUpload = (file) => {
+      console.log("上传前file====>", file);
+      console.log(data.fileList);
+      console.log(file);
+      if (data.fileList.length > 1) {
+        ElMessage.error("只能上传一张头像");
+        return false;
+      }
+      const isLt50M = file.size / 1024 / 1024 < 50;
+      if (!isLt50M) {
+        ElMessage.error("上传头像图片大小不能超过 50MB!");
+        return false;
+      }
+    };
     const handleCreateGroup = async () => {
       try {
         data.createGroupReq.owner_id = data.userInfo.uuid;
+        if (data.fileList.length > 0) {
+          data.createGroupReq.avatar =
+            store.state.backendUrl + "/static/avatars/" + data.fileList[0].name;
+          console.log(data.createGroupReq.avatar);
+          data.uploadRef.submit();
+        }
         const response = await axios.post(
           store.state.backendUrl + "/group/createGroup",
           data.createGroupReq
@@ -432,7 +471,7 @@ export default {
         ElMessage.error("请输入申请用户/群组id");
         return;
       }
-      if (data.applyContactReq.contact_id[0] == 'G') {
+      if (data.applyContactReq.contact_id[0] == "G") {
         handleApplyGroup();
       } else {
         handleApplyContact();
@@ -451,10 +490,14 @@ export default {
       try {
         let req = {
           group_id: data.applyContactReq.contact_id,
-        }
-        let rsp = await axios.post(store.state.backendUrl + "/group/checkGroupAddMode", req);
+        };
+        let rsp = await axios.post(
+          store.state.backendUrl + "/group/checkGroupAddMode",
+          req
+        );
         if (rsp.data.code == 200) {
-          if (rsp.data.data == 0) { // 直接加入
+          if (rsp.data.data == 0) {
+            // 直接加入
             handleEnterDirectly(data.applyContactReq.contact_id);
             return;
           }
@@ -497,7 +540,7 @@ export default {
             ElMessage.success("申请成功");
             return;
           }
-        } 
+        }
         ElMessage.error(rsp.data.message);
       } catch (error) {
         console.error(error);
@@ -550,8 +593,6 @@ export default {
       data.myJoinedGroupList = [];
     };
 
-    
-
     const handleToChatUser = async (user) => {
       try {
         const req = {
@@ -580,7 +621,34 @@ export default {
     };
 
     const handleToChatGroup = async (group) => {
-      router.push("/chat/" + group.group_id);
+      try {
+        const req = {
+          send_id: data.userInfo.uuid,
+          receive_id: group.group_id,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/session/checkOpenSessionAllowed",
+          req
+        );
+        if (rsp.data.code == 200) {
+          if (rsp.data.data == true) {
+            router.push("/chat/" + group.group_id);
+          } else {
+            ElMessage.warning(rsp.data.message);
+            console.error(rsp.data.message);
+          }
+        } else {
+          if (rsp.data.code == 400) {
+            ElMessage.warning(rsp.data.message);
+            console.error(rsp.data.message);
+          } else {
+            ElMessage.error(rsp.data.message);
+            console.error(rsp.data.message);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
     };
 
     const handleNewContactList = async () => {
@@ -629,7 +697,7 @@ export default {
     const handleEnterDirectly = async (groupId) => {
       try {
         const req = {
-          owner_id:  groupId,
+          owner_id: groupId,
           contact_id: data.userInfo.uuid,
         };
         const rsp = await axios.post(
@@ -674,7 +742,7 @@ export default {
       } catch (error) {
         console.error(error);
       }
-    }
+    };
     const handleBlack = async (contactId) => {
       try {
         const req = {
@@ -702,7 +770,7 @@ export default {
         ElMessage.error(error);
         console.error(error);
       }
-    }
+    };
     const handleCancelBlack = async (user) => {
       try {
         const req = {
@@ -729,8 +797,6 @@ export default {
       }
     };
 
-    
-
     return {
       ...toRefs(data),
       router,
@@ -756,8 +822,10 @@ export default {
       handleReject,
       handleCancelBlack,
       handleBlack,
+      handleUploadSuccess,
+      beforeFileUpload,
     };
-  }
+  },
 };
 </script>
 
@@ -858,6 +926,15 @@ h3 {
   justify-content: center;
 }
 
+.creatgroup-modal-body {
+  height: 75%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .newcontact-modal-body {
   height: 70%;
   width: 100%;
@@ -877,6 +954,14 @@ h3 {
 
 .modal-footer {
   height: 25%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.creategroup-modal-footer {
+  height: 20%;
   width: 100%;
   display: flex;
   justify-content: center;

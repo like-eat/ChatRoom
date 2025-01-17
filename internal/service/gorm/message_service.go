@@ -46,25 +46,26 @@ func (m *messageService) GetMessageList(userOneId, userTwoId string) (string, []
 }
 
 // GetGroupMessageList 获取群聊消息记录
-func (m *messageService) GetGroupMessageList(groupId string) (string, []respond.GetMessageListRespond, int) {
+func (m *messageService) GetGroupMessageList(groupId string) (string, []respond.GetGroupMessageListRespond, int) {
 	var messageList []model.Message
 	if res := dao.GormDB.Where("receive_id = ?", groupId).Order("created_at ASC").Find(&messageList); res.Error != nil {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, nil, -1
 	}
-	var rspList []respond.GetMessageListRespond
+	var rspList []respond.GetGroupMessageListRespond
 	for _, message := range messageList {
-		rsp := respond.GetMessageListRespond{
-			SendId:    message.SendId,
-			SendName:  message.SendName,
-			ReceiveId: message.ReceiveId,
-			Content:   message.Content,
-			Url:       message.Url,
-			Type:      message.Type,
-			FileType:  message.FileType,
-			FileName:  message.FileName,
-			FileSize:  message.FileSize,
-			CreatedAt: message.CreatedAt.Format("2006-01-02 15:04:05"),
+		rsp := respond.GetGroupMessageListRespond{
+			SendId:     message.SendId,
+			SendName:   message.SendName,
+			SendAvatar: message.SendAvatar,
+			ReceiveId:  message.ReceiveId,
+			Content:    message.Content,
+			Url:        message.Url,
+			Type:       message.Type,
+			FileType:   message.FileType,
+			FileName:   message.FileName,
+			FileSize:   message.FileSize,
+			CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		rspList = append(rspList, rsp)
 	}
