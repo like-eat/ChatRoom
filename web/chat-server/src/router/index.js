@@ -12,6 +12,11 @@ const routes = [
     component: () => import('../views/access/Login.vue')
   },
   {
+    path: '/smsLogin',
+    name: 'smsLogin',
+    component: () => import('../views/access/SmsLogin.vue')
+  },
+  {
     path: '/register',
     name: 'Register',
     component: () => import('../views/access/Register.vue')
@@ -40,7 +45,7 @@ const routes = [
     path: '/manager',
     name: 'Manager',
     component: () => import('../views/manager/Manager.vue')
-  },
+  }
 ]
 
 const router = createRouter({
@@ -50,7 +55,7 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   if (!store.state.userInfo.uuid) {
-    if (to.path === '/login' || to.path === '/register') {
+    if (to.path === '/login' || to.path === '/register' || to.path === '/smsLogin') {
       next()
       return
     }

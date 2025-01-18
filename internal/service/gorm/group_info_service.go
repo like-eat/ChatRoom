@@ -494,3 +494,82 @@ func (g *groupInfoService) UpdateGroupInfo(req request.UpdateGroupInfoRequest) (
 	}
 	return "更新成功", 0
 }
+
+// GetGroupMemberList 获取群聊成员列表
+func (g *groupInfoService) GetGroupMemberList(groupId string) (string, []respond.GetGroupMemberListRespond, int) {
+	var group model.GroupInfo
+	if res := dao.GormDB.First(&group, "uuid = ?", groupId); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+	var members []string
+	if err := json.Unmarshal(group.Members, &members); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+	var rspList []respond.GetGroupMemberListRespond
+	for _, member := range members {
+		var user model.UserInfo
+		if res := dao.GormDB.First(&user, "uuid = ?", member); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, nil, -1
+		}
+		rspList = append(rspList, respond.GetGroupMemberListRespond{
+			UserId:   user.Uuid,
+			Nickname: user.Nickname,
+			Avatar:   user.Avatar,
+		})
+	}
+	return "获取群聊成员列表成功", rspList, 0
+}
+
+// RemoveGroupMembers 移除群聊成员
+func (g *groupInfoService) RemoveGroupMembers(req request.RemoveGroupMembersRequest) (string, int) {
+	var group model.GroupInfo
+	if res := dao.GormDB.First(&group, "uuid = ?", req.GroupId); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	var members []string
+	if err := json.Unmarshal(group.Members, &members); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	var deletedAt gorm.DeletedAt
+	deletedAt.Time = time.Now()
+	deletedAt.Valid = true
+	log.Println(req.UuidList, req.OwnerId)
+	for _, uuid := range req.UuidList {
+		if req.OwnerId == uuid {
+			return "不能移除群主", -2
+		}
+		// 从members中找到uuid，移除
+		for i, member := range members {
+			if member == uuid {
+				members = append(members[:i], members[i+1:]...)
+			}
+		}
+		group.MemberCnt -= 1
+		// 删除会话
+		if res := dao.GormDB.Model(&model.Session{}).Where("send_id = ? AND receive_id = ?", uuid, req.GroupId).Update("deleted_at", deletedAt); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		// 删除联系人
+		if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", uuid, req.GroupId).Update("deleted_at", deletedAt); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		// 删除申请记录
+		if res := dao.GormDB.Model(&model.ContactApply{}).Where("user_id = ? AND contact_id = ?", uuid, req.GroupId).Update("deleted_at", deletedAt); res.Error != nil {
+			zlog.Error(res.Error.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+	}
+	group.Members, _ = json.Marshal(members)
+	if res := dao.GormDB.Save(&group); res.Error != nil {
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+	return "移除群聊成员成功", 0
+}

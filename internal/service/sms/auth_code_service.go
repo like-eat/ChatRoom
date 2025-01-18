@@ -44,6 +44,7 @@ func init() {
 	smsClient = client
 }
 
+// VerificationCode 验证码发送
 func VerificationCode(telephone string) error {
 	code, _ := redis.GetKey("auto_code")
 	if code != "" {

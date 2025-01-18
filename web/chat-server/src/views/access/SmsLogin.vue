@@ -27,8 +27,8 @@
           <el-input v-model="loginData.telephone" />
         </el-form-item>
         <el-form-item
-          prop="password"
-          label="密码"
+          prop="sms_code"
+          label="验证码"
           :rules="[
             {
               required: true,
@@ -37,18 +37,26 @@
             },
           ]"
         >
-          <el-input type="password" v-model="loginData.password" />
+          <el-input
+            v-model="loginData.sms_code"
+            style="max-width: 200px"
+          >
+            <template #append>
+                <el-button @click="sendSmsCode" style="background-color: rgb(229, 132, 132); color: #ffffff;">点击发送</el-button>
+            </template>
+            
+          </el-input>
         </el-form-item>
       </el-form>
       <div class="login-button-container">
-        <el-button type="primary" class="login-btn" @click="handleLogin"
+        <el-button type="primary" class="login-btn" @click="handleSmsLogin"
           >登录</el-button
         >
       </div>
-      
+
       <div class="go-register-button-container">
         <button class="go-register-btn" @click="handleRegister">注册</button>
-      <button class="go-sms-btn" @click="handleSmsLogin">验证码登录</button>
+        <button class="go-sms-btn" @click="handleLogin">密码登录</button>
       </div>
     </div>
   </div>
@@ -61,19 +69,19 @@ import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useStore } from "vuex";
 export default {
-  name: "Login",
+  name: "smsLogin",
   setup() {
     const data = reactive({
       loginData: {
         telephone: "",
-        password: "",
+        sms_code: "",
       },
     });
     const router = useRouter();
     const store = useStore();
-    const handleLogin = async () => {
+    const handleSmsLogin = async () => {
       try {
-        if (!data.loginData.telephone || !data.loginData.password) {
+        if (!data.loginData.telephone || !data.loginData.sms_code) {
           ElMessage.error("请填写完整登录信息。");
           return;
         }
@@ -82,7 +90,7 @@ export default {
           return;
         }
         const response = await axios.post(
-          store.state.backendUrl + "/login",
+          store.state.backendUrl + "/user/smsLogin",
           data.loginData
         );
         console.log(response);
@@ -130,16 +138,44 @@ export default {
     const handleRegister = () => {
       router.push("/register");
     };
-    const handleSmsLogin = () => {
-      router.push("/smsLogin");
+    const handleLogin = () => {
+			router.push("/login");
+    }
+    const sendSmsCode = async () => {
+        if (!data.loginData.telephone) {
+            ElMessage.error("请输入手机号码。");
+            return;
+        }
+        if (!checkTelephoneValid()) {
+            ElMessage.error("请输入有效的手机号码。");
+            return;
+        }
+        try {
+            const req = {
+                telephone: data.loginData.telephone,
+            }
+            const rsp = await axios.post(store.state.backendUrl + "/user/sendSmsCode", req
+            );
+            console.log(rsp);
+            if (rsp.data.code == 200) {
+                ElMessage.success(rsp.data.message);
+            } else if (rsp.data.code == 400) {
+                ElMessage.warning(rsp.data.message);
+            } else {
+                ElMessage.error(rsp.data.message);
+            }
+        } catch ( error) {
+            console.error(error);
+        }
     }
 
     return {
       ...toRefs(data),
       router,
-      handleLogin,
-      handleRegister,
       handleSmsLogin,
+			handleLogin,
+      handleRegister,
+      sendSmsCode,
     };
   },
 };

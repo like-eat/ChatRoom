@@ -3,12 +3,13 @@ package gorm
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/internal/service/redis"
+	"kama_chat_server/internal/service/sms/local"
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
@@ -49,7 +50,7 @@ func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) int8 {
 }
 
 // Login 登录
-func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (string, *respond.LoginRespond, int) {
+func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond.LoginRespond, int) {
 	password := loginReq.Password
 	var user model.UserInfo
 	res := dao.GormDB.First(&user, "telephone = ?", loginReq.Telephone)
@@ -91,24 +92,95 @@ func (u *userInfoService) Login(c *gin.Context, loginReq request.LoginRequest) (
 	return "登陆成功!", loginRsp, 0
 }
 
+// SmsLogin 验证码登录
+func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respond.LoginRespond, int) {
+	var user model.UserInfo
+	res := dao.GormDB.First(&user, "telephone = ?", req.Telephone)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			message := "用户不存在，请注册"
+			zlog.Error(message)
+			return message, nil, -2
+		}
+		zlog.Error(res.Error.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+
+	key := "auth_code_" + req.Telephone
+	code, err := redis.GetKey(key)
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+	if code != req.SmsCode {
+		message := "验证码不正确，请重试"
+		zlog.Info(message)
+		return message, nil, -2
+	} else {
+		if err := redis.DelKey(key); err != nil {
+			zlog.Error(err.Error())
+			return constants.SYSTEM_ERROR, nil, -1
+		}
+	}
+
+	loginRsp := &respond.LoginRespond{
+		Uuid:      user.Uuid,
+		Telephone: user.Telephone,
+		Nickname:  user.Nickname,
+		Email:     user.Email,
+		Avatar:    user.Avatar,
+		Gender:    user.Gender,
+		Birthday:  user.Birthday,
+		Signature: user.Signature,
+		IsAdmin:   user.IsAdmin,
+		Status:    user.Status,
+	}
+	year, month, day := user.CreatedAt.Date()
+	loginRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
+
+	return "登陆成功!", loginRsp, 0
+}
+
+// SendSmsCode 发送短信验证码 - 验证码登录
+func (u *userInfoService) SendSmsCode(telephone string) (string, int) {
+	// 如果是从github上拉下来的，默认没有local包，VerificationCode函数应该在sms包中
+	return local.VerificationCode(telephone)
+}
+
 // checkTelephoneExist 检查手机号是否存在
 func (u *userInfoService) checkTelephoneExist(telephone string) (string, int) {
 	var user model.UserInfo
 	// gorm默认排除软删除，所以翻译过来的select语句是SELECT * FROM `user_info` WHERE telephone = '18089596095' AND `user_info`.`deleted_at` IS NULL ORDER BY `user_info`.`id` LIMIT 1
 	if res := dao.GormDB.Where("telephone = ?", telephone).First(&user); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			zlog.Info("用户不存在，可以注册")
+			zlog.Info("该电话不存在，可以注册")
 			return "", 0
 		}
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	zlog.Info("用户已经存在，注册失败")
-	return "用户已经存在，注册失败", -2
+	zlog.Info("该电话已经存在，注册失败")
+	return "该电话已经存在，注册失败", -2
 }
 
 // Register 注册，返回(message, register_respond_string, error)
-func (u *userInfoService) Register(c *gin.Context, registerReq request.RegisterRequest) (string, *respond.RegisterRespond, int) {
+func (u *userInfoService) Register(registerReq request.RegisterRequest) (string, *respond.RegisterRespond, int) {
+	key := "auth_code_" + registerReq.Telephone
+	code, err := redis.GetKey(key)
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+	if code != registerReq.SmsCode {
+		message := "验证码不正确，请重试"
+		zlog.Info(message)
+		return message, nil, -2
+	} else {
+		if err := redis.DelKey(key); err != nil {
+			zlog.Error(err.Error())
+			return constants.SYSTEM_ERROR, nil, -1
+		}
+	}
 	// 不用校验手机号，前端校验
 	// 判断电话是否已经被注册过了
 	message, ret := u.checkTelephoneExist(registerReq.Telephone)

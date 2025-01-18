@@ -352,6 +352,85 @@
                   </div>
                 </template>
               </Modal>
+              <Modal :isVisible="isRemoveGroupMemberModalVisible">
+                <template v-slot:header>
+                  <div class="removegroupmember-modal-quit-btn-container">
+                    <button
+                      class="removegroupmember-modal-quit-btn"
+                      @click="quitRemoveGroupMemberModal"
+                    >
+                      <el-icon><Close /></el-icon>
+                    </button>
+                  </div>
+                  <div class="removegroupmember-modal-header-title">
+                    <h3>移除群组人员</h3>
+                  </div>
+                </template>
+                <template v-slot:body>
+                  <span
+                    style="
+                      font-size: 14px;
+                      font-weight: bold;
+                      font-family: Arial, Helvetica, sans-serif;
+                      color: rgb(57, 57, 57);
+                      width: 270px;
+                      display: flex;
+                      justify-content: left;
+                      margin-bottom: 5px;
+                    "
+                    >群组成员：</span
+                  >
+                  <el-scrollbar
+                    max-height="400px"
+                    style="height: 300px; width: 350px"
+                  >
+                    <div class="modal-body">
+                      <ul
+                        style="list-style-type: none"
+                        class="removegroupmembers-list"
+                      >
+                        <li
+                          v-for="groupMember in groupMemberList"
+                          :key="groupMember.user_id"
+                          class="removegroupmembers-item"
+                        >
+                          <div style="display: flex; align-items: center">
+                            <el-image
+                              :src="groupMember.avatar"
+                              class="removegroupmembers-item-avatar"
+                            />
+                            <span class="removegroupmembers-item-name">{{
+                              groupMember.nickname
+                            }}</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            :value="groupMember.user_id"
+                            v-model="selectedGroupMembers"
+                            @change="handleCheckboxChange"
+                          />
+                        </li>
+                      </ul>
+                    </div>
+                  </el-scrollbar>
+                </template>
+                <template v-slot:footer>
+                  <div
+                    style="
+                      height: 50px;
+                      width: 300px;
+                      display: flex;
+                      justify-content: right;
+                    "
+                  >
+                    <el-button
+                      class="removegroupmembers-button"
+                      @click="handleRemoveGroupMembers"
+                      >移除所选人员</el-button
+                    >
+                  </div>
+                </template>
+              </Modal>
               <SmallModal :isVisible="isAddGroupModalVisible">
                 <template v-slot:header>
                   <div class="modal-header">
@@ -776,7 +855,7 @@
                   hide-after="0"
                   enterable="false"
                 >
-                  <button class="image-button">
+                  <button class="image-button" @click="showAVContainerModal">
                     <svg
                       t="1733503700535"
                       class="av-icon"
@@ -795,6 +874,7 @@
                     </svg>
                   </button>
                 </el-tooltip>
+                <VideoModal :isVisible="isAVContainerModalVisible"></VideoModal>
               </div>
             </div>
           </el-main>
@@ -827,6 +907,7 @@ import axios from "axios";
 import Modal from "@/components/Modal.vue";
 import SmallModal from "@/components/SmallModal.vue";
 import NavigationModal from "@/components/NavigationModal.vue";
+import VideoModal from "@/components/VideoModal.vue";
 import { ElMessage, ElMessageBox, ElScrollbar } from "element-plus";
 export default {
   name: "ContactChat",
@@ -834,6 +915,7 @@ export default {
     Modal,
     SmallModal,
     NavigationModal,
+    VideoModal,
   },
 
   setup() {
@@ -855,6 +937,7 @@ export default {
       isGroupContactInfoModalVisible: false,
       isAddGroupModalVisible: false,
       isUpdateGroupInfoModalVisible: false,
+      isRemoveGroupMemberModalVisible: false,
       getUserListReq: {
         owner_id: "",
       },
@@ -893,7 +976,7 @@ export default {
       sessionId: "",
       messageList: [],
       innerRef: ref < HTMLDivElement > null,
-      scrollbarRef: ref(null),
+      scrollbarRef: null,
       addGroupList: [],
       uploadRef: null,
       uploadPath: store.state.backendUrl + "/message/uploadFile",
@@ -909,6 +992,10 @@ export default {
         name: "",
         notice: "",
       },
+      groupMemberList: [],
+      selectedGroupMembers: [],
+      removeGroupMembersList: [],
+      isAVContainerModalVisible: false,
     });
     //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate(async (to, from, next) => {
@@ -1331,7 +1418,7 @@ export default {
       console.log(chatAvatarMessageRequest);
       store.state.socket.send(JSON.stringify(chatAvatarMessageRequest));
       scrollToBottom();
-    }
+    };
 
     const getMessageList = async () => {
       try {
@@ -1595,6 +1682,72 @@ export default {
     const closeUpdateGroupInfoModal = () => {
       handleUpdateGroupInfo();
     };
+    const getGroupMemberList = async () => {
+      const req = {
+        group_id: data.contactInfo.contact_id,
+      };
+      try {
+        const rsp = await axios.post(
+          store.state.backendUrl + "/group/getGroupMemberList",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          data.groupMemberList = rsp.data.data;
+          console.log(data.groupMemberList);
+        } else {
+          ElMessage.error(rsp.data.message);
+          console.log(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const showRemoveGroupMemberModal = async () => {
+      await getGroupMemberList();
+      data.isRemoveGroupMemberModalVisible = true;
+    };
+
+    const quitRemoveGroupMemberModal = () => {
+      data.isRemoveGroupMemberModalVisible = false;
+    };
+
+    const closeRemoveGroupMemberModal = () => {};
+
+    const handleCheckboxChange = () => {
+      data.removeGroupMembersList = data.selectedGroupMembers;
+      console.log(data.removeGroupMembersList);
+    };
+
+    const handleRemoveGroupMembers = async () => {
+      const req = {
+        group_id: data.contactInfo.contact_id,
+        owner_id: data.contactInfo.contact_owner_id,
+        uuid_list: data.removeGroupMembersList,
+      };
+      console.log(data.contactInfo);
+      try {
+        const rsp = await axios.post(
+          store.state.backendUrl + "/group/removeGroupMembers",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+          getGroupMemberList();
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+        } else {
+          ElMessage.error(rsp.data.message);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    const showAVContainerModal = () => {
+      data.isAVContainerModalVisible = true;
+    };
+
     return {
       ...toRefs(data),
       router,
@@ -1639,6 +1792,13 @@ export default {
       handleAvatarUploadSuccess,
       handleUpdateGroupInfo,
       closeUpdateGroupInfoModal,
+      showRemoveGroupMemberModal,
+      quitRemoveGroupMemberModal,
+      closeRemoveGroupMemberModal,
+      getGroupMemberList,
+      handleCheckboxChange,
+      handleRemoveGroupMembers,
+      showAVContainerModal,
     };
   },
 };
@@ -1681,7 +1841,8 @@ h3 {
 
 .groupcontactinfo-modal-quit-btn-container,
 .userinfo-modal-quit-btn-container,
-.updategroupinfo-modal-quit-btn-container {
+.updategroupinfo-modal-quit-btn-container,
+.removegroupmember-modal-quit-btn-container {
   height: 25px;
   width: 100%;
   display: flex;
@@ -1690,7 +1851,8 @@ h3 {
 
 .groupcontactinfo-modal-quit-btn,
 .userinfo-modal-quit-btn,
-.updategroupinfo-modal-quit-btn {
+.updategroupinfo-modal-quit-btn,
+.removegroupmember-modal-quit-btn {
   background-color: rgba(255, 255, 255, 0);
   color: rgb(229, 25, 25);
   padding: 15px;
@@ -1702,7 +1864,8 @@ h3 {
 }
 
 .groupcontactinfo-modal-header-title,
-.userinfo-modal-header-title {
+.userinfo-modal-header-title,
+.removegroupmember-modal-header-title {
   height: 30px;
   width: 100%;
   display: flex;
@@ -1959,7 +2122,7 @@ h3 {
 }
 
 .modal-body {
-  height: 55%;
+  height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -2031,5 +2194,67 @@ h3 {
   justify-content: center;
   align-items: center;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.removegroupmembers-list {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.removegroupmembers-item {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+}
+
+.removegroupmembers-item-avatar {
+  height: 30px;
+  width: 30px;
+  margin-right: 20px;
+}
+.removegroupmembers-item-name {
+  font-size: 14px;
+  font-weight: bold;
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(57, 57, 57);
+}
+.removegroupmembers-button {
+  background-color: rgb(252, 210.9, 210.9);
+}
+
+.video-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  border-radius: 30px;
+}
+
+.video-modal-content {
+  background: #fff;
+  height: 500px;
+  border-radius: 20px;
+  width: 800px;
+  box-shadow: 0 2px 15px rgb(195, 8, 8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.video-player {
+  height: 200px;
+  width: 300px;
 }
 </style>

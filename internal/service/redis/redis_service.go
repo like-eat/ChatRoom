@@ -30,7 +30,6 @@ func init() {
 func SetKeyEx(key string, value string, timeout time.Duration) error {
 	err := redisClient.Set(ctx, key, value, timeout).Err()
 	if err != nil {
-		zlog.Error(err.Error())
 		return err
 	}
 	return nil
@@ -38,9 +37,20 @@ func SetKeyEx(key string, value string, timeout time.Duration) error {
 
 func GetKey(key string) (string, error) {
 	value, err := redisClient.Get(ctx, key).Result()
-	if err == redis.Nil {
-		zlog.Error("key_with_expire has expired")
+	if err != nil {
+		if err == redis.Nil {
+			zlog.Info("该key不存在")
+			return "", nil
+		}
 		return "", err
 	}
 	return value, nil
+}
+
+func DelKey(key string) error {
+	err := redisClient.Del(ctx, key).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }
