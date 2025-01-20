@@ -13,14 +13,25 @@
 
 <script>
 import { onMounted, reactive } from "vue";
+import { useStore } from "vuex";
 export default {
   name: "LargeModal",
   props: {
     isVisible: false,
   },
   setup() {
+    const store = useStore();
     const data = reactive({
       videoPlayer: null,
+      rtcPeerConn: null,
+      ICE_CFG: {},
+      inMyPeerId: null,
+      remoteRtcPeerId: null,
+      wsConn: null,
+      localStream: null,
+      remoteStream: null,
+      remoteVideo: querySelector("video.remote-video"),
+      localVideo: querySelector("video.local-video"),
     });
     onMounted(() => {
       prepareAVBase();
@@ -65,8 +76,292 @@ export default {
         }
       }
     };
+    const createRtcPeerConnection = () => {
+      if (data.rtcPeerConn) {
+        console.log("peer connection has already been created.");
+        return;
+      }
+      rtcPeerConn = new RTCPeerConnection(data.ICE_CFG);
+      rtcPeerConn.onicecandidate = (event) => {
+        if (event.candidate) {
+          var proxyCandidateMessage = {
+            messageId: "PROXY",
+            type: "candidate",
+            fromPeerId: data.inMyPeerId.value,
+            toPeerId: data.remoteRtcPeerId,
+            messageData: {
+              candidate: event.candidate,
+            },
+          };
+          data.wsConn.send(JSON.stringify(proxyCandidateMessage));
+        }
+      };
+      rtcPeerConn.oniceconnectionstatechange = (event) => {
+        console.log(
+          "oniceconnectionstatechange",
+          rtcPeerConn.iceConnectionState
+        );
+      };
+      // 对端传来媒体轨道
+      rtcPeerConn.ontrack = (event) => {
+        if (remoteStream === null) {
+          data.remoteStream = new MediaStream();
+          data.remoteVideo.srcObject = data.remoteStream;
+          data.remoteVideo.style.display = "inline-block";
+        }
+        data.remoteStream.addTrack(event.track);
+      };
+    };
+
+    const closeRtcPeerConnection = () => {
+      if (data.rtcPeerConn) {
+        data.rtcPeerConn.close();
+        data.rtcPeerConn = null;
+      }
+    };
+
+    const getLocalMediaStream = () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.log("getUserMedia is not supported!");
+        return null;
+      } else if (data.localStream) {
+        console.log("localStream already exist.");
+        return data.localStream;
+      } else {
+        var constraints = {
+          video: true,
+          audio: true,
+        };
+        return navigator.mediaDevices.getUserMedia(constraints);
+      }
+    };
+
+    const closeLocalMediaStream = () => {
+      if (data.localStream != null) {
+        data.localStream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        data.localStream = null;
+      }
+    };
+
+    const attachMediaStreamToLocalVideo = () => {
+      data.localVideo.srcObject = data.localStream;
+      data.localVideo.muted = true;
+      data.localVideo.style.display = "inline-block";
+    };
+
+    const attachMediaStreamToPeerConnection = () => {
+      data.localStream.getTracks().forEach((track) => {
+        data.rtcPeerConn.addTrack(track);
+      });
+    };
+
+    const createOffer = () => {
+      var offerOpts = {
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      };
+      data.rtcPeerConn
+        .createOffer(offerOpts)
+        .then((desc) => {
+          data.rtcPeerConn.setLocalDescription(desc);
+          var proxySdpMessage = {
+            messageId: "PROXY",
+            type: "sdp",
+            fromPeerId: data.inMyPeerId.value,
+            toPeerId: data.remoteRtcPeerId,
+            messageData: {
+              sdp: desc,
+            },
+          };
+          data.wsConn.send(JSON.stringify(proxySdpMessage));
+        })
+        .catch((err) => {
+          console.log(
+            `createOffer failed, error name: ${err.name}, error message: ${err.message}`
+          );
+        });
+    };
+
+    const createAnswer = () => {
+      data.rtcPeerConn
+        .createAnswer()
+        .then((desc) => {
+          data.rtcPeerConn.setLocalDescription(desc);
+          var proxySdpMessage = {
+            messageId: "PROXY",
+            type: "sdp",
+            fromPeerId: data.inMyPeerId.value,
+            toPeerId: data.remoteRtcPeerId,
+            messageData: {
+              sdp: desc,
+            },
+          };
+          data.wsConn.send(JSON.stringify(proxySdpMessage));
+        })
+        .catch((err) => {
+          console.log(
+            `createAnswer failed, error name: ${err.name}, error message: ${err.message}`
+          );
+        });
+    };
+
+    const startCall = async (isInitiator, remotePeerId) => {
+      data.remoteRtcPeerId = remotePeerId;
+      createRtcPeerConnection();
+      data.localStream = await getLocalMediaStream();
+      attachMediaStreamToLocalVideo();
+      attachMediaStreamToPeerConnection();
+      if (isInitiator) {
+        var startCallMessage = {
+          messageId: "PROXY",
+          type: "start_call",
+          fromPeerId: data.inMyPeerId.value,
+          toPeerId: data.remotePeerId,
+        };
+        data.wsConn.send(JSON.stringify(startCallMessage));
+      } else {
+        var receiveCallMessage = {
+          messageId: "PROXY",
+          type: "receive_call",
+          fromPeerId: data.inMyPeerId.value,
+          toPeerId: data.remotePeerId,
+        };
+        data.wsConn.send(JSON.stringify(receiveCallMessage));
+      }
+    };
+
+    const endCall = () => {
+      closeLocalMediaStream();
+      closeRtcPeerConnection();
+      data.localVideo.style.display = "none";
+      data.remoteVideo.style.display = "none";
+      data.remoteStream = null;
+      data.remoteRtcPeerId = null;
+    };
+
+    const handleOfferSdp = (val) => {
+      data.rtcPeerConn
+        .setRemoteDescription(new RTCSessionDescription(val))
+        .then(() => {
+          CreateAnswer();
+        })
+        .catch((err) => {
+          console.log("rtcPeerConn setRemoteDescription failed", err);
+        });
+    };
+
+    const handleAnswerSdp = (val) => {
+      data.rtcPeerConn.setRemoteDescription(new RTCSessionDescription(val));
+    };
+
+    const handleCandidate = (val) => {
+      data.rtcPeerConn.addIceCandidate(new RTCIceCandidate(val));
+    };
+
+    const login = () => {
+      var myPeerId = data.inMyPeerId.value;
+      if (myPeerId === "") {
+        alert("用户名不能为空");
+        return;
+      }
+
+      wsConn = new WebSocket(
+        `wss://${store.state.backendUrl}:4445/?peerId=${myPeerId}`
+      );
+      wsConn.onopen = function () {
+        console.log("Connect signal server success");
+        btLogin.textContent = "登出";
+      };
+      wsConn.onclose = function () {
+        console.log("Disconnect from signal server");
+      };
+      wsConn.onerror = function (error) {
+        console.log("Connect signal server failed, error:", error);
+      };
+      wsConn.onmessage = function (event) {
+        var message = event.data;
+        var messageObj = JSON.parse(message);
+        if (messageObj.messageId === "CURRENT_PEERS") {
+          console.log(
+            "Recv CURRENT_PEERS message, peerList:",
+            messageObj.messageData.peerList
+          );
+          ulPeerList.innerHTML = "";
+          messageObj.messageData.peerList.forEach((peerId) => {
+            const li = document.createElement("li");
+            li.textContent = peerId;
+            li.onclick = function () {
+              StartCall(true, peerId);
+            };
+            ulPeerList.appendChild(li);
+          });
+        } else if (messageObj.messageId === "PEER_JOIN") {
+          console.log(
+            "Recv PEER_JOIN message, peerId:",
+            messageObj.messageData.peerId
+          );
+          const li = document.createElement("li");
+          li.textContent = messageObj.messageData.peerId;
+          li.onclick = function () {
+            StartCall(true, messageObj.messageData.peerId);
+          };
+          ulPeerList.appendChild(li);
+        } else if (messageObj.messageId === "PEER_LEAVE") {
+          console.log(
+            "Recv PEER_LEAVE message, peerId:",
+            messageObj.messageData.peerId
+          );
+          var liPeerElements = ulPeerList.getElementsByTagName("li");
+          for (let i = 0; i < liPeerElements.length; i++) {
+            if (
+              liPeerElements[i].textContent === messageObj.messageData.peerId
+            ) {
+              ulPeerList.removeChild(liPeerElements[i]);
+              if (remoteRtcPeerId === messageObj.messageData.peerId) {
+                EndCall();
+              }
+            }
+          }
+        } else if (messageObj.messageId === "PROXY") {
+          console.log("Recv PROXY message", message);
+          if (messageObj.type === "start_call") {
+            StartCall(false, messageObj.fromPeerId);
+          } else if (messageObj.type === "receive_call") {
+            CreateOffer();
+          } else if (messageObj.type === "sdp") {
+            if (messageObj.messageData.sdp.type === "offer") {
+              HandleOfferSdp(messageObj.messageData.sdp);
+            } else if (messageObj.messageData.sdp.type === "answer") {
+              HandleAnswerSdp(messageObj.messageData.sdp);
+            } else {
+              console.log("Unknown sdp type");
+            }
+          } else if (messageObj.type === "candidate") {
+            HandleCandidate(messageObj.messageData.candidate);
+          } else {
+            console.log("Unknown PROXY type");
+          }
+        }
+      };
+    };
+
     return {
       prepareAVBase,
+      createRtcPeerConnection,
+      closeRtcPeerConnection,
+      getLocalMediaStream,
+      closeLocalMediaStream,
+      attachMediaStreamToLocalVideo,
+      attachMediaStreamToPeerConnection,
+      createOffer,
+      createAnswer,
+      startCall,
+      endCall,
+      handleOfferSdp,
+      handleAnswerSdp,
+      handleCandidate,
     };
   },
 };

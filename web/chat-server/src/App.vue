@@ -41,7 +41,7 @@ export default {
           logout();
         }
         const wsUrl =
-          store.state.wsUrl + "/ws?client_id=" + store.state.userInfo.uuid;
+          store.state.wsUrl + "/wss?client_id=" + store.state.userInfo.uuid;
         store.state.socket = new WebSocket(wsUrl);
         store.state.socket.onopen = () => {
           console.log("WebSocket连接已打开");

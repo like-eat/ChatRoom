@@ -30,3 +30,5 @@ vendor/*
 static/avatars/*
 
 static/files/*
+
+pkg/ssl/*
