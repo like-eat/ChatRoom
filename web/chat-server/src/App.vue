@@ -44,16 +44,17 @@ export default {
           store.state.wsUrl + "/wss?client_id=" + store.state.userInfo.uuid;
         store.state.socket = new WebSocket(wsUrl);
         store.state.socket.onopen = () => {
-          console.log("WebSocket连接已打开");
+          console.log("WebSocket连接已打开");console.log("连接信令服务器成功");
         };
         store.state.socket.onmessage = (message) => {
           console.log("收到消息：", message.data);
         };
         store.state.socket.onclose = () => {
           console.log("WebSocket连接已关闭");
+        console.log("连接信令服务器断开");
         };
         store.state.socket.onerror = () => {
-          console.log("WebSocket连接发生错误");
+          console.log("WebSocket连接发生错误");console.log("连接信令服务器失败，错误信息：", error);
         };
         console.log(store.state.socket);
       }

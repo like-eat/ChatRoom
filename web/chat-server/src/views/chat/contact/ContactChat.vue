@@ -874,7 +874,32 @@
                     </svg>
                   </button>
                 </el-tooltip>
-                <VideoModal :isVisible="isAVContainerModalVisible"></VideoModal>
+                <div
+                  class="video-modal-overlay"
+                  v-show="isAVContainerModalVisible"
+                >
+                  <div class="video-modal-content">
+                    <div class="video-modal-header">
+                      <h2>聊天室</h2>
+                    </div>
+                    <div class="video-modal-body">
+                      <video autoplay playsinline class="video-player"></video>
+                    </div>
+                    <div class="video-modal-footer">
+                      <el-button
+                        class="video-modal-footer-btn"
+                        @click="emitSession"
+                        >发起通话</el-button
+                      >
+                      <el-button class="video-modal-footer-btn"
+                        >挂断通话</el-button
+                      >
+                      <el-button class="video-modal-footer-btn"
+                        >退出聊天室</el-button
+                      >
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </el-main>
@@ -907,7 +932,6 @@ import axios from "axios";
 import Modal from "@/components/Modal.vue";
 import SmallModal from "@/components/SmallModal.vue";
 import NavigationModal from "@/components/NavigationModal.vue";
-import VideoModal from "@/components/VideoModal.vue";
 import { ElMessage, ElMessageBox, ElScrollbar } from "element-plus";
 export default {
   name: "ContactChat",
@@ -915,7 +939,6 @@ export default {
     Modal,
     SmallModal,
     NavigationModal,
-    VideoModal,
   },
 
   setup() {
@@ -996,6 +1019,16 @@ export default {
       selectedGroupMembers: [],
       removeGroupMembersList: [],
       isAVContainerModalVisible: false,
+      videoPlayer: null,
+      rtcPeerConn: null,
+      ICE_CFG: {},
+      contactId: null,
+      wsConn: null,
+      localStream: null,
+      remoteStream: null,
+      remoteVideo: document.querySelector("video.remote-video"),
+      localVideo: document.querySelector("video.local-video"),
+      curContactList: [],
     });
     //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate(async (to, from, next) => {
@@ -1009,24 +1042,74 @@ export default {
       console.log(data.sessionId);
       store.state.socket.onmessage = (jsonMessage) => {
         const message = JSON.parse(jsonMessage.data);
-        if (
-          // 群聊过来的消息，且当前会话是该群聊
-          (message.receive_id[0] == "G" &&
-            message.receive_id == data.contactInfo.contact_id) ||
-          // 其他用户过来的消息，且当前会话是该用户
-          (message.receive_id[0] == "U" &&
-            message.receive_id == data.userInfo.uuid) ||
-          // 自己发送的消息
-          message.send_id == data.userInfo.uuid
-        ) {
-          console.log("收到消息：", message);
-          if (data.messageList == null) {
-            data.messageList = [];
+        if (message.type != 3) {
+          if (
+            // 群聊过来的消息，且当前会话是该群聊
+            (message.receive_id[0] == "G" &&
+              message.receive_id == data.contactInfo.contact_id) ||
+            // 其他用户过来的消息，且当前会话是该用户
+            (message.receive_id[0] == "U" &&
+              message.receive_id == data.userInfo.uuid) ||
+            // 自己发送的消息
+            message.send_id == data.userInfo.uuid
+          ) {
+            console.log("收到消息：", message);
+            if (data.messageList == null) {
+              data.messageList = [];
+            }
+            data.messageList.push(message);
+            scrollToBottom();
           }
-          data.messageList.push(message);
-          scrollToBottom();
+          // 其他接受的消息都不显示在messageList中，而是通过切换页面或刷新页面getMessageList来获取
+        } else {
+          var messageObj = message.obj; // 后端message的该字段命名为obj
+          if (messageObj.messageId === "CURRENT_PEERS") {
+            console.log(
+              "获取CURRENT_PEERS当前在线用户列表，curContactList:",
+              messageObj.messageData.curContactList
+            );
+            data.curContactList = messageObj.messageData.curContactList;
+          } else if (messageObj.messageId === "PEER_JOIN") {
+            console.log(
+              "接受到PEER_JOIN消息，contactId:",
+              messageObj.messagecontactId
+            );
+            data.curContactList.push(messageObj.messagecontactId);
+          } else if (messageObj.messageId === "PEER_LEAVE") {
+            console.log(
+              "获取PEER_LEAVE消息，contactId:",
+              messageObj.messagecontactId
+            );
+            for (let i = 0; i < data.curContactList.length; i++) {
+              if (
+                data.curContactList[i].contactId === messageObj.messagecontactId
+              ) {
+                if (contactId === messageObj.messagecontactId) {
+                  endCall();
+                }
+              }
+            }
+          } else if (messageObj.messageId === "PROXY") {
+            console.log("接收到PROXY消息：", message);
+            if (messageObj.type === "start_call") {
+              startCall(false, messageObj.contactId);
+            } else if (messageObj.type === "receive_call") {
+              createOffer();
+            } else if (messageObj.type === "sdp") {
+              if (messageObj.messageData.sdp.type === "offer") {
+                handleOfferSdp(messageObj.messageData.sdp);
+              } else if (messageObj.messageData.sdp.type === "answer") {
+                handleAnswerSdp(messageObj.messageData.sdp);
+              } else {
+                console.log("不支持的sdp类型");
+              }
+            } else if (messageObj.type === "candidate") {
+              handleCandidate(messageObj.messageData.candidate);
+            } else {
+              console.log("不支持的proxy类型");
+            }
+          }
         }
-        // 其他接受的消息都不显示在messageList中，而是通过切换页面或刷新页面getMessageList来获取
       };
       scrollToBottom();
       next();
@@ -1046,7 +1129,8 @@ export default {
         }
         console.log(data.sessionId);
         store.state.socket.onmessage = (jsonMessage) => {
-          const message = JSON.parse(jsonMessage.data);
+        const message = JSON.parse(jsonMessage.data);
+        if (message.type != 3) {
           if (
             // 群聊过来的消息，且当前会话是该群聊
             (message.receive_id[0] == "G" &&
@@ -1064,7 +1148,57 @@ export default {
             data.messageList.push(message);
             scrollToBottom();
           }
-        };
+          // 其他接受的消息都不显示在messageList中，而是通过切换页面或刷新页面getMessageList来获取
+        } else {
+          var messageObj = message.obj; // 后端message的该字段命名为obj
+          if (messageObj.messageId === "CURRENT_PEERS") {
+            console.log(
+              "获取CURRENT_PEERS当前在线用户列表，curContactList:",
+              messageObj.messageData.curContactList
+            );
+            data.curContactList = messageObj.messageData.curContactList;
+          } else if (messageObj.messageId === "PEER_JOIN") {
+            console.log(
+              "接受到PEER_JOIN消息，contactId:",
+              messageObj.messagecontactId
+            );
+            data.curContactList.push(messageObj.messagecontactId);
+          } else if (messageObj.messageId === "PEER_LEAVE") {
+            console.log(
+              "获取PEER_LEAVE消息，contactId:",
+              messageObj.messagecontactId
+            );
+            for (let i = 0; i < data.curContactList.length; i++) {
+              if (
+                data.curContactList[i].contactId === messageObj.messagecontactId
+              ) {
+                if (contactId === messageObj.messagecontactId) {
+                  endCall();
+                }
+              }
+            }
+          } else if (messageObj.messageId === "PROXY") {
+            console.log("接收到PROXY消息：", message);
+            if (messageObj.type === "start_call") {
+              startCall(false, messageObj.contactId);
+            } else if (messageObj.type === "receive_call") {
+              createOffer();
+            } else if (messageObj.type === "sdp") {
+              if (messageObj.messageData.sdp.type === "offer") {
+                handleOfferSdp(messageObj.messageData.sdp);
+              } else if (messageObj.messageData.sdp.type === "answer") {
+                handleAnswerSdp(messageObj.messageData.sdp);
+              } else {
+                console.log("不支持的sdp类型");
+              }
+            } else if (messageObj.type === "candidate") {
+              handleCandidate(messageObj.messageData.candidate);
+            } else {
+              console.log("不支持的proxy类型");
+            }
+          }
+        }
+      };
         scrollToBottom();
       } catch (error) {
         console.error(error);
@@ -1748,6 +1882,245 @@ export default {
       data.isAVContainerModalVisible = true;
     };
 
+    const emitSession = () => {
+      login();
+    };
+    // const prepareAVBase = async () => {
+    //   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    //     console.log("不支持 enumerateDevices() .");
+    //   } else {
+    //     navigator.mediaDevices
+    //       .enumerateDevices()
+    //       .then(function (devices) {
+    //         devices.forEach(function (device) {
+    //           console.log(
+    //             device.kind +
+    //               ": " +
+    //               device.label +
+    //               " id = " +
+    //               device.deviceId +
+    //               " groupId = " +
+    //               device.groupId
+    //           );
+    //         });
+    //       })
+    //       .catch(function (err) {
+    //         console.log(err.name + ": " + err.message);
+    //       });
+    //   }
+    //   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    //     console.log("getUserMedia is not supported");
+    //   } else {
+    //     data.videoPlayer = document.querySelector(".video-player");
+    //     console.log(data.videoPlayer);
+    //     var constraints = {
+    //       video: true,
+    //       audio: true,
+    //     };
+    //     try {
+    //       var stream = await navigator.mediaDevices.getUserMedia(constraints);
+    //       data.videoPlayer.srcObject = stream;
+    //     } catch (error) {
+    //       console.log(error);
+    //     }
+    //   }
+    // };
+    const createRtcPeerConnection = () => {
+      if (data.rtcPeerConn) {
+        console.log("peer connection has already been created.");
+        return;
+      }
+      rtcPeerConn = new RTCPeerConnection(data.ICE_CFG);
+      rtcPeerConn.onicecandidate = (event) => {
+        if (event.candidate) {
+          var proxyCandidateMessage = {
+            messageId: "PROXY",
+            type: "candidate",
+            fromId: props.ownerId,
+            toId: data.contactId,
+            messageData: {
+              candidate: event.candidate,
+            },
+          };
+          data.wsConn.send(JSON.stringify(proxyCandidateMessage));
+        }
+      };
+      rtcPeerConn.oniceconnectionstatechange = (event) => {
+        console.log(
+          "oniceconnectionstatechange",
+          rtcPeerConn.iceConnectionState
+        );
+      };
+      // 对端传来媒体轨道
+      rtcPeerConn.ontrack = (event) => {
+        if (remoteStream === null) {
+          data.remoteStream = new MediaStream();
+          data.remoteVideo.srcObject = data.remoteStream;
+          data.remoteVideo.style.display = "inline-block";
+        }
+        data.remoteStream.addTrack(event.track);
+      };
+    };
+
+    const closeRtcPeerConnection = () => {
+      if (data.rtcPeerConn) {
+        data.rtcPeerConn.close();
+        data.rtcPeerConn = null;
+      }
+    };
+
+    const getLocalMediaStream = () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.log("getUserMedia is not supported!");
+        return null;
+      } else if (data.localStream) {
+        console.log("localStream already exist.");
+        return data.localStream;
+      } else {
+        var constraints = {
+          video: true,
+          audio: true,
+        };
+        return navigator.mediaDevices.getUserMedia(constraints);
+      }
+    };
+
+    const closeLocalMediaStream = () => {
+      if (data.localStream != null) {
+        data.localStream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        data.localStream = null;
+      }
+    };
+
+    const attachMediaStreamToLocalVideo = () => {
+      data.localVideo.srcObject = data.localStream;
+      data.localVideo.muted = true;
+      data.localVideo.style.display = "inline-block";
+    };
+
+    const attachMediaStreamToPeerConnection = () => {
+      data.localStream.getTracks().forEach((track) => {
+        data.rtcPeerConn.addTrack(track);
+      });
+    };
+
+    const createOffer = () => {
+      var offerOpts = {
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      };
+      data.rtcPeerConn
+        .createOffer(offerOpts)
+        .then((desc) => {
+          data.rtcPeerConn.setLocalDescription(desc);
+          var proxySdpMessage = {
+            messageId: "PROXY",
+            type: "sdp",
+            fromId: props.ownerId,
+            toId: data.contactId,
+            messageData: {
+              sdp: desc,
+            },
+          };
+          data.wsConn.send(JSON.stringify(proxySdpMessage));
+        })
+        .catch((err) => {
+          console.log(
+            `createOffer failed, error name: ${err.name}, error message: ${err.message}`
+          );
+        });
+    };
+
+    const createAnswer = () => {
+      data.rtcPeerConn
+        .createAnswer()
+        .then((desc) => {
+          data.rtcPeerConn.setLocalDescription(desc);
+          var proxySdpMessage = {
+            messageId: "PROXY",
+            type: "sdp",
+            fromId: props.ownerId,
+            toId: data.contactId,
+            messageData: {
+              sdp: desc,
+            },
+          };
+          data.wsConn.send(JSON.stringify(proxySdpMessage));
+        })
+        .catch((err) => {
+          console.log(
+            `createAnswer failed, error name: ${err.name}, error message: ${err.message}`
+          );
+        });
+    };
+
+    const startCall = async (isInitiator, contactId) => {
+      contactId = data.contactId;
+      createRtcPeerConnection();
+      data.localStream = await getLocalMediaStream();
+      attachMediaStreamToLocalVideo();
+      attachMediaStreamToPeerConnection();
+      if (isInitiator) {
+        var startCallMessage = {
+          messageId: "PROXY",
+          type: "start_call",
+          fromId: props.ownerId,
+          toId: contactId,
+        };
+        data.wsConn.send(JSON.stringify(startCallMessage));
+      } else {
+        var receiveCallMessage = {
+          messageId: "PROXY",
+          type: "receive_call",
+          fromId: props.ownerId,
+          toId: contactId,
+        };
+        data.wsConn.send(JSON.stringify(receiveCallMessage));
+      }
+    };
+
+    const endCall = () => {
+      closeLocalMediaStream();
+      closeRtcPeerConnection();
+      data.localVideo.style.display = "none";
+      data.remoteVideo.style.display = "none";
+      data.remoteStream = null;
+      contactId = null;
+    };
+
+    const handleOfferSdp = (val) => {
+      data.rtcPeerConn
+        .setRemoteDescription(new RTCSessionDescription(val))
+        .then(() => {
+          createAnswer();
+        })
+        .catch((err) => {
+          console.log("rtcPeerConn setRemoteDescription failed", err);
+        });
+    };
+
+    const handleAnswerSdp = (val) => {
+      data.rtcPeerConn.setRemoteDescription(new RTCSessionDescription(val));
+    };
+
+    const handleCandidate = (val) => {
+      data.rtcPeerConn.addIceCandidate(new RTCIceCandidate(val));
+    };
+
+    const login = () => {
+      
+    };
+
+    const logout = () => {
+      if (data.wsConn) {
+        data.wsConn.close();
+        data.wsConn = null;
+      }
+      endCall();
+    };
+
     return {
       ...toRefs(data),
       router,
@@ -1798,6 +2171,22 @@ export default {
       getGroupMemberList,
       handleCheckboxChange,
       handleRemoveGroupMembers,
+      createRtcPeerConnection,
+      closeRtcPeerConnection,
+      getLocalMediaStream,
+      closeLocalMediaStream,
+      attachMediaStreamToLocalVideo,
+      attachMediaStreamToPeerConnection,
+      createOffer,
+      createAnswer,
+      startCall,
+      endCall,
+      handleOfferSdp,
+      handleAnswerSdp,
+      handleCandidate,
+      login,
+      logout,
+      emitSession,
       showAVContainerModal,
     };
   },
@@ -2254,7 +2643,31 @@ h3 {
 }
 
 .video-player {
-  height: 200px;
   width: 300px;
+  height: 200px;
+}
+
+.video-modal-header {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-modal-body {
+  height: 360px;
+  width: 700px;
+}
+
+.video-modal-footer {
+  height: 80px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-modal-footer-btn {
+  background-color: rgb(252, 210.9, 210.9);
 }
 </style>

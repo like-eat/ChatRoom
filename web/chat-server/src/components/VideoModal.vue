@@ -7,6 +7,11 @@
       <div class="modal-body">
         <video autoplay playsinline class="video-player"></video>
       </div>
+      <div class="modal-footer">
+      <el-button class="modal-footer-btn" @click="emitSession">发起通话</el-button>
+      <el-button class="modal-footer-btn">挂断通话</el-button>
+      <el-button class="modal-footer-btn">退出聊天室</el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -14,68 +19,73 @@
 <script>
 import { onMounted, reactive } from "vue";
 import { useStore } from "vuex";
+import { ElMessage } from 'element-plus';
 export default {
   name: "LargeModal",
   props: {
     isVisible: false,
+    ownerId: null,
   },
-  setup() {
+  setup(props) {
     const store = useStore();
     const data = reactive({
       videoPlayer: null,
       rtcPeerConn: null,
       ICE_CFG: {},
-      inMyPeerId: null,
-      remoteRtcPeerId: null,
+      contactId: null,
       wsConn: null,
       localStream: null,
       remoteStream: null,
-      remoteVideo: querySelector("video.remote-video"),
-      localVideo: querySelector("video.local-video"),
+      remoteVideo: document.querySelector("video.remote-video"),
+      localVideo: document.querySelector("video.local-video"),
+      curContactList: [],
     });
-    onMounted(() => {
-      prepareAVBase();
+    onMounted(() => { 
+      // prepareAVBase();
     });
-    const prepareAVBase = async () => {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        console.log("不支持 enumerateDevices() .");
-      } else {
-        navigator.mediaDevices
-          .enumerateDevices()
-          .then(function (devices) {
-            devices.forEach(function (device) {
-              console.log(
-                device.kind +
-                  ": " +
-                  device.label +
-                  " id = " +
-                  device.deviceId +
-                  " groupId = " +
-                  device.groupId
-              );
-            });
-          })
-          .catch(function (err) {
-            console.log(err.name + ": " + err.message);
-          });
-      }
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.log("getUserMedia is not supported");
-      } else {
-        data.videoPlayer = document.querySelector(".video-player");
-        console.log(data.videoPlayer);
-        var constraints = {
-          video: true,
-          audio: true,
-        };
-        try {
-          var stream = await navigator.mediaDevices.getUserMedia(constraints);
-          data.videoPlayer.srcObject = stream;
-        } catch (error) {
-          console.log(error);
-        }
-      }
-    };
+    const emitSession = () => {
+      login();
+    }
+    // const prepareAVBase = async () => {
+    //   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    //     console.log("不支持 enumerateDevices() .");
+    //   } else {
+    //     navigator.mediaDevices
+    //       .enumerateDevices()
+    //       .then(function (devices) {
+    //         devices.forEach(function (device) {
+    //           console.log(
+    //             device.kind +
+    //               ": " +
+    //               device.label +
+    //               " id = " +
+    //               device.deviceId +
+    //               " groupId = " +
+    //               device.groupId
+    //           );
+    //         });
+    //       })
+    //       .catch(function (err) {
+    //         console.log(err.name + ": " + err.message);
+    //       });
+    //   }
+    //   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    //     console.log("getUserMedia is not supported");
+    //   } else {
+    //     data.videoPlayer = document.querySelector(".video-player");
+    //     console.log(data.videoPlayer);
+    //     var constraints = {
+    //       video: true,
+    //       audio: true,
+    //     };
+    //     try {
+    //       var stream = await navigator.mediaDevices.getUserMedia(constraints);
+    //       data.videoPlayer.srcObject = stream;
+    //     } catch (error) {
+    //       console.log(error);
+    //     }
+    //   }
+    // };
     const createRtcPeerConnection = () => {
       if (data.rtcPeerConn) {
         console.log("peer connection has already been created.");
@@ -87,8 +97,8 @@ export default {
           var proxyCandidateMessage = {
             messageId: "PROXY",
             type: "candidate",
-            fromPeerId: data.inMyPeerId.value,
-            toPeerId: data.remoteRtcPeerId,
+            fromId: props.ownerId,
+            toId: data.contactId,
             messageData: {
               candidate: event.candidate,
             },
@@ -169,8 +179,8 @@ export default {
           var proxySdpMessage = {
             messageId: "PROXY",
             type: "sdp",
-            fromPeerId: data.inMyPeerId.value,
-            toPeerId: data.remoteRtcPeerId,
+            fromId: props.ownerId,
+            toId: data.contactId,
             messageData: {
               sdp: desc,
             },
@@ -192,8 +202,8 @@ export default {
           var proxySdpMessage = {
             messageId: "PROXY",
             type: "sdp",
-            fromPeerId: data.inMyPeerId.value,
-            toPeerId: data.remoteRtcPeerId,
+            fromId: props.ownerId,
+            toId: data.contactId,
             messageData: {
               sdp: desc,
             },
@@ -207,8 +217,8 @@ export default {
         });
     };
 
-    const startCall = async (isInitiator, remotePeerId) => {
-      data.remoteRtcPeerId = remotePeerId;
+    const startCall = async (isInitiator, contactId) => {
+      contactId = data.contactId;
       createRtcPeerConnection();
       data.localStream = await getLocalMediaStream();
       attachMediaStreamToLocalVideo();
@@ -217,16 +227,16 @@ export default {
         var startCallMessage = {
           messageId: "PROXY",
           type: "start_call",
-          fromPeerId: data.inMyPeerId.value,
-          toPeerId: data.remotePeerId,
+          fromId: props.ownerId,
+          toId: contactId,
         };
         data.wsConn.send(JSON.stringify(startCallMessage));
       } else {
         var receiveCallMessage = {
           messageId: "PROXY",
           type: "receive_call",
-          fromPeerId: data.inMyPeerId.value,
-          toPeerId: data.remotePeerId,
+          fromId: props.ownerId,
+          toId: contactId,
         };
         data.wsConn.send(JSON.stringify(receiveCallMessage));
       }
@@ -238,14 +248,14 @@ export default {
       data.localVideo.style.display = "none";
       data.remoteVideo.style.display = "none";
       data.remoteStream = null;
-      data.remoteRtcPeerId = null;
+      contactId = null;
     };
 
     const handleOfferSdp = (val) => {
       data.rtcPeerConn
         .setRemoteDescription(new RTCSessionDescription(val))
         .then(() => {
-          CreateAnswer();
+          createAnswer();
         })
         .catch((err) => {
           console.log("rtcPeerConn setRemoteDescription failed", err);
@@ -261,94 +271,81 @@ export default {
     };
 
     const login = () => {
-      var myPeerId = data.inMyPeerId.value;
-      if (myPeerId === "") {
-        alert("用户名不能为空");
+      if (props.ownerId === "") {
+        ElMessage.warning("用户名不能为空");
         return;
       }
-
-      wsConn = new WebSocket(
-        `wss://${store.state.backendUrl}:4445/?peerId=${myPeerId}`
-      );
-      wsConn.onopen = function () {
-        console.log("Connect signal server success");
-        btLogin.textContent = "登出";
+      data.wsConn.onopen = () => {
+        console.log("连接信令服务器成功");
       };
-      wsConn.onclose = function () {
-        console.log("Disconnect from signal server");
+      data.wsConn.onclose = () => {
+        console.log("连接信令服务器断开");
       };
-      wsConn.onerror = function (error) {
-        console.log("Connect signal server failed, error:", error);
+      data.wsConn.onerror = (error) => {
+        console.log("连接信令服务器失败，错误信息：", error);
       };
-      wsConn.onmessage = function (event) {
-        var message = event.data;
-        var messageObj = JSON.parse(message);
+      data.wsConn.onmessage = (event) => {
+        var message = JSON.parse(event.data);
+        var messageObj = message.obj; // 后端message的该字段命名为obj
         if (messageObj.messageId === "CURRENT_PEERS") {
           console.log(
-            "Recv CURRENT_PEERS message, peerList:",
-            messageObj.messageData.peerList
+            "获取CURRENT_PEERS当前在线用户列表，curContactList:",
+            messageObj.messageData.curContactList
           );
-          ulPeerList.innerHTML = "";
-          messageObj.messageData.peerList.forEach((peerId) => {
-            const li = document.createElement("li");
-            li.textContent = peerId;
-            li.onclick = function () {
-              StartCall(true, peerId);
-            };
-            ulPeerList.appendChild(li);
-          });
+          data.curContactList = messageObj.messageData.curContactList;
         } else if (messageObj.messageId === "PEER_JOIN") {
           console.log(
-            "Recv PEER_JOIN message, peerId:",
-            messageObj.messageData.peerId
+            "接受到PEER_JOIN消息，contactId:",
+            messageObj.messagecontactId
           );
-          const li = document.createElement("li");
-          li.textContent = messageObj.messageData.peerId;
-          li.onclick = function () {
-            StartCall(true, messageObj.messageData.peerId);
-          };
-          ulPeerList.appendChild(li);
+          data.curContactList.push(messageObj.messagecontactId);
         } else if (messageObj.messageId === "PEER_LEAVE") {
           console.log(
-            "Recv PEER_LEAVE message, peerId:",
-            messageObj.messageData.peerId
+            "获取PEER_LEAVE消息，contactId:",
+            messageObj.messagecontactId
           );
-          var liPeerElements = ulPeerList.getElementsByTagName("li");
-          for (let i = 0; i < liPeerElements.length; i++) {
+          for (let i = 0; i < data.curContactList.length; i++) {
             if (
-              liPeerElements[i].textContent === messageObj.messageData.peerId
+              data.curContactList[i].contactId === messageObj.messagecontactId
             ) {
-              ulPeerList.removeChild(liPeerElements[i]);
-              if (remoteRtcPeerId === messageObj.messageData.peerId) {
-                EndCall();
+              if (contactId === messageObj.messagecontactId) {
+                endCall();
               }
             }
           }
         } else if (messageObj.messageId === "PROXY") {
-          console.log("Recv PROXY message", message);
+          console.log("接收到PROXY消息：", message);
           if (messageObj.type === "start_call") {
-            StartCall(false, messageObj.fromPeerId);
+            startCall(false, messageObj.contactId);
           } else if (messageObj.type === "receive_call") {
-            CreateOffer();
+            createOffer();
           } else if (messageObj.type === "sdp") {
             if (messageObj.messageData.sdp.type === "offer") {
-              HandleOfferSdp(messageObj.messageData.sdp);
+              handleOfferSdp(messageObj.messageData.sdp);
             } else if (messageObj.messageData.sdp.type === "answer") {
-              HandleAnswerSdp(messageObj.messageData.sdp);
+              handleAnswerSdp(messageObj.messageData.sdp);
             } else {
-              console.log("Unknown sdp type");
+              console.log("不支持的sdp类型");
             }
           } else if (messageObj.type === "candidate") {
-            HandleCandidate(messageObj.messageData.candidate);
+            handleCandidate(messageObj.messageData.candidate);
           } else {
-            console.log("Unknown PROXY type");
+            console.log("不支持的proxy类型");
           }
         }
       };
     };
 
+    const logout = () => {
+      if (data.wsConn) {
+        data.wsConn.close();
+        data.wsConn = null;
+      }
+      endCall();
+    };
+
     return {
-      prepareAVBase,
+      // prepareAVBase,
       createRtcPeerConnection,
       closeRtcPeerConnection,
       getLocalMediaStream,
@@ -362,6 +359,9 @@ export default {
       handleOfferSdp,
       handleAnswerSdp,
       handleCandidate,
+      login,
+      logout,
+      emitSession,
     };
   },
 };
@@ -406,8 +406,19 @@ export default {
 }
 
 .modal-body {
-  background-color: red;
   height: 360px;
   width: 700px;
+}
+
+.modal-footer {
+  height: 80px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-footer-btn {
+  background-color: rgb(252, 210.9, 210.9);
 }
 </style>

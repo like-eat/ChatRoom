@@ -6,7 +6,7 @@ type Message struct {
 	Id         int64     `gorm:"column:id;primaryKey;comment:自增id"`
 	Uuid       string    `gorm:"column:uuid;uniqueIndex;type:char(20);not null;comment:消息uuid"`
 	SessionId  string    `gorm:"column:session_id;index;type:char(20);not null;comment:会话uuid"`
-	Type       int8      `gorm:"column:type;not null;comment:消息类型，0.文本，1.语音，2.文件，3.通话"`
+	Type       int8      `gorm:"column:type;not null;comment:消息类型，0.文本，1.语音，2.文件，3.通话"` // 通话不用存消息内容或者url
 	Content    string    `gorm:"column:content;type:TEXT;comment:消息内容"`
 	Url        string    `gorm:"column:url;type:char(255);comment:消息url"`
 	SendId     string    `gorm:"column:send_id;index;type:char(20);not null;comment:发送者uuid"`
