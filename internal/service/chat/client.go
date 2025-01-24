@@ -11,7 +11,6 @@ import (
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/message/message_status_enum"
 	"kama_chat_server/pkg/zlog"
-	"log"
 	"net/http"
 )
 
@@ -62,7 +61,7 @@ func (c *Client) Read() {
 				if err := json.Unmarshal(jsonMessage, &message); err != nil {
 					zlog.Error(err.Error())
 				}
-				log.Println("接受到消息为: ", jsonMessage)
+				// log.Println("接受到消息为: ", jsonMessage)
 				if messageMode == "channel" {
 					// 如果server的转发channel没满，先把sendto中的给transmit
 					for len(ChatServer.Transmit) < constants.CHANNEL_SIZE && len(c.SendTo) > 0 {
@@ -103,7 +102,7 @@ func (c *Client) Write() {
 			zlog.Error(err.Error())
 			return // 直接断开websocket
 		}
-		log.Println("已发送消息：", messageBack.Message)
+		// log.Println("已发送消息：", messageBack.Message)
 		// 说明顺利发送，修改状态为已发送
 		if res := dao.GormDB.Model(&model.Message{}).Where("uuid = ?", messageBack.Uuid).Update("status", message_status_enum.Sent); res.Error != nil {
 			zlog.Error(res.Error.Error())

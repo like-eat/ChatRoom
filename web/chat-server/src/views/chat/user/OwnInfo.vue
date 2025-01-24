@@ -205,10 +205,9 @@ export default {
       }
       if (data.fileList.length != 0) {
         try {
-          data.updateInfo.avatar = store.state.backendUrl +
-            "/static/avatars/" + data.fileList[0].name;
+          data.updateInfo.avatar = "/static/avatars/" + data.fileList[0].name;
           console.log(data.updateInfo.avatar);
-          data.userInfo.avatar = data.updateInfo.avatar;
+          data.userInfo.avatar = store.state.backendUrl + data.updateInfo.avatar;
           store.commit("setUserInfo", data.userInfo);
           data.uploadRef.submit();
         } catch (error) {

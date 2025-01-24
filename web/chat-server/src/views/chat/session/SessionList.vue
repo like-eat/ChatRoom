@@ -244,18 +244,18 @@
 <script>
 import { reactive, toRefs, onMounted, ref } from "vue";
 import { onBeforeRouteUpdate, useRouter } from "vue-router";
-import { ElMessageBox, ElMessage } from 'element-plus';
+import { ElMessageBox, ElMessage } from "element-plus";
 import { useStore } from "vuex";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
-import NavigationModal from "@/components/NavigationModal.vue"
+import NavigationModal from "@/components/NavigationModal.vue";
 export default {
   name: "ContactList",
   components: {
     Modal,
     NavigationModal,
   },
-  
+
   setup() {
     const router = useRouter();
     const store = useStore();
@@ -277,7 +277,11 @@ export default {
       userSessionList: [],
       groupSessionList: [],
     });
-
+    onMounted(() => {
+      // if (data.userInfo.avatar.startswith("/static")) {
+      //   data.userInfo.avatar = data.
+      // }
+    });
     const handleToChatUser = (user) => {
       router.push("/chat/" + user.user_id);
     };
@@ -292,6 +296,14 @@ export default {
           store.state.backendUrl + "/session/getUserSessionList",
           data.ownListReq
         );
+        if (userSessionListRsp.data.data) {
+          for (let i = 0; i < userSessionListRsp.data.data.length; i++) {
+            if (!userSessionListRsp.data.data[i].avatar.startsWith("http")) {
+              userSessionListRsp.data.data[i].avatar =
+                store.state.backendUrl + userSessionListRsp.data.data[i].avatar;
+            }
+          }
+        }
         data.userSessionList = userSessionListRsp.data.data;
       } catch (error) {
         console.error(error);
@@ -307,6 +319,14 @@ export default {
           store.state.backendUrl + "/session/getGroupSessionList",
           data.ownListReq
         );
+        if (groupSessionListRsp.data.data) {
+          for (let i = 0; i < groupSessionListRsp.data.data.length; i++) {
+            if (!groupSessionListRsp.data.data[i].avatar.startsWith("http")) {
+              groupSessionListRsp.data.data[i].avatar =
+                store.state.backendUrl + groupSessionListRsp.data.data[i].avatar;
+            }
+          }
+        }
         data.groupSessionList = groupSessionListRsp.data.data;
       } catch (error) {
         console.error(error);
@@ -318,16 +338,18 @@ export default {
     const handleContextMenu = (event, group) => {
       event.preventDefault(); // 阻止默认的右键菜单
       // 显示自定义的删除选项
-      ElMessageBox.confirm('确定要删除该会话组吗?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }).then(() => {
-        // 执行删除操作
-        this.deleteGroup(group);
-      }).catch(() => {
-        // 取消删除操作
-      });
+      ElMessageBox.confirm("确定要删除该会话组吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          // 执行删除操作
+          this.deleteGroup(group);
+        })
+        .catch(() => {
+          // 取消删除操作
+        });
     };
     return {
       ...toRefs(data),
@@ -358,7 +380,7 @@ export default {
   height: 30px;
   margin-left: 5px;
   margin-right: 2px;
-} 
+}
 
 .el-menu {
   background-color: rgb(252, 210.9, 210.9);

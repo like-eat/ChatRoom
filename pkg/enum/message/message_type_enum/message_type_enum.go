@@ -7,6 +7,5 @@ const (
 	// 文件
 	File
 	// 通话
-	Audio
-	Video
+	AudioOrVideo
 )

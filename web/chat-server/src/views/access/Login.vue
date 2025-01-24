@@ -45,10 +45,10 @@
           >登录</el-button
         >
       </div>
-      
+
       <div class="go-register-button-container">
         <button class="go-register-btn" @click="handleRegister">注册</button>
-      <button class="go-sms-btn" @click="handleSmsLogin">验证码登录</button>
+        <button class="go-sms-btn" @click="handleSmsLogin">验证码登录</button>
       </div>
     </div>
   </div>
@@ -93,11 +93,14 @@ export default {
           }
           try {
             ElMessage.success(response.data.message);
+            if (!response.data.data.avatar.startsWith("http")) {
+              response.data.data.avatar =
+                store.state.backendUrl + response.data.data.avatar;
+            }
             store.commit("setUserInfo", response.data.data);
             // 准备创建websocket连接
             const wsUrl =
               store.state.wsUrl + "/wss?client_id=" + response.data.data.uuid;
-            // const wsUrl = store.state.wsUrl + "/ws";
             console.log(wsUrl);
             store.state.socket = new WebSocket(wsUrl);
             store.state.socket.onopen = () => {
@@ -132,7 +135,7 @@ export default {
     };
     const handleSmsLogin = () => {
       router.push("/smsLogin");
-    }
+    };
 
     return {
       ...toRefs(data),

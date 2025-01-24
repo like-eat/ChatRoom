@@ -14,6 +14,7 @@ import (
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
 	"log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -38,6 +39,20 @@ func init() {
 			Logout:   make(chan *Client, constants.CHANNEL_SIZE),
 		}
 	}
+}
+
+// 将https://127.0.0.1:8000/static/xxx 转为 /static/xxx
+func normalizePath(path string) string {
+	// 查找 "/static/" 的位置
+	if path == "https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" {
+		return path
+	}
+	staticIndex := strings.Index(path, "/static/")
+	if staticIndex < 0 {
+		zlog.Fatal("路径不合法")
+	}
+	// 返回从 "/static/" 开始的部分
+	return path[staticIndex:]
 }
 
 // Start 启动函数，Server端用主进程起，Client端可以用协程起
@@ -75,7 +90,7 @@ func (s *Server) Start() {
 				if err := json.Unmarshal(data, &chatMessageReq); err != nil {
 					zlog.Error(err.Error())
 				}
-				log.Println("原消息为：", data, "反序列化后为：", chatMessageReq)
+				// log.Println("原消息为：", data, "反序列化后为：", chatMessageReq)
 				if chatMessageReq.Type == message_type_enum.Text {
 					// 存message
 					message := model.Message{
@@ -93,7 +108,10 @@ func (s *Server) Start() {
 						FileName:   "",
 						Status:     message_status_enum.Unsent,
 						CreatedAt:  time.Now(),
+						AVdata:     "",
 					}
+					// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
+					message.SendAvatar = normalizePath(message.SendAvatar)
 					if res := dao.GormDB.Create(&message); res.Error != nil {
 						zlog.Error(res.Error.Error())
 					}
@@ -192,7 +210,10 @@ func (s *Server) Start() {
 						FileName:   chatMessageReq.FileName,
 						Status:     message_status_enum.Unsent,
 						CreatedAt:  time.Now(),
+						AVdata:     "",
 					}
+					// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
+					message.SendAvatar = normalizePath(message.SendAvatar)
 					if res := dao.GormDB.Create(&message); res.Error != nil {
 						zlog.Error(res.Error.Error())
 					}
@@ -273,6 +294,67 @@ func (s *Server) Start() {
 								sendClient.SendBack <- messageBack
 							}
 						}
+					}
+				} else if chatMessageReq.Type == message_type_enum.AudioOrVideo {
+					// 存message
+					message := model.Message{
+						Uuid:       fmt.Sprintf("M%s", random.GetNowAndLenRandomString(11)),
+						SessionId:  chatMessageReq.SessionId,
+						Type:       chatMessageReq.Type,
+						Content:    "",
+						Url:        "",
+						SendId:     chatMessageReq.SendId,
+						SendName:   chatMessageReq.SendName,
+						SendAvatar: chatMessageReq.SendAvatar,
+						ReceiveId:  chatMessageReq.ReceiveId,
+						FileSize:   "",
+						FileType:   "",
+						FileName:   "",
+						Status:     message_status_enum.Unsent,
+						CreatedAt:  time.Now(),
+						AVdata:     chatMessageReq.AVdata,
+					}
+					// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
+					message.SendAvatar = normalizePath(message.SendAvatar)
+					if res := dao.GormDB.Create(&message); res.Error != nil {
+						zlog.Error(res.Error.Error())
+					}
+					if message.ReceiveId[0] == 'U' { // 发送给User
+						// 如果能找到ReceiveId，说明在线，可以发送，否则存表后跳过
+						// 因为在线的时候是通过websocket更新消息记录的，离线后通过存表，登录时只调用一次数据库操作
+						// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
+						messageRsp := respond.AVMessageRespond{
+							SendId:     message.SendId,
+							SendName:   message.SendName,
+							SendAvatar: chatMessageReq.SendAvatar,
+							ReceiveId:  message.ReceiveId,
+							Type:       message.Type,
+							Content:    message.Content,
+							Url:        message.Url,
+							FileSize:   message.FileSize,
+							FileName:   message.FileName,
+							FileType:   message.FileType,
+							CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
+							AVdata:     message.AVdata,
+						}
+						jsonMessage, err := json.Marshal(messageRsp)
+						if err != nil {
+							zlog.Error(err.Error())
+						}
+						// log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
+						log.Println("返回的消息为：", messageRsp)
+						var messageBack = &MessageBack{
+							Message: jsonMessage,
+							Uuid:    message.Uuid,
+						}
+						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
+							//messageBack.Message = jsonMessage
+							//messageBack.Uuid = message.Uuid
+							receiveClient.SendBack <- messageBack // 向client.Send发送
+						}
+						// 通话这不能回显，发回去的话就会出现两个start_call。
+						//sendClient := s.Clients[message.SendId]
+						//sendClient.SendBack <- messageBack
 					}
 				}
 

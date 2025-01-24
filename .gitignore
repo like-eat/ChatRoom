@@ -32,3 +32,5 @@ static/avatars/*
 static/files/*
 
 pkg/ssl/*
+
+web/src/assets/cert/*

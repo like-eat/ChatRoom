@@ -429,8 +429,7 @@ export default {
       try {
         data.createGroupReq.owner_id = data.userInfo.uuid;
         if (data.fileList.length > 0) {
-          data.createGroupReq.avatar =
-            store.state.backendUrl + "/static/avatars/" + data.fileList[0].name;
+          data.createGroupReq.avatar = "/static/avatars/" + data.fileList[0].name;
           console.log(data.createGroupReq.avatar);
           data.uploadRef.submit();
         }
@@ -553,6 +552,14 @@ export default {
           store.state.backendUrl + "/contact/getUserList",
           data.ownListReq
         );
+        if (getUserListRsp.data.data) {
+          for (let i = 0; i < getUserListRsp.data.data.length; i++) {
+            if (!getUserListRsp.data.data[i].avatar.startsWith("http")) {
+              getUserListRsp.data.data[i].avatar =
+                store.state.backendUrl + getUserListRsp.data.data[i].avatar;
+            }
+          }
+        }
         data.contactUserList = getUserListRsp.data.data;
       } catch (error) {
         console.error(error);
@@ -569,6 +576,14 @@ export default {
           store.state.backendUrl + "/group/loadMyGroup",
           data.ownListReq
         );
+        if (loadMyGroupRsp.data.data) {
+          for (let i = 0; i < loadMyGroupRsp.data.data.length; i++) {
+            if (!loadMyGroupRsp.data.data[i].avatar.startsWith("http")) {
+              loadMyGroupRsp.data.data[i].avatar =
+                store.state.backendUrl + loadMyGroupRsp.data.data[i].avatar;
+            }
+          }
+        }
         data.myGroupList = loadMyGroupRsp.data.data;
       } catch (error) {
         console.error(error);
@@ -584,6 +599,14 @@ export default {
           store.state.backendUrl + "/contact/loadMyJoinedGroup",
           data.ownListReq
         );
+        if (loadMyJoinedGroupRsp.data.data) {
+          for (let i = 0; i < loadMyJoinedGroupRsp.data.data.length; i++) {
+            if (!loadMyJoinedGroupRsp.data.data[i].avatar.startsWith("http")) {
+              loadMyJoinedGroupRsp.data.data[i].avatar =
+                store.state.backendUrl + loadMyJoinedGroupRsp.data.data[i].avatar;
+            }
+          }
+        }
         data.myJoinedGroupList = loadMyJoinedGroupRsp.data.data;
       } catch (error) {
         console.error(error);

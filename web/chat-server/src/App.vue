@@ -20,6 +20,9 @@ export default {
           req
         );
         if (rsp.data.code == 200) {
+          if (!rsp.data.data.avatar.startsWith("http")) {
+            rsp.data.data = store.state.backendUrl + rsp.data.data;
+          }
           store.commit("setUserInfo", rsp.data.data);
         } else {
           console.error(rsp.data.message);

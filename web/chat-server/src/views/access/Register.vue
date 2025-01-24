@@ -69,14 +69,14 @@
             },
           ]"
         >
-          <el-input
-            v-model="registerData.sms_code"
-            style="max-width: 200px"
-          >
+          <el-input v-model="registerData.sms_code" style="max-width: 200px">
             <template #append>
-                <el-button @click="sendSmsCode" style="background-color: rgb(229, 132, 132); color: #ffffff;">点击发送</el-button>
+              <el-button
+                @click="sendSmsCode"
+                style="background-color: rgb(229, 132, 132); color: #ffffff"
+                >点击发送</el-button
+              >
             </template>
-            
           </el-input>
         </el-form-item>
       </el-form>
@@ -86,8 +86,12 @@
         >
       </div>
       <div class="go-login-button-container">
-        <button class="go-sms-login-btn" @click="handleSmsLogin">验证码登录</button>
-      <button class="go-password-login-btn" @click="handleLogin">密码登录</button>
+        <button class="go-sms-login-btn" @click="handleSmsLogin">
+          验证码登录
+        </button>
+        <button class="go-password-login-btn" @click="handleLogin">
+          密码登录
+        </button>
       </div>
     </div>
   </div>
@@ -141,11 +145,15 @@ export default {
         if (response.data.code == 200) {
           ElMessage.success(response.data.message);
           console.log(response.data.message);
+          // 查看avatar前缀有没有http
+          if (!response.data.data.avatar.startsWith("http")) {
+            response.data.data.avatar =
+              store.state.backendUrl + response.data.data.avatar;
+          }
           store.commit("setUserInfo", response.data.data);
           // 准备创建websocket连接
           const wsUrl =
             store.state.wsUrl + "/wss?client_id=" + response.data.data.uuid;
-          // const wsUrl = store.state.wsUrl + "/ws";
           console.log(wsUrl);
           store.state.socket = new WebSocket(wsUrl);
           store.state.socket.onopen = () => {
@@ -180,11 +188,15 @@ export default {
     };
 
     const handleSmsLogin = () => {
-      router.push('/smsLogin');
+      router.push("/smsLogin");
     };
 
     const sendSmsCode = async () => {
-      if (!data.registerData.telephone || !data.registerData.nickname || !data.registerData.password) {
+      if (
+        !data.registerData.telephone ||
+        !data.registerData.nickname ||
+        !data.registerData.password
+      ) {
         ElMessage.error("请填写完整注册信息。");
         return;
       }
@@ -194,8 +206,11 @@ export default {
       }
       const req = {
         telephone: data.registerData.telephone,
-      }
-      const rsp = await axios.post(store.state.backendUrl + "/user/sendSmsCode", req);
+      };
+      const rsp = await axios.post(
+        store.state.backendUrl + "/user/sendSmsCode",
+        req
+      );
       console.log(rsp);
       if (rsp.data.code == 200) {
         ElMessage.success(rsp.data.message);

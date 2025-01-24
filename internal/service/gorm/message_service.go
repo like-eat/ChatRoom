@@ -30,16 +30,17 @@ func (m *messageService) GetMessageList(userOneId, userTwoId string) (string, []
 	var rspList []respond.GetMessageListRespond
 	for _, message := range messageList {
 		rspList = append(rspList, respond.GetMessageListRespond{
-			SendId:    message.SendId,
-			SendName:  message.SendName,
-			ReceiveId: message.ReceiveId,
-			Content:   message.Content,
-			Url:       message.Url,
-			Type:      message.Type,
-			FileType:  message.FileType,
-			FileName:  message.FileName,
-			FileSize:  message.FileSize,
-			CreatedAt: message.CreatedAt.Format("2006-01-02 15:04:05"),
+			SendId:     message.SendId,
+			SendName:   message.SendName,
+			SendAvatar: message.SendAvatar,
+			ReceiveId:  message.ReceiveId,
+			Content:    message.Content,
+			Url:        message.Url,
+			Type:       message.Type,
+			FileType:   message.FileType,
+			FileName:   message.FileName,
+			FileSize:   message.FileSize,
+			CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 	return "获取聊天记录成功", rspList, 0

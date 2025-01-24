@@ -19,6 +19,7 @@ type Message struct {
 	Status     int8      `gorm:"column:status;not null;comment:状态，0.未发送，1.已发送"`
 	CreatedAt  time.Time `gorm:"column:created_at;not null;comment:创建时间"`
 	SendAt     time.Time `gorm:"column:send_at;comment:发送时间"`
+	AVdata     string    `gorm:"column:av_data;comment:通话传递数据"`
 }
 
 func (Message) TableName() string {

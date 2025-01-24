@@ -883,18 +883,21 @@
                       <h2>聊天室</h2>
                     </div>
                     <div class="video-modal-body">
-                      <video autoplay playsinline class="video-player"></video>
+                      <video autoplay playsinline class="local-video"></video>
+                      <video autoplay playsinline class="remote-video"></video>
                     </div>
                     <div class="video-modal-footer">
                       <el-button
                         class="video-modal-footer-btn"
-                        @click="emitSession"
+                        @click="startCall(true)"
                         >发起通话</el-button
                       >
-                      <el-button class="video-modal-footer-btn"
+                      <el-button class="video-modal-footer-btn" @click="endCall"
                         >挂断通话</el-button
                       >
-                      <el-button class="video-modal-footer-btn"
+                      <el-button
+                        class="video-modal-footer-btn"
+                        @click="closeAVContainerModal"
                         >退出聊天室</el-button
                       >
                     </div>
@@ -1022,12 +1025,10 @@ export default {
       videoPlayer: null,
       rtcPeerConn: null,
       ICE_CFG: {},
-      contactId: null,
-      wsConn: null,
       localStream: null,
       remoteStream: null,
-      remoteVideo: document.querySelector("video.remote-video"),
-      localVideo: document.querySelector("video.local-video"),
+      remoteVideo: null,
+      localVideo: null,
       curContactList: [],
     });
     //这是/chat/:id 的id改变时会调用
@@ -1062,53 +1063,60 @@ export default {
           }
           // 其他接受的消息都不显示在messageList中，而是通过切换页面或刷新页面getMessageList来获取
         } else {
-          var messageObj = message.obj; // 后端message的该字段命名为obj
-          if (messageObj.messageId === "CURRENT_PEERS") {
+          var messageAVdata = JSON.parse(message.av_data); // 后端message的该字段命名为av_data
+          if (messageAVdata.messageId === "CURRENT_PEERS") {
             console.log(
               "获取CURRENT_PEERS当前在线用户列表，curContactList:",
-              messageObj.messageData.curContactList
+              messageAVdata.messageData.curContactList
             );
-            data.curContactList = messageObj.messageData.curContactList;
-          } else if (messageObj.messageId === "PEER_JOIN") {
+            data.curContactList = messageAVdata.messageData.curContactList;
+          } else if (messageAVdata.messageId === "PEER_JOIN") {
             console.log(
               "接受到PEER_JOIN消息，contactId:",
-              messageObj.messagecontactId
+              messageAVdata.messagecontactId
             );
-            data.curContactList.push(messageObj.messagecontactId);
-          } else if (messageObj.messageId === "PEER_LEAVE") {
+            data.curContactList.push(messageAVdata.messagecontactId);
+          } else if (messageAVdata.messageId === "PEER_LEAVE") {
             console.log(
               "获取PEER_LEAVE消息，contactId:",
-              messageObj.messagecontactId
+              messageAVdata.messagecontactId
             );
             for (let i = 0; i < data.curContactList.length; i++) {
               if (
-                data.curContactList[i].contactId === messageObj.messagecontactId
+                data.curContactList[i].contactId ===
+                messageAVdata.messagecontactId
               ) {
-                if (contactId === messageObj.messagecontactId) {
+                if (contactId === messageAVdata.messagecontactId) {
                   endCall();
                 }
               }
             }
-          } else if (messageObj.messageId === "PROXY") {
+          } else if (messageAVdata.messageId === "PROXY") {
             console.log("接收到PROXY消息：", message);
-            if (messageObj.type === "start_call") {
-              startCall(false, messageObj.contactId);
-            } else if (messageObj.type === "receive_call") {
+            if (messageAVdata.type === "start_call") {
+              startCall(false);
+            } else if (messageAVdata.type === "receive_call") {
               createOffer();
-            } else if (messageObj.type === "sdp") {
-              if (messageObj.messageData.sdp.type === "offer") {
-                handleOfferSdp(messageObj.messageData.sdp);
-              } else if (messageObj.messageData.sdp.type === "answer") {
-                handleAnswerSdp(messageObj.messageData.sdp);
+            } else if (messageAVdata.type === "sdp") {
+              if (messageAVdata.messageData.sdp.type === "offer") {
+                handleOfferSdp(messageAVdata.messageData.sdp);
+              } else if (messageAVdata.messageData.sdp.type === "answer") {
+                handleAnswerSdp(messageAVdata.messageData.sdp);
               } else {
                 console.log("不支持的sdp类型");
               }
-            } else if (messageObj.type === "candidate") {
-              handleCandidate(messageObj.messageData.candidate);
+            } else if (messageAVdata.type === "candidate") {
+              handleCandidate(messageAVdata.messageData.candidate);
             } else {
               console.log("不支持的proxy类型");
             }
           }
+          console.log("收到消息：", message);
+          if (data.messageList == null) {
+            data.messageList = [];
+          }
+          data.messageList.push(message);
+          scrollToBottom();
         }
       };
       scrollToBottom();
@@ -1129,18 +1137,77 @@ export default {
         }
         console.log(data.sessionId);
         store.state.socket.onmessage = (jsonMessage) => {
-        const message = JSON.parse(jsonMessage.data);
-        if (message.type != 3) {
-          if (
-            // 群聊过来的消息，且当前会话是该群聊
-            (message.receive_id[0] == "G" &&
-              message.receive_id == data.contactInfo.contact_id) ||
-            // 其他用户过来的消息，且当前会话是该用户
-            (message.receive_id[0] == "U" &&
-              message.receive_id == data.userInfo.uuid) ||
-            // 自己发送的消息
-            message.send_id == data.userInfo.uuid
-          ) {
+          const message = JSON.parse(jsonMessage.data);
+          if (message.type != 3) {
+            if (
+              // 群聊过来的消息，且当前会话是该群聊
+              (message.receive_id[0] == "G" &&
+                message.receive_id == data.contactInfo.contact_id) ||
+              // 其他用户过来的消息，且当前会话是该用户
+              (message.receive_id[0] == "U" &&
+                message.receive_id == data.userInfo.uuid) ||
+              // 自己发送的消息
+              message.send_id == data.userInfo.uuid
+            ) {
+              console.log("收到消息：", message);
+              if (data.messageList == null) {
+                data.messageList = [];
+              }
+              data.messageList.push(message);
+              scrollToBottom();
+            }
+            // 其他接受的消息都不显示在messageList中，而是通过切换页面或刷新页面getMessageList来获取
+          } else {
+            var messageAVdata = JSON.parse(message.av_data); // 后端message的该字段命名为av_data
+            if (messageAVdata.messageId === "CURRENT_PEERS") {
+              console.log(
+                "获取CURRENT_PEERS当前在线用户列表，curContactList:",
+                messageAVdata.messageData.curContactList
+              );
+              data.curContactList = messageAVdata.messageData.curContactList;
+            } else if (messageAVdata.messageId === "PEER_JOIN") {
+              console.log(
+                "接受到PEER_JOIN消息，contactId:",
+                messageAVdata.messagecontactId
+              );
+              data.curContactList.push(messageAVdata.messagecontactId);
+            } else if (messageAVdata.messageId === "PEER_LEAVE") {
+              console.log(
+                "获取PEER_LEAVE消息，contactId:",
+                messageAVdata.messagecontactId
+              );
+              for (let i = 0; i < data.curContactList.length; i++) {
+                if (
+                  data.curContactList[i].contactId ===
+                  messageAVdata.messagecontactId
+                ) {
+                  if (contactId === messageAVdata.messagecontactId) {
+                    endCall();
+                  }
+                }
+              }
+            } else if (messageAVdata.messageId === "PROXY") {
+              console.log("接收到PROXY消息：", message);
+              if (messageAVdata.type === "start_call") {
+                console.log("接受start_call消息", data.userInfo.nickname);
+                startCall(false);
+              } else if (messageAVdata.type === "receive_call") {
+                console.log("接收到receive_call消息", data.userInfo.nickname);
+                createOffer();
+              } else if (messageAVdata.type === "sdp") {
+                if (messageAVdata.messageData.sdp.type === "offer") {
+                  handleOfferSdp(messageAVdata.messageData.sdp);
+                } else if (messageAVdata.messageData.sdp.type === "answer") {
+                  handleAnswerSdp(messageAVdata.messageData.sdp);
+                } else {
+                  console.log("不支持的sdp类型");
+                }
+              } else if (messageAVdata.type === "candidate") {
+                handleCandidate(messageAVdata.messageData.candidate);
+              } else {
+                console.log("不支持的proxy类型");
+              }
+            }
             console.log("收到消息：", message);
             if (data.messageList == null) {
               data.messageList = [];
@@ -1148,57 +1215,7 @@ export default {
             data.messageList.push(message);
             scrollToBottom();
           }
-          // 其他接受的消息都不显示在messageList中，而是通过切换页面或刷新页面getMessageList来获取
-        } else {
-          var messageObj = message.obj; // 后端message的该字段命名为obj
-          if (messageObj.messageId === "CURRENT_PEERS") {
-            console.log(
-              "获取CURRENT_PEERS当前在线用户列表，curContactList:",
-              messageObj.messageData.curContactList
-            );
-            data.curContactList = messageObj.messageData.curContactList;
-          } else if (messageObj.messageId === "PEER_JOIN") {
-            console.log(
-              "接受到PEER_JOIN消息，contactId:",
-              messageObj.messagecontactId
-            );
-            data.curContactList.push(messageObj.messagecontactId);
-          } else if (messageObj.messageId === "PEER_LEAVE") {
-            console.log(
-              "获取PEER_LEAVE消息，contactId:",
-              messageObj.messagecontactId
-            );
-            for (let i = 0; i < data.curContactList.length; i++) {
-              if (
-                data.curContactList[i].contactId === messageObj.messagecontactId
-              ) {
-                if (contactId === messageObj.messagecontactId) {
-                  endCall();
-                }
-              }
-            }
-          } else if (messageObj.messageId === "PROXY") {
-            console.log("接收到PROXY消息：", message);
-            if (messageObj.type === "start_call") {
-              startCall(false, messageObj.contactId);
-            } else if (messageObj.type === "receive_call") {
-              createOffer();
-            } else if (messageObj.type === "sdp") {
-              if (messageObj.messageData.sdp.type === "offer") {
-                handleOfferSdp(messageObj.messageData.sdp);
-              } else if (messageObj.messageData.sdp.type === "answer") {
-                handleAnswerSdp(messageObj.messageData.sdp);
-              } else {
-                console.log("不支持的sdp类型");
-              }
-            } else if (messageObj.type === "candidate") {
-              handleCandidate(messageObj.messageData.candidate);
-            } else {
-              console.log("不支持的proxy类型");
-            }
-          }
-        }
-      };
+        };
         scrollToBottom();
       } catch (error) {
         console.error(error);
@@ -1211,6 +1228,10 @@ export default {
           store.state.backendUrl + "/contact/getContactInfo",
           data.getContactInfoReq
         );
+        if (!rsp.data.data.contact_avatar.startsWith("http")) {
+          rsp.data.data.contact_avatar =
+            store.state.backendUrl + rsp.data.data.contact_avatar;
+        }
         data.contactInfo = rsp.data.data;
         console.log(data.contactInfo);
       } catch (error) {
@@ -1355,6 +1376,14 @@ export default {
           store.state.backendUrl + "/session/getUserSessionList",
           data.ownListReq
         );
+        if (userSessionListRsp.data.data) {
+          for (let i = 0; i < userSessionListRsp.data.data.length; i++) {
+            if (!userSessionListRsp.data.data[i].avatar.startsWith("http")) {
+              userSessionListRsp.data.data[i].avatar =
+                store.state.backendUrl + userSessionListRsp.data.data[i].avatar;
+            }
+          }
+        }
         data.userSessionList = userSessionListRsp.data.data;
       } catch (error) {
         console.error(error);
@@ -1370,6 +1399,15 @@ export default {
           store.state.backendUrl + "/session/getGroupSessionList",
           data.ownListReq
         );
+        if (groupSessionListRsp.data.data) {
+          for (let i = 0; i < groupSessionListRsp.data.data.length; i++) {
+            if (!groupSessionListRsp.data.data[i].avatar.startsWith("http")) {
+              groupSessionListRsp.data.data[i].avatar =
+                store.state.backendUrl +
+                groupSessionListRsp.data.data[i].avatar;
+            }
+          }
+        }
         data.groupSessionList = groupSessionListRsp.data.data;
       } catch (error) {
         console.error(error);
@@ -1566,7 +1604,16 @@ export default {
           store.state.backendUrl + "/message/getMessageList",
           req
         );
+        if (rsp.data.data) {
+          for (let i = 0; i < rsp.data.data.length; i++) {
+            if (!rsp.data.data[i].send_avatar.startsWith("http")) {
+              rsp.data.data[i].send_avatar =
+                store.state.backendUrl + rsp.data.data[i].send_avatar;
+            }
+          }
+        }
         data.messageList = rsp.data.data;
+        console.log(data.messageList);
         console.log(rsp);
       } catch (error) {
         console.error(error);
@@ -1584,6 +1631,14 @@ export default {
           store.state.backendUrl + "/message/getGroupMessageList",
           req
         );
+        if (rsp.data.data) {
+          for (let i = 0; i < rsp.data.data.length; i++) {
+            if (!rsp.data.data[i].send_avatar.startsWith("http")) {
+              rsp.data.data[i].send_avatar =
+                store.state.backendUrl + rsp.data.data[i].send_avatar;
+            }
+          }
+        }
         data.messageList = rsp.data.data;
         console.log(rsp);
       } catch (error) {
@@ -1790,9 +1845,7 @@ export default {
         }
         if (data.avatarList.length > 0) {
           data.updateGroupInfo.avatar =
-            store.state.backendUrl +
-            "/static/avatars/" +
-            data.avatarList[0].name;
+            "/static/avatars/" + data.avatarList[0].name;
           data.uploadAvatarRef.submit();
         }
         data.updateGroupInfo.uuid = data.contactInfo.contact_id;
@@ -1827,6 +1880,12 @@ export default {
         );
         console.log(rsp);
         if (rsp.data.code == 200) {
+          for (let i = 0; i < rsp.data.data.length; i++) {
+            if (!rsp.data.data[i].send_avatar.startsWith("http")) {
+              rsp.data.data[i].send_avatar =
+                store.state.backendUrl + rsp.data.data[i].send_avatar;
+            }
+          }
           data.groupMemberList = rsp.data.data;
           console.log(data.groupMemberList);
         } else {
@@ -1882,79 +1941,58 @@ export default {
       data.isAVContainerModalVisible = true;
     };
 
-    const emitSession = () => {
-      login();
+    const closeAVContainerModal = () => {
+      if (data.localVideo || data.remoteVideo) {
+        ElMessage.warning("请先结束通话");
+        return;
+      }
+      data.isAVContainerModalVisible = false;
     };
-    // const prepareAVBase = async () => {
-    //   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-    //     console.log("不支持 enumerateDevices() .");
-    //   } else {
-    //     navigator.mediaDevices
-    //       .enumerateDevices()
-    //       .then(function (devices) {
-    //         devices.forEach(function (device) {
-    //           console.log(
-    //             device.kind +
-    //               ": " +
-    //               device.label +
-    //               " id = " +
-    //               device.deviceId +
-    //               " groupId = " +
-    //               device.groupId
-    //           );
-    //         });
-    //       })
-    //       .catch(function (err) {
-    //         console.log(err.name + ": " + err.message);
-    //       });
-    //   }
-    //   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    //     console.log("getUserMedia is not supported");
-    //   } else {
-    //     data.videoPlayer = document.querySelector(".video-player");
-    //     console.log(data.videoPlayer);
-    //     var constraints = {
-    //       video: true,
-    //       audio: true,
-    //     };
-    //     try {
-    //       var stream = await navigator.mediaDevices.getUserMedia(constraints);
-    //       data.videoPlayer.srcObject = stream;
-    //     } catch (error) {
-    //       console.log(error);
-    //     }
-    //   }
-    // };
+
     const createRtcPeerConnection = () => {
       if (data.rtcPeerConn) {
         console.log("peer connection has already been created.");
         return;
       }
-      rtcPeerConn = new RTCPeerConnection(data.ICE_CFG);
-      rtcPeerConn.onicecandidate = (event) => {
+      data.rtcPeerConn = new RTCPeerConnection();
+      data.rtcPeerConn.onicecandidate = (event) => {
         if (event.candidate) {
           var proxyCandidateMessage = {
             messageId: "PROXY",
             type: "candidate",
-            fromId: props.ownerId,
-            toId: data.contactId,
             messageData: {
               candidate: event.candidate,
             },
           };
-          data.wsConn.send(JSON.stringify(proxyCandidateMessage));
+          const rtcMessageRequest = {
+            session_id: data.sessionId,
+            type: 3,
+            content: "",
+            url: "",
+            send_id: data.userInfo.uuid,
+            send_name: data.userInfo.nickname,
+            send_avatar: data.userInfo.avatar,
+            receive_id: data.contactInfo.contact_id,
+            file_size: 0,
+            file_name: "",
+            file_type: "",
+            av_data: JSON.stringify(proxyCandidateMessage),
+          };
+          console.log(rtcMessageRequest);
+          store.state.socket.send(JSON.stringify(rtcMessageRequest));
         }
       };
-      rtcPeerConn.oniceconnectionstatechange = (event) => {
+      data.rtcPeerConn.oniceconnectionstatechange = (event) => {
         console.log(
           "oniceconnectionstatechange",
-          rtcPeerConn.iceConnectionState
+          data.rtcPeerConn.iceConnectionState
         );
       };
       // 对端传来媒体轨道
-      rtcPeerConn.ontrack = (event) => {
-        if (remoteStream === null) {
+      data.rtcPeerConn.ontrack = (event) => {
+        if (data.remoteStream === null) {
           data.remoteStream = new MediaStream();
+          data.remoteVideo = document.querySelector("video.remote-video");
           data.remoteVideo.srcObject = data.remoteStream;
           data.remoteVideo.style.display = "inline-block";
         }
@@ -1995,6 +2033,7 @@ export default {
     };
 
     const attachMediaStreamToLocalVideo = () => {
+      data.localVideo = document.querySelector("video.local-video");
       data.localVideo.srcObject = data.localStream;
       data.localVideo.muted = true;
       data.localVideo.style.display = "inline-block";
@@ -2018,13 +2057,26 @@ export default {
           var proxySdpMessage = {
             messageId: "PROXY",
             type: "sdp",
-            fromId: props.ownerId,
-            toId: data.contactId,
             messageData: {
               sdp: desc,
             },
           };
-          data.wsConn.send(JSON.stringify(proxySdpMessage));
+          console.log(desc);
+          const rtcMessageRequest = {
+            session_id: data.sessionId,
+            type: 3,
+            content: "",
+            url: "",
+            send_id: data.userInfo.uuid,
+            send_name: data.userInfo.nickname,
+            send_avatar: data.userInfo.avatar,
+            receive_id: data.contactInfo.contact_id,
+            file_size: 0,
+            file_name: "",
+            file_type: "",
+            av_data: JSON.stringify(proxySdpMessage),
+          };
+          store.state.socket.send(JSON.stringify(rtcMessageRequest));
         })
         .catch((err) => {
           console.log(
@@ -2041,13 +2093,26 @@ export default {
           var proxySdpMessage = {
             messageId: "PROXY",
             type: "sdp",
-            fromId: props.ownerId,
-            toId: data.contactId,
             messageData: {
               sdp: desc,
             },
           };
-          data.wsConn.send(JSON.stringify(proxySdpMessage));
+          console.log(desc);
+          const rtcMessageRequest = {
+            session_id: data.sessionId,
+            type: 3,
+            content: "",
+            url: "",
+            send_id: data.userInfo.uuid,
+            send_name: data.userInfo.nickname,
+            send_avatar: data.userInfo.avatar,
+            receive_id: data.contactInfo.contact_id,
+            file_size: 0,
+            file_name: "",
+            file_type: "",
+            av_data: JSON.stringify(proxySdpMessage),
+          };
+          store.state.socket.send(JSON.stringify(rtcMessageRequest));
         })
         .catch((err) => {
           console.log(
@@ -2056,8 +2121,13 @@ export default {
         });
     };
 
-    const startCall = async (isInitiator, contactId) => {
-      contactId = data.contactId;
+    const startCall = async (isInitiator) => {
+      console.log(data.localVideo);
+      console.log(data.localStream);
+      if (data.localVideo) {
+        ElMessage.warning("已经发起通话或已在通话中，请勿重复发起");
+        return;
+      }
       createRtcPeerConnection();
       data.localStream = await getLocalMediaStream();
       attachMediaStreamToLocalVideo();
@@ -2066,28 +2136,58 @@ export default {
         var startCallMessage = {
           messageId: "PROXY",
           type: "start_call",
-          fromId: props.ownerId,
-          toId: contactId,
         };
-        data.wsConn.send(JSON.stringify(startCallMessage));
+        const rtcMessageRequest = {
+          session_id: data.sessionId,
+          type: 3,
+          content: "",
+          url: "",
+          send_id: data.userInfo.uuid,
+          send_name: data.userInfo.nickname,
+          send_avatar: data.userInfo.avatar,
+          receive_id: data.contactInfo.contact_id,
+          file_size: 0,
+          file_name: "",
+          file_type: "",
+          av_data: JSON.stringify(startCallMessage),
+        };
+        store.state.socket.send(JSON.stringify(rtcMessageRequest));
       } else {
         var receiveCallMessage = {
           messageId: "PROXY",
           type: "receive_call",
-          fromId: props.ownerId,
-          toId: contactId,
         };
-        data.wsConn.send(JSON.stringify(receiveCallMessage));
+        const rtcMessageRequest = {
+          session_id: data.sessionId,
+          type: 3,
+          content: "",
+          url: "",
+          send_id: data.userInfo.uuid,
+          send_name: data.userInfo.nickname,
+          send_avatar: data.userInfo.avatar,
+          receive_id: data.contactInfo.contact_id,
+          file_size: 0,
+          file_name: "",
+          file_type: "",
+          av_data: JSON.stringify(receiveCallMessage),
+        };
+        store.state.socket.send(JSON.stringify(rtcMessageRequest));
       }
     };
 
     const endCall = () => {
+      if (data.localVideo == null && data.remoteVideo == null) {
+        ElMessage.warning("尚未开始通话，无法挂断");
+        return;
+      }
+      if (data.localVideo) data.localVideo.style.display = "none";
+      if (data.remoteVideo) data.remoteVideo.style.display = "none";
       closeLocalMediaStream();
       closeRtcPeerConnection();
-      data.localVideo.style.display = "none";
-      data.remoteVideo.style.display = "none";
       data.remoteStream = null;
-      contactId = null;
+      data.localStream = null;
+      data.localVideo = null;
+      data.remoteVideo = null;
     };
 
     const handleOfferSdp = (val) => {
@@ -2102,23 +2202,15 @@ export default {
     };
 
     const handleAnswerSdp = (val) => {
-      data.rtcPeerConn.setRemoteDescription(new RTCSessionDescription(val));
+      data.rtcPeerConn
+        .setRemoteDescription(new RTCSessionDescription(val))
+        .catch((err) => {
+          console.log("rtcPeerConn setRemoteDescription failed", err);
+        });
     };
 
     const handleCandidate = (val) => {
       data.rtcPeerConn.addIceCandidate(new RTCIceCandidate(val));
-    };
-
-    const login = () => {
-      
-    };
-
-    const logout = () => {
-      if (data.wsConn) {
-        data.wsConn.close();
-        data.wsConn = null;
-      }
-      endCall();
     };
 
     return {
@@ -2184,10 +2276,8 @@ export default {
       handleOfferSdp,
       handleAnswerSdp,
       handleCandidate,
-      login,
-      logout,
-      emitSession,
       showAVContainerModal,
+      closeAVContainerModal,
     };
   },
 };
@@ -2642,9 +2732,16 @@ h3 {
   align-items: center;
 }
 
-.video-player {
-  width: 300px;
-  height: 200px;
+.local-video {
+ width: 330px;
+ height: 320px;
+ margin-left: 10px;
+}
+
+.remote-video {
+  width: 330px;
+  height: 320px;
+  margin-right: 10px;
 }
 
 .video-modal-header {
@@ -2657,6 +2754,11 @@ h3 {
 .video-modal-body {
   height: 360px;
   width: 700px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 15px rgb(250, 65, 109);
+  border-radius: 20px;
 }
 
 .video-modal-footer {

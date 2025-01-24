@@ -15,7 +15,7 @@ func main() {
 
 	go chat.ChatServer.Start()
 
-	if err := https_server.GE.RunTLS(fmt.Sprintf("%s:%d", host, port), "pkg/ssl/cert.crt", "pkg/ssl/cert.key"); err != nil {
+	if err := https_server.GE.RunTLS(fmt.Sprintf("%s:%d", host, port), "pkg/ssl/127.0.0.1+2.pem", "pkg/ssl/127.0.0.1+2-key.pem"); err != nil {
 		zlog.Fatal("server running fault")
 		return
 	}

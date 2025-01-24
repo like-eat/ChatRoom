@@ -37,14 +37,14 @@
             },
           ]"
         >
-          <el-input
-            v-model="loginData.sms_code"
-            style="max-width: 200px"
-          >
+          <el-input v-model="loginData.sms_code" style="max-width: 200px">
             <template #append>
-                <el-button @click="sendSmsCode" style="background-color: rgb(229, 132, 132); color: #ffffff;">点击发送</el-button>
+              <el-button
+                @click="sendSmsCode"
+                style="background-color: rgb(229, 132, 132); color: #ffffff"
+                >点击发送</el-button
+              >
             </template>
-            
           </el-input>
         </el-form-item>
       </el-form>
@@ -101,11 +101,14 @@ export default {
           }
           try {
             ElMessage.success(response.data.message);
+            if (!response.data.data.avatar.startsWith("http")) {
+              response.data.data.avatar =
+                store.state.backendUrl + response.data.data.avatar;
+            }
             store.commit("setUserInfo", response.data.data);
             // 准备创建websocket连接
             const wsUrl =
               store.state.wsUrl + "/wss?client_id=" + response.data.data.uuid;
-            // const wsUrl = store.state.wsUrl + "/ws";
             console.log(wsUrl);
             store.state.socket = new WebSocket(wsUrl);
             store.state.socket.onopen = () => {
@@ -139,41 +142,43 @@ export default {
       router.push("/register");
     };
     const handleLogin = () => {
-			router.push("/login");
-    }
+      router.push("/login");
+    };
     const sendSmsCode = async () => {
-        if (!data.loginData.telephone) {
-            ElMessage.error("请输入手机号码。");
-            return;
+      if (!data.loginData.telephone) {
+        ElMessage.error("请输入手机号码。");
+        return;
+      }
+      if (!checkTelephoneValid()) {
+        ElMessage.error("请输入有效的手机号码。");
+        return;
+      }
+      try {
+        const req = {
+          telephone: data.loginData.telephone,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/user/sendSmsCode",
+          req
+        );
+        console.log(rsp);
+        if (rsp.data.code == 200) {
+          ElMessage.success(rsp.data.message);
+        } else if (rsp.data.code == 400) {
+          ElMessage.warning(rsp.data.message);
+        } else {
+          ElMessage.error(rsp.data.message);
         }
-        if (!checkTelephoneValid()) {
-            ElMessage.error("请输入有效的手机号码。");
-            return;
-        }
-        try {
-            const req = {
-                telephone: data.loginData.telephone,
-            }
-            const rsp = await axios.post(store.state.backendUrl + "/user/sendSmsCode", req
-            );
-            console.log(rsp);
-            if (rsp.data.code == 200) {
-                ElMessage.success(rsp.data.message);
-            } else if (rsp.data.code == 400) {
-                ElMessage.warning(rsp.data.message);
-            } else {
-                ElMessage.error(rsp.data.message);
-            }
-        } catch ( error) {
-            console.error(error);
-        }
-    }
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
     return {
       ...toRefs(data),
       router,
       handleSmsLogin,
-			handleLogin,
+      handleLogin,
       handleRegister,
       sendSmsCode,
     };
