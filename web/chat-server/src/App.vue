@@ -21,7 +21,7 @@ export default {
         );
         if (rsp.data.code == 200) {
           if (!rsp.data.data.avatar.startsWith("http")) {
-            rsp.data.data = store.state.backendUrl + rsp.data.data;
+            rsp.data.data.avatar = store.state.backendUrl + rsp.data.data.avatar;
           }
           store.commit("setUserInfo", rsp.data.data);
         } else {

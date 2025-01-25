@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type Message struct {
 	Id         int64     `gorm:"column:id;primaryKey;comment:自增id"`

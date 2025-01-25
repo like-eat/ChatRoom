@@ -609,6 +609,7 @@
                       </div>
                     </div>
                   </div>
+
                   <div
                     style="
                       width: 100%;
@@ -892,7 +893,19 @@
                         @click="startCall(true)"
                         >发起通话</el-button
                       >
-                      <el-button class="video-modal-footer-btn" @click="endCall"
+                      <el-button
+                        class="video-modal-footer-btn"
+                        @click="startCall(false)"
+                        >接收通话</el-button
+                      >
+                      <el-button
+                        class="video-modal-footer-btn"
+                        @click="rejectCall"
+                        >拒绝通话</el-button
+                      >
+                      <el-button
+                        class="video-modal-footer-btn"
+                        @click="sendEndCall"
                         >挂断通话</el-button
                       >
                       <el-button
@@ -936,6 +949,7 @@ import Modal from "@/components/Modal.vue";
 import SmallModal from "@/components/SmallModal.vue";
 import NavigationModal from "@/components/NavigationModal.vue";
 import { ElMessage, ElMessageBox, ElScrollbar } from "element-plus";
+import { ElNotification } from "element-plus";
 export default {
   name: "ContactChat",
   components: {
@@ -1030,6 +1044,8 @@ export default {
       remoteVideo: null,
       localVideo: null,
       curContactList: [],
+      ableToReceiveOrRejectCall: false,
+      ableToStartCall: true,
     });
     //这是/chat/:id 的id改变时会调用
     onBeforeRouteUpdate(async (to, from, next) => {
@@ -1077,26 +1093,22 @@ export default {
             );
             data.curContactList.push(messageAVdata.messagecontactId);
           } else if (messageAVdata.messageId === "PEER_LEAVE") {
-            console.log(
-              "获取PEER_LEAVE消息，contactId:",
-              messageAVdata.messagecontactId
-            );
-            for (let i = 0; i < data.curContactList.length; i++) {
-              if (
-                data.curContactList[i].contactId ===
-                messageAVdata.messagecontactId
-              ) {
-                if (contactId === messageAVdata.messagecontactId) {
-                  endCall();
-                }
-              }
-            }
+            console.log("接收到PEER_LEAVE消息：", data.userInfo.uuid);
+            receiveEndCall();
           } else if (messageAVdata.messageId === "PROXY") {
             console.log("接收到PROXY消息：", message);
             if (messageAVdata.type === "start_call") {
-              startCall(false);
+              ElNotification({
+                title: "消息提示",
+                message: `收到一条来自${message.send_name}的通话请求，请及时前往查看`,
+                type: "warning",
+              });
+              data.ableToReceiveOrRejectCall = true;
+              data.ableToStartCall = false;
             } else if (messageAVdata.type === "receive_call") {
               createOffer();
+            } else if (messageAVdata.type === "reject_call") {
+              endCall();
             } else if (messageAVdata.type === "sdp") {
               if (messageAVdata.messageData.sdp.type === "offer") {
                 handleOfferSdp(messageAVdata.messageData.sdp);
@@ -1172,25 +1184,20 @@ export default {
               );
               data.curContactList.push(messageAVdata.messagecontactId);
             } else if (messageAVdata.messageId === "PEER_LEAVE") {
-              console.log(
-                "获取PEER_LEAVE消息，contactId:",
-                messageAVdata.messagecontactId
-              );
-              for (let i = 0; i < data.curContactList.length; i++) {
-                if (
-                  data.curContactList[i].contactId ===
-                  messageAVdata.messagecontactId
-                ) {
-                  if (contactId === messageAVdata.messagecontactId) {
-                    endCall();
-                  }
-                }
-              }
+              console.log("接收到PEER_LEAVE消息：", data.userInfo.uuid);
+              receiveEndCall();
             } else if (messageAVdata.messageId === "PROXY") {
               console.log("接收到PROXY消息：", message);
               if (messageAVdata.type === "start_call") {
-                console.log("接受start_call消息", data.userInfo.nickname);
-                startCall(false);
+                ElNotification({
+                  title: "消息提示",
+                  message: `收到一条来自${message.send_name}的通话请求，请及时前往查看`,
+                  type: "warning",
+                });
+                data.ableToReceiveOrRejectCall = true;
+                data.ableToStartCall = false;
+              } else if (messageAVdata.type === "reject_call") {
+                endCall();
               } else if (messageAVdata.type === "receive_call") {
                 console.log("接收到receive_call消息", data.userInfo.nickname);
                 createOffer();
@@ -1973,7 +1980,7 @@ export default {
             send_name: data.userInfo.nickname,
             send_avatar: data.userInfo.avatar,
             receive_id: data.contactInfo.contact_id,
-            file_size: 0,
+            file_size: "",
             file_name: "",
             file_type: "",
             av_data: JSON.stringify(proxyCandidateMessage),
@@ -2071,7 +2078,7 @@ export default {
             send_name: data.userInfo.nickname,
             send_avatar: data.userInfo.avatar,
             receive_id: data.contactInfo.contact_id,
-            file_size: 0,
+            file_size: "",
             file_name: "",
             file_type: "",
             av_data: JSON.stringify(proxySdpMessage),
@@ -2107,7 +2114,7 @@ export default {
             send_name: data.userInfo.nickname,
             send_avatar: data.userInfo.avatar,
             receive_id: data.contactInfo.contact_id,
-            file_size: 0,
+            file_size: "",
             file_name: "",
             file_type: "",
             av_data: JSON.stringify(proxySdpMessage),
@@ -2125,7 +2132,17 @@ export default {
       console.log(data.localVideo);
       console.log(data.localStream);
       if (data.localVideo) {
-        ElMessage.warning("已经发起通话或已在通话中，请勿重复发起");
+        ElMessage.warning("已经在通话中，请勿重复发起");
+        return;
+      }
+      if (isInitiator && !data.ableToStartCall) {
+        ElMessage.warning(
+          "对方已经发起通话，请先接收通话或拒绝通话，才能发起下一次通话"
+        );
+        return;
+      }
+      if (!isInitiator && !data.ableToReceiveOrRejectCall) {
+        ElMessage.warning("对方没有发起通话或已在通话中，无法接收通话");
         return;
       }
       createRtcPeerConnection();
@@ -2146,7 +2163,7 @@ export default {
           send_name: data.userInfo.nickname,
           send_avatar: data.userInfo.avatar,
           receive_id: data.contactInfo.contact_id,
-          file_size: 0,
+          file_size: "",
           file_name: "",
           file_type: "",
           av_data: JSON.stringify(startCallMessage),
@@ -2166,16 +2183,17 @@ export default {
           send_name: data.userInfo.nickname,
           send_avatar: data.userInfo.avatar,
           receive_id: data.contactInfo.contact_id,
-          file_size: 0,
+          file_size: "",
           file_name: "",
           file_type: "",
           av_data: JSON.stringify(receiveCallMessage),
         };
         store.state.socket.send(JSON.stringify(rtcMessageRequest));
+        data.ableToReceiveOrRejectCall = false;
       }
     };
 
-    const endCall = () => {
+    const sendEndCall = () => {
       if (data.localVideo == null && data.remoteVideo == null) {
         ElMessage.warning("尚未开始通话，无法挂断");
         return;
@@ -2188,6 +2206,54 @@ export default {
       data.localStream = null;
       data.localVideo = null;
       data.remoteVideo = null;
+      data.ableToReceiveOrRejectCall = false;
+      data.ableToStartCall = true;
+      var proxyPeerLeaveMessage = {
+        messageId: "PEER_LEAVE",
+      };
+      const rtcMessageRequest = {
+        session_id: data.sessionId,
+        type: 3,
+        content: "",
+        url: "",
+        send_id: data.userInfo.uuid,
+        send_name: data.userInfo.nickname,
+        send_avatar: data.userInfo.avatar,
+        receive_id: data.contactInfo.contact_id,
+        file_size: "",
+        file_name: "",
+        file_type: "",
+        av_data: JSON.stringify(proxyPeerLeaveMessage),
+      };
+      store.state.socket.send(JSON.stringify(rtcMessageRequest));
+    };
+
+    const endCall = () => {
+      if (data.localVideo) data.localVideo.style.display = "none";
+      if (data.remoteVideo) data.remoteVideo.style.display = "none";
+      closeLocalMediaStream();
+      closeRtcPeerConnection();
+      data.remoteStream = null;
+      data.localStream = null;
+      data.localVideo = null;
+      data.remoteVideo = null;
+      data.ableToReceiveOrRejectCall = false;
+      data.ableToStartCall = true;
+      ElMessage.warning("对方拒绝通话");
+    };
+
+    const receiveEndCall = () => {
+      if (data.localVideo) data.localVideo.style.display = "none";
+      if (data.remoteVideo) data.remoteVideo.style.display = "none";
+      closeLocalMediaStream();
+      closeRtcPeerConnection();
+      data.remoteStream = null;
+      data.localStream = null;
+      data.localVideo = null;
+      data.remoteVideo = null;
+      data.ableToReceiveOrRejectCall = false;
+      data.ableToStartCall = true;
+      ElMessage.warning("对方已挂断");
     };
 
     const handleOfferSdp = (val) => {
@@ -2211,6 +2277,33 @@ export default {
 
     const handleCandidate = (val) => {
       data.rtcPeerConn.addIceCandidate(new RTCIceCandidate(val));
+    };
+
+    const rejectCall = () => {
+      if (!data.ableToReceiveOrRejectCall) {
+        ElMessage.warning("对方没有发起通话或已在通话中，无法拒绝通话");
+        return;
+      }
+      var rejectCallMessage = {
+        messageId: "PROXY",
+        type: "reject_call",
+      };
+      const rtcMessageRequest = {
+        session_id: data.sessionId,
+        type: 3,
+        content: "",
+        url: "",
+        send_id: data.userInfo.uuid,
+        send_name: data.userInfo.nickname,
+        send_avatar: data.userInfo.avatar,
+        receive_id: data.contactInfo.contact_id,
+        file_size: "",
+        file_name: "",
+        file_type: "",
+        av_data: JSON.stringify(rejectCallMessage),
+      };
+      store.state.socket.send(JSON.stringify(rtcMessageRequest));
+      data.ableToReceiveOrRejectCall = false;
     };
 
     return {
@@ -2272,12 +2365,15 @@ export default {
       createOffer,
       createAnswer,
       startCall,
-      endCall,
+      sendEndCall,
+      receiveEndCall,
       handleOfferSdp,
       handleAnswerSdp,
       handleCandidate,
       showAVContainerModal,
       closeAVContainerModal,
+      rejectCall,
+      endCall,
     };
   },
 };
@@ -2732,16 +2828,10 @@ h3 {
   align-items: center;
 }
 
-.local-video {
- width: 330px;
- height: 320px;
- margin-left: 10px;
-}
-
+.local-video,
 .remote-video {
   width: 330px;
   height: 320px;
-  margin-right: 10px;
 }
 
 .video-modal-header {

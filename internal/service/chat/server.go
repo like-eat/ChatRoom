@@ -49,7 +49,8 @@ func normalizePath(path string) string {
 	}
 	staticIndex := strings.Index(path, "/static/")
 	if staticIndex < 0 {
-		zlog.Fatal("路径不合法")
+		log.Println(path)
+		zlog.Error("路径不合法")
 	}
 	// 返回从 "/static/" 开始的部分
 	return path[staticIndex:]
@@ -296,7 +297,11 @@ func (s *Server) Start() {
 						}
 					}
 				} else if chatMessageReq.Type == message_type_enum.AudioOrVideo {
-					// 存message
+					var avData request.AVData
+					if err := json.Unmarshal([]byte(chatMessageReq.AVdata), &avData); err != nil {
+						zlog.Error(err.Error())
+					}
+					//log.Println(avData)
 					message := model.Message{
 						Uuid:       fmt.Sprintf("M%s", random.GetNowAndLenRandomString(11)),
 						SessionId:  chatMessageReq.SessionId,
@@ -314,19 +319,23 @@ func (s *Server) Start() {
 						CreatedAt:  time.Now(),
 						AVdata:     chatMessageReq.AVdata,
 					}
-					// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
-					message.SendAvatar = normalizePath(message.SendAvatar)
-					if res := dao.GormDB.Create(&message); res.Error != nil {
-						zlog.Error(res.Error.Error())
+					if avData.MessageId == "PROXY" && (avData.Type == "start_call" || avData.Type == "receive_call" || avData.Type == "reject_call") {
+						// 存message
+						// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
+						message.SendAvatar = normalizePath(message.SendAvatar)
+						if res := dao.GormDB.Create(&message); res.Error != nil {
+							zlog.Error(res.Error.Error())
+						}
 					}
-					if message.ReceiveId[0] == 'U' { // 发送给User
+
+					if chatMessageReq.ReceiveId[0] == 'U' { // 发送给User
 						// 如果能找到ReceiveId，说明在线，可以发送，否则存表后跳过
 						// 因为在线的时候是通过websocket更新消息记录的，离线后通过存表，登录时只调用一次数据库操作
 						// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
 						messageRsp := respond.AVMessageRespond{
 							SendId:     message.SendId,
 							SendName:   message.SendName,
-							SendAvatar: chatMessageReq.SendAvatar,
+							SendAvatar: message.SendAvatar,
 							ReceiveId:  message.ReceiveId,
 							Type:       message.Type,
 							Content:    message.Content,
