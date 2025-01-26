@@ -1888,9 +1888,9 @@ export default {
         console.log(rsp);
         if (rsp.data.code == 200) {
           for (let i = 0; i < rsp.data.data.length; i++) {
-            if (!rsp.data.data[i].send_avatar.startsWith("http")) {
-              rsp.data.data[i].send_avatar =
-                store.state.backendUrl + rsp.data.data[i].send_avatar;
+            if (!rsp.data.data[i].avatar.startsWith("http")) {
+              rsp.data.data[i].avatar =
+                store.state.backendUrl + rsp.data.data[i].avatar;
             }
           }
           data.groupMemberList = rsp.data.data;

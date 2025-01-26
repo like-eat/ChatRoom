@@ -2,12 +2,15 @@ package chat
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	myredis "kama_chat_server/internal/service/redis"
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/message/message_status_enum"
 	"kama_chat_server/pkg/enum/message/message_type_enum"
@@ -152,8 +155,31 @@ func (s *Server) Start() {
 						// 所以这里后端进行回显，前端不回显
 						sendClient := s.Clients[message.SendId]
 						sendClient.SendBack <- messageBack
+
+						// redis
+						var rspString string
+						rspString, err = myredis.GetKeyNilIsErr("message_list_" + message.SendId + "_" + message.ReceiveId)
+						if err == nil {
+							var rsp []respond.GetMessageListRespond
+							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
+								zlog.Error(err.Error())
+							}
+							rsp = append(rsp, messageRsp)
+							rspByte, err := json.Marshal(rsp)
+							if err != nil {
+								zlog.Error(err.Error())
+							}
+							if err := myredis.SetKeyEx("message_list_"+message.SendId+"_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+								zlog.Error(err.Error())
+							}
+						} else {
+							if !errors.Is(err, redis.Nil) {
+								zlog.Error(err.Error())
+							}
+						}
+
 					} else if message.ReceiveId[0] == 'G' { // 发送给Group
-						messageRsp := respond.GetMessageListRespond{
+						messageRsp := respond.GetGroupMessageListRespond{
 							SendId:     message.SendId,
 							SendName:   message.SendName,
 							SendAvatar: chatMessageReq.SendAvatar,
@@ -191,6 +217,28 @@ func (s *Server) Start() {
 							} else {
 								sendClient := s.Clients[message.SendId]
 								sendClient.SendBack <- messageBack
+							}
+						}
+
+						// redis
+						var rspString string
+						rspString, err = myredis.GetKeyNilIsErr("group_messagelist_" + message.ReceiveId)
+						if err == nil {
+							var rsp []respond.GetGroupMessageListRespond
+							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
+								zlog.Error(err.Error())
+							}
+							rsp = append(rsp, messageRsp)
+							rspByte, err := json.Marshal(rsp)
+							if err != nil {
+								zlog.Error(err.Error())
+							}
+							if err := myredis.SetKeyEx("group_messagelist_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+								zlog.Error(err.Error())
+							}
+						} else {
+							if !errors.Is(err, redis.Nil) {
+								zlog.Error(err.Error())
 							}
 						}
 					}
@@ -254,8 +302,30 @@ func (s *Server) Start() {
 						// 所以这里后端进行回显，前端不回显
 						sendClient := s.Clients[message.SendId]
 						sendClient.SendBack <- messageBack
+
+						// redis
+						var rspString string
+						rspString, err = myredis.GetKeyNilIsErr("message_list_" + message.SendId + "_" + message.ReceiveId)
+						if err == nil {
+							var rsp []respond.GetMessageListRespond
+							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
+								zlog.Error(err.Error())
+							}
+							rsp = append(rsp, messageRsp)
+							rspByte, err := json.Marshal(rsp)
+							if err != nil {
+								zlog.Error(err.Error())
+							}
+							if err := myredis.SetKeyEx("message_list_"+message.SendId+"_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+								zlog.Error(err.Error())
+							}
+						} else {
+							if !errors.Is(err, redis.Nil) {
+								zlog.Error(err.Error())
+							}
+						}
 					} else {
-						messageRsp := respond.GetMessageListRespond{
+						messageRsp := respond.GetGroupMessageListRespond{
 							SendId:     message.SendId,
 							SendName:   message.SendName,
 							SendAvatar: chatMessageReq.SendAvatar,
@@ -293,6 +363,28 @@ func (s *Server) Start() {
 							} else {
 								sendClient := s.Clients[message.SendId]
 								sendClient.SendBack <- messageBack
+							}
+						}
+
+						// redis
+						var rspString string
+						rspString, err = myredis.GetKeyNilIsErr("group_messagelist_" + message.ReceiveId)
+						if err == nil {
+							var rsp []respond.GetGroupMessageListRespond
+							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
+								zlog.Error(err.Error())
+							}
+							rsp = append(rsp, messageRsp)
+							rspByte, err := json.Marshal(rsp)
+							if err != nil {
+								zlog.Error(err.Error())
+							}
+							if err := myredis.SetKeyEx("group_messagelist_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+								zlog.Error(err.Error())
+							}
+						} else {
+							if !errors.Is(err, redis.Nil) {
+								zlog.Error(err.Error())
 							}
 						}
 					}
