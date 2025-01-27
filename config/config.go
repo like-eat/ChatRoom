@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/BurntSushi/toml"
 	"log"
+	"time"
 )
 
 type MainConfig struct {
@@ -38,7 +39,14 @@ type LogConfig struct {
 }
 
 type KafkaConfig struct {
-	MessageMode string `toml:"messageMode"`
+	MessageMode  string        `toml:"messageMode"`
+	HostPort     string        `toml:"hostPort"`
+	LoginTopic   string        `toml:"loginTopic"`
+	LogoutTopic  string        `toml:"logoutTopic"`
+	ChatInTopic  string        `toml:"chatInTopic"`
+	ChatOutTopic string        `toml:"chatOutTopic"`
+	Partition    int           `toml:"partition"`
+	Timeout      time.Duration `toml:"timeout"`
 }
 
 type StaticSrcConfig struct {

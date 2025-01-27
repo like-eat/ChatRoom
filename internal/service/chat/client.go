@@ -1,17 +1,21 @@
 package chat
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/segmentio/kafka-go"
 	"kama_chat_server/config"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/model"
+	myKafka "kama_chat_server/internal/service/kafka"
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/message/message_status_enum"
 	"kama_chat_server/pkg/zlog"
 	"net/http"
+	"strconv"
 )
 
 type MessageBack struct {
@@ -34,6 +38,8 @@ var upgrader = websocket.Upgrader{
 		return true
 	},
 }
+
+var ctx = context.Background()
 
 var messageMode = config.GetConfig().KafkaConfig.MessageMode
 
@@ -80,6 +86,13 @@ func (c *Client) Read() {
 							zlog.Error(err.Error())
 						}
 					}
+				} else {
+					if err := myKafka.KafkaService.ChatInWriter.WriteMessages(ctx, kafka.Message{
+						Key:   []byte(strconv.Itoa(config.GetConfig().KafkaConfig.Partition)),
+						Value: jsonMessage,
+					}); err != nil {
+						zlog.Error(err.Error())
+					}
 				}
 			}
 		}
@@ -112,6 +125,7 @@ func (c *Client) Write() {
 
 // NewClientInit 当接受到前端有登录消息时，会调用该函数
 func NewClientInit(c *gin.Context, clientId string) {
+	kafkaConfig := config.GetConfig().KafkaConfig
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		zlog.Error(err.Error())
@@ -122,7 +136,20 @@ func NewClientInit(c *gin.Context, clientId string) {
 		SendTo:   make(chan []byte, constants.CHANNEL_SIZE),
 		SendBack: make(chan *MessageBack, constants.CHANNEL_SIZE),
 	}
-	ChatServer.SendClientToLogin(client)
+	if kafkaConfig.MessageMode == "channel" {
+		ChatServer.SendClientToLogin(client)
+	} else {
+		jsonClient, err := json.Marshal(client)
+		if err != nil {
+			zlog.Error(err.Error())
+		}
+		if err := myKafka.KafkaService.LoginWriter.WriteMessages(ctx, kafka.Message{
+			Key:   []byte(strconv.Itoa(kafkaConfig.Partition)),
+			Value: jsonClient,
+		}); err != nil {
+			zlog.Error(err.Error())
+		}
+	}
 	go client.Read()
 	go client.Write()
 	zlog.Info("ws连接成功")

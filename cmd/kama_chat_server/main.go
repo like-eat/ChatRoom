@@ -5,6 +5,7 @@ import (
 	"kama_chat_server/config"
 	"kama_chat_server/internal/https_server"
 	"kama_chat_server/internal/service/chat"
+	"kama_chat_server/internal/service/kafka"
 	myredis "kama_chat_server/internal/service/redis"
 	"kama_chat_server/pkg/zlog"
 	"os"
@@ -26,12 +27,20 @@ func main() {
 		}
 	}()
 
+	if config.GetConfig().KafkaConfig.MessageMode == "kafka" {
+		kafka.KafkaService.KafkaInit()
+	}
+
 	// 设置信号监听
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// 等待信号
 	<-quit
+
+	if config.GetConfig().KafkaConfig.MessageMode == "kafka" {
+		kafka.KafkaService.KafkaClose()
+	}
 
 	zlog.Info("关闭服务器...")
 
