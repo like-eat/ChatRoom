@@ -39,14 +39,13 @@ type LogConfig struct {
 }
 
 type KafkaConfig struct {
-	MessageMode  string        `toml:"messageMode"`
-	HostPort     string        `toml:"hostPort"`
-	LoginTopic   string        `toml:"loginTopic"`
-	LogoutTopic  string        `toml:"logoutTopic"`
-	ChatInTopic  string        `toml:"chatInTopic"`
-	ChatOutTopic string        `toml:"chatOutTopic"`
-	Partition    int           `toml:"partition"`
-	Timeout      time.Duration `toml:"timeout"`
+	MessageMode string        `toml:"messageMode"`
+	HostPort    string        `toml:"hostPort"`
+	LoginTopic  string        `toml:"loginTopic"`
+	LogoutTopic string        `toml:"logoutTopic"`
+	ChatTopic   string        `toml:"chatTopic"`
+	Partition   int           `toml:"partition"`
+	Timeout     time.Duration `toml:"timeout"`
 }
 
 type StaticSrcConfig struct {

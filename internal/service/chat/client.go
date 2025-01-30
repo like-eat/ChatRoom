@@ -14,6 +14,7 @@ import (
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/message/message_status_enum"
 	"kama_chat_server/pkg/zlog"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -45,55 +46,45 @@ var messageMode = config.GetConfig().KafkaConfig.MessageMode
 
 // 读取websocket消息并发送给send通道
 func (c *Client) Read() {
-	defer func() {
-		if err := c.Conn.Close(); err != nil {
-			zlog.Error(err.Error())
-		}
-		close(c.SendTo)
-		close(c.SendBack)
-		ChatServer.RemoveClient(c.Uuid)
-	}()
 	zlog.Info("ws read goroutine start")
 	for {
-		select {
-		default:
-			// 阻塞有一定隐患，因为下面要处理缓冲的逻辑，但是可以先不做优化，问题不大
-			_, jsonMessage, err := c.Conn.ReadMessage() // 阻塞状态
-			if err != nil {
+		// 阻塞有一定隐患，因为下面要处理缓冲的逻辑，但是可以先不做优化，问题不大
+		_, jsonMessage, err := c.Conn.ReadMessage() // 阻塞状态
+		if err != nil {
+			zlog.Error(err.Error())
+			return // 直接断开websocket
+		} else {
+			var message = request.ChatMessageRequest{}
+			if err := json.Unmarshal(jsonMessage, &message); err != nil {
 				zlog.Error(err.Error())
-				return // 直接断开websocket
-			} else {
-				var message = request.ChatMessageRequest{}
-				if err := json.Unmarshal(jsonMessage, &message); err != nil {
-					zlog.Error(err.Error())
+			}
+			log.Println("接受到消息为: ", jsonMessage)
+			if messageMode == "channel" {
+				// 如果server的转发channel没满，先把sendto中的给transmit
+				for len(ChatServer.Transmit) < constants.CHANNEL_SIZE && len(c.SendTo) > 0 {
+					sendToMessage := <-c.SendTo
+					ChatServer.SendMessageToTransmit(sendToMessage)
 				}
-				// log.Println("接受到消息为: ", jsonMessage)
-				if messageMode == "channel" {
-					// 如果server的转发channel没满，先把sendto中的给transmit
-					for len(ChatServer.Transmit) < constants.CHANNEL_SIZE && len(c.SendTo) > 0 {
-						sendToMessage := <-c.SendTo
-						ChatServer.SendMessageToTransmit(sendToMessage)
-					}
-					// 如果server没满，sendto空了，直接给server的transmit
-					if len(ChatServer.Transmit) < constants.CHANNEL_SIZE {
-						ChatServer.SendMessageToTransmit(jsonMessage)
-					} else if len(c.SendTo) < constants.CHANNEL_SIZE {
-						// 如果server满了，直接塞sendto
-						c.SendTo <- jsonMessage
-					} else {
-						// 否则考虑加宽channel size，或者使用kafka
-						if err := c.Conn.WriteMessage(websocket.TextMessage, []byte("由于目前同一时间过多用户发送消息，消息发送失败，请稍后重试")); err != nil {
-							zlog.Error(err.Error())
-						}
-					}
+				// 如果server没满，sendto空了，直接给server的transmit
+				if len(ChatServer.Transmit) < constants.CHANNEL_SIZE {
+					ChatServer.SendMessageToTransmit(jsonMessage)
+				} else if len(c.SendTo) < constants.CHANNEL_SIZE {
+					// 如果server满了，直接塞sendto
+					c.SendTo <- jsonMessage
 				} else {
-					if err := myKafka.KafkaService.ChatInWriter.WriteMessages(ctx, kafka.Message{
-						Key:   []byte(strconv.Itoa(config.GetConfig().KafkaConfig.Partition)),
-						Value: jsonMessage,
-					}); err != nil {
+					// 否则考虑加宽channel size，或者使用kafka
+					if err := c.Conn.WriteMessage(websocket.TextMessage, []byte("由于目前同一时间过多用户发送消息，消息发送失败，请稍后重试")); err != nil {
 						zlog.Error(err.Error())
 					}
 				}
+			} else {
+				if err := myKafka.KafkaService.ChatWriter.WriteMessages(ctx, kafka.Message{
+					Key:   []byte(strconv.Itoa(config.GetConfig().KafkaConfig.Partition)),
+					Value: jsonMessage,
+				}); err != nil {
+					zlog.Error(err.Error())
+				}
+				zlog.Info("已发送消息：" + string(jsonMessage))
 			}
 		}
 	}
@@ -101,12 +92,6 @@ func (c *Client) Read() {
 
 // 从send通道读取消息发送给websocket
 func (c *Client) Write() {
-	//交给read goroutine来管理
-	//defer func() {
-	//	if err := c.Conn.Close(); err != nil {
-	//		zlog.Error(err.Error())
-	//	}
-	//}()
 	zlog.Info("ws write goroutine start")
 	for messageBack := range c.SendBack { // 阻塞状态
 		// 通过 WebSocket 发送消息
@@ -139,18 +124,29 @@ func NewClientInit(c *gin.Context, clientId string) {
 	if kafkaConfig.MessageMode == "channel" {
 		ChatServer.SendClientToLogin(client)
 	} else {
-		jsonClient, err := json.Marshal(client)
-		if err != nil {
-			zlog.Error(err.Error())
-		}
-		if err := myKafka.KafkaService.LoginWriter.WriteMessages(ctx, kafka.Message{
-			Key:   []byte(strconv.Itoa(kafkaConfig.Partition)),
-			Value: jsonClient,
-		}); err != nil {
-			zlog.Error(err.Error())
-		}
+		KafkaChatServer.SendClientToLogin(client)
 	}
 	go client.Read()
 	go client.Write()
 	zlog.Info("ws连接成功")
+}
+
+// ClientLogout 当接受到前端有登出消息时，会调用该函数
+func ClientLogout(clientId string) (string, int) {
+	kafkaConfig := config.GetConfig().KafkaConfig
+	client := ChatServer.Clients[clientId]
+	if client != nil {
+		if kafkaConfig.MessageMode == "channel" {
+			ChatServer.SendClientToLogout(client)
+		} else {
+			KafkaChatServer.SendClientToLogout(client)
+		}
+		if err := client.Conn.Close(); err != nil {
+			zlog.Error(err.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		close(client.SendTo)
+		close(client.SendBack)
+	}
+	return "退出成功", 0
 }

@@ -91,7 +91,7 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 	year, month, day := user.CreatedAt.Date()
 	loginRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
 
-	return "登陆成功!", loginRsp, 0
+	return "登陆成功", loginRsp, 0
 }
 
 // SmsLogin 验证码登录
@@ -140,7 +140,7 @@ func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respon
 	year, month, day := user.CreatedAt.Date()
 	loginRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
 
-	return "登陆成功!", loginRsp, 0
+	return "登陆成功", loginRsp, 0
 }
 
 // SendSmsCode 发送短信验证码 - 验证码登录
@@ -230,7 +230,7 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 	year, month, day := newUser.CreatedAt.Date()
 	registerRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
 
-	return "注册成功!", registerRsp, 0
+	return "注册成功", registerRsp, 0
 }
 
 // UpdateUserInfo 修改用户信息
@@ -445,6 +445,7 @@ func (u *userInfoService) DeleteUsers(uuidList []string) (string, int) {
 // GetUserInfo 获取用户信息
 func (u *userInfoService) GetUserInfo(uuid string) (string, *respond.GetUserInfoRespond, int) {
 	// redis
+	zlog.Info(uuid)
 	rspString, err := myredis.GetKeyNilIsErr("user_info_" + uuid)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {

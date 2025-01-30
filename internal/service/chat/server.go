@@ -86,6 +86,9 @@ func (s *Server) Start() {
 				delete(s.Clients, client.Uuid)
 				s.mutex.Unlock()
 				zlog.Info(fmt.Sprintf("用户%s退出登录\n", client.Uuid))
+				if err := client.Conn.WriteMessage(websocket.TextMessage, []byte("已退出登录")); err != nil {
+					zlog.Error(err.Error())
+				}
 			}
 
 		case data := <-s.Transmit:
@@ -145,6 +148,7 @@ func (s *Server) Start() {
 							Message: jsonMessage,
 							Uuid:    message.Uuid,
 						}
+						s.mutex.Lock()
 						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
 							//messageBack.Message = jsonMessage
 							//messageBack.Uuid = message.Uuid
@@ -155,6 +159,7 @@ func (s *Server) Start() {
 						// 所以这里后端进行回显，前端不回显
 						sendClient := s.Clients[message.SendId]
 						sendClient.SendBack <- messageBack
+						s.mutex.Unlock()
 
 						// redis
 						var rspString string
@@ -209,6 +214,7 @@ func (s *Server) Start() {
 						if err := json.Unmarshal(group.Members, &members); err != nil {
 							zlog.Error(err.Error())
 						}
+						s.mutex.Lock()
 						for _, member := range members {
 							if member != message.SendId {
 								if receiveClient, ok := s.Clients[member]; ok {
@@ -219,6 +225,7 @@ func (s *Server) Start() {
 								sendClient.SendBack <- messageBack
 							}
 						}
+						s.mutex.Unlock()
 
 						// redis
 						var rspString string
@@ -292,6 +299,7 @@ func (s *Server) Start() {
 							Message: jsonMessage,
 							Uuid:    message.Uuid,
 						}
+						s.mutex.Lock()
 						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
 							//messageBack.Message = jsonMessage
 							//messageBack.Uuid = message.Uuid
@@ -302,6 +310,7 @@ func (s *Server) Start() {
 						// 所以这里后端进行回显，前端不回显
 						sendClient := s.Clients[message.SendId]
 						sendClient.SendBack <- messageBack
+						s.mutex.Unlock()
 
 						// redis
 						var rspString string
@@ -355,6 +364,7 @@ func (s *Server) Start() {
 						if err := json.Unmarshal(group.Members, &members); err != nil {
 							zlog.Error(err.Error())
 						}
+						s.mutex.Lock()
 						for _, member := range members {
 							if member != message.SendId {
 								if receiveClient, ok := s.Clients[member]; ok {
@@ -365,6 +375,7 @@ func (s *Server) Start() {
 								sendClient.SendBack <- messageBack
 							}
 						}
+						s.mutex.Unlock()
 
 						// redis
 						var rspString string
@@ -448,6 +459,7 @@ func (s *Server) Start() {
 							Message: jsonMessage,
 							Uuid:    message.Uuid,
 						}
+						s.mutex.Lock()
 						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
 							//messageBack.Message = jsonMessage
 							//messageBack.Uuid = message.Uuid
@@ -456,12 +468,19 @@ func (s *Server) Start() {
 						// 通话这不能回显，发回去的话就会出现两个start_call。
 						//sendClient := s.Clients[message.SendId]
 						//sendClient.SendBack <- messageBack
+						s.mutex.Unlock()
 					}
 				}
 
 			}
 		}
 	}
+}
+
+func (s *Server) Close() {
+	close(s.Login)
+	close(s.Logout)
+	close(s.Transmit)
 }
 
 func (s *Server) SendClientToLogin(client *Client) {

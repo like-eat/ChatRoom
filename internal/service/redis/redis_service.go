@@ -75,7 +75,7 @@ func GetKeyWithPrefixNilIsErr(prefix string) (string, error) {
 		}
 
 		if len(keys) == 1 {
-			zlog.Info(fmt.Sprintln("成功删除相关前缀key", keys))
+			zlog.Info(fmt.Sprintln("成功找到了相关前缀key", keys))
 			return keys[0], nil
 		} else {
 			zlog.Error("找到了数量大于1的key，查找异常")

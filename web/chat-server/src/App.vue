@@ -32,10 +32,21 @@ export default {
         console.log(error);
       }
     };
-    const logout = () => {
+    const logout = async () => {
       store.commit("cleanUserInfo");
-      router.push("/login");
-      ElMessage.success("账号被封禁，退出登录");
+      const req = {
+        owner_id: data.userInfo.uuid,
+      };
+      const rsp = await axios.post(
+        store.state.backendUrl + "/user/wsLogout",
+        req
+      );
+      if (rsp.data.code == 200) {
+        router.push("/login");
+        ElMessage.success("账号被封禁，退出登录");
+      } else {
+        ElMessage.error(rsp.data.message);
+      }
     };
     onMounted(() => {
       if (store.state.userInfo.uuid) {
@@ -45,6 +56,7 @@ export default {
         }
         const wsUrl =
           store.state.wsUrl + "/wss?client_id=" + store.state.userInfo.uuid;
+          console.log(wsUrl);
         store.state.socket = new WebSocket(wsUrl);
         store.state.socket.onopen = () => {
           console.log("WebSocket连接已打开");console.log("连接信令服务器成功");

@@ -33,6 +33,7 @@ func init() {
 	GE.POST("/user/setAdmin", v1.SetAdmin)
 	GE.POST("/user/sendSmsCode", v1.SendSmsCode)
 	GE.POST("/user/smsLogin", v1.SmsLogin)
+	GE.POST("/user/wsLogout", v1.WsLogout)
 	GE.POST("/group/createGroup", v1.CreateGroup)
 	GE.POST("/group/loadMyGroup", v1.LoadMyGroup)
 	GE.POST("/group/checkGroupAddMode", v1.CheckGroupAddMode)
@@ -68,5 +69,6 @@ func init() {
 	GE.POST("/message/uploadAvatar", v1.UploadAvatar)
 	GE.POST("/message/uploadFile", v1.UploadFile)
 	GE.POST("/chatroom/getCurContactListInChatRoom", v1.GetCurContactListInChatRoom)
-	GE.GET("/wss", v1.WsHandler)
+	GE.GET("/wss", v1.WsLogin)
+
 }

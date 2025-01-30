@@ -34,3 +34,5 @@ static/files/*
 pkg/ssl/*
 
 web/src/assets/cert/*
+
+internal/service/kafka/start.bat

@@ -17,8 +17,16 @@ func main() {
 	conf := config.GetConfig()
 	host := conf.MainConfig.Host
 	port := conf.MainConfig.Port
+	kafkaConfig := conf.KafkaConfig
+	if kafkaConfig.MessageMode == "kafka" {
+		kafka.KafkaService.KafkaInit()
+	}
 
-	go chat.ChatServer.Start()
+	if kafkaConfig.MessageMode == "channel" {
+		go chat.ChatServer.Start()
+	} else {
+		go chat.KafkaChatServer.Start()
+	}
 
 	go func() {
 		if err := https_server.GE.RunTLS(fmt.Sprintf("%s:%d", host, port), "pkg/ssl/127.0.0.1+2.pem", "pkg/ssl/127.0.0.1+2-key.pem"); err != nil {
@@ -27,10 +35,6 @@ func main() {
 		}
 	}()
 
-	if config.GetConfig().KafkaConfig.MessageMode == "kafka" {
-		kafka.KafkaService.KafkaInit()
-	}
-
 	// 设置信号监听
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -38,9 +42,11 @@ func main() {
 	// 等待信号
 	<-quit
 
-	if config.GetConfig().KafkaConfig.MessageMode == "kafka" {
+	if kafkaConfig.MessageMode == "kafka" {
 		kafka.KafkaService.KafkaClose()
 	}
+
+	chat.ChatServer.Close()
 
 	zlog.Info("关闭服务器...")
 

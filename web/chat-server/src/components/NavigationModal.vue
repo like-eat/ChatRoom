@@ -88,7 +88,10 @@
           </button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item v-if="userInfo.is_admin == 1" @click="handleToManager">
+              <el-dropdown-item
+                v-if="userInfo.is_admin == 1"
+                @click="handleToManager"
+              >
                 管理员模式
               </el-dropdown-item>
               <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
@@ -116,6 +119,7 @@ import { useRouter } from "vue-router";
 import { useStore } from "vuex";
 import { ElMessage } from "element-plus";
 import { reactive, toRefs } from "vue";
+import axios from "axios";
 export default {
   name: "NavigationModal",
   setup() {
@@ -124,7 +128,7 @@ export default {
     const data = reactive({
       userInfo: store.state.userInfo,
     });
-    
+
     const handleToContactList = () => {
       router.push("/chat/contactlist");
     };
@@ -137,10 +141,21 @@ export default {
       console.log(data.userInfo);
       router.push("/manager");
     };
-    const logout = () => {
+    const logout = async () => {
       store.commit("cleanUserInfo");
-      router.push("/login");
-      ElMessage.success("已退出登录");
+      const req = {
+        owner_id: data.userInfo.uuid,
+      };
+      const rsp = await axios.post(
+        store.state.backendUrl + "/user/wsLogout",
+        req
+      );
+      if (rsp.data.code == 200) {
+        router.push("/login");
+        ElMessage.success(rsp.data.message);
+      } else {
+        ElMessage.error(rsp.data.message);
+      }
     };
     const handleToOwnInfo = () => {
       router.push("/chat/owninfo");
