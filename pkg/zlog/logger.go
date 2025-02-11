@@ -4,7 +4,7 @@ import (
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"os"
 	"path"
 	"runtime"

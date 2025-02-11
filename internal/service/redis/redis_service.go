@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"kama_chat_server/pkg/zlog"
 	"log"
 	"strconv"
@@ -102,7 +102,7 @@ func GetKeyWithSuffixNilIsErr(suffix string) (string, error) {
 		}
 
 		if len(keys) == 1 {
-			zlog.Info(fmt.Sprintln("成功删除相关后缀key", keys))
+			zlog.Info(fmt.Sprintln("成功找到了相关后缀key", keys))
 			return keys[0], nil
 		} else {
 			zlog.Error("找到了数量大于1的key，查找异常")

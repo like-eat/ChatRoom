@@ -193,71 +193,85 @@
             </div>
           </template>
           <template v-slot:body>
-            <div class="creatgroup-modal-body">
-              <el-form
-                ref="formRef"
-                :model="createGroupReq"
-                label-width="80px"
-                class="demo-dynamic"
-              >
-                <el-form-item
-                  prop="name"
-                  label="群名称"
-                  :rules="[
-                    {
-                      required: true,
-                      message: '此项为必填项',
-                      trigger: 'blur',
-                    },
-                  ]"
+            <el-scrollbar
+              max-height="300px"
+              style="
+                width: 400px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-top: 20px;
+              "
+            >
+              <div class="creatgroup-modal-body">
+                <el-form
+                  ref="formRef"
+                  :model="createGroupReq"
+                  label-width="80px"
+                  class="demo-dynamic"
                 >
-                  <el-input v-model="createGroupReq.name" placeholder="必填" />
-                </el-form-item>
-                <el-form-item prop="notice" label="群公告">
-                  <el-input
-                    v-model="createGroupReq.notice"
-                    type="textarea"
-                    show-word-limit
-                    maxlength="500"
-                    :autosize="{ minRows: 3, maxRows: 3 }"
-                    placeholder="选填"
-                  />
-                </el-form-item>
-                <el-form-item
-                  prop="add_mode"
-                  label="加群方式"
-                  :rules="[
-                    {
-                      required: true,
-                      message: 'Please select activity resource',
-                      trigger: 'change',
-                    },
-                  ]"
-                >
-                  <el-radio-group v-model="createGroupReq.add_mode">
-                    <el-radio :value="0">直接加入</el-radio>
-                    <el-radio :value="1">群主审核</el-radio>
-                  </el-radio-group>
-                </el-form-item>
-                <el-form-item prop="avatar" label="群头像">
-                  <el-upload
-                    v-model:file-list="fileList"
-                    ref="uploadRef"
-                    :auto-upload="false"
-                    :action="uploadPath"
-                    :on-success="handleUploadSuccess"
-                    :before-upload="beforeFileUpload"
+                  <el-form-item
+                    prop="name"
+                    label="群名称"
+                    :rules="[
+                      {
+                        required: true,
+                        message: '此项为必填项',
+                        trigger: 'blur',
+                      },
+                    ]"
                   >
-                    <template #trigger>
-                      <el-button
-                        style="background-color: rgb(252, 210.9, 210.9)"
-                        >上传图片</el-button
-                      >
-                    </template>
-                  </el-upload>
-                </el-form-item>
-              </el-form>
-            </div>
+                    <el-input
+                      v-model="createGroupReq.name"
+                      placeholder="必填"
+                    />
+                  </el-form-item>
+                  <el-form-item prop="notice" label="群公告">
+                    <el-input
+                      v-model="createGroupReq.notice"
+                      type="textarea"
+                      show-word-limit
+                      maxlength="500"
+                      :autosize="{ minRows: 3, maxRows: 3 }"
+                      placeholder="选填"
+                    />
+                  </el-form-item>
+                  <el-form-item
+                    prop="add_mode"
+                    label="加群方式"
+                    :rules="[
+                      {
+                        required: true,
+                        message: 'Please select activity resource',
+                        trigger: 'change',
+                      },
+                    ]"
+                  >
+                    <el-radio-group v-model="createGroupReq.add_mode">
+                      <el-radio :value="0">直接加入</el-radio>
+                      <el-radio :value="1">群主审核</el-radio>
+                    </el-radio-group>
+                  </el-form-item>
+                  <el-form-item prop="avatar" label="群头像">
+                    <el-upload
+                      v-model:file-list="fileList"
+                      ref="uploadRef"
+                      :auto-upload="false"
+                      :action="uploadPath"
+                      :on-success="handleUploadSuccess"
+                      :before-upload="beforeFileUpload"
+                    >
+                      <template #trigger>
+                        <el-button
+                          style="background-color: rgb(252, 210.9, 210.9)"
+                          >上传图片</el-button
+                        >
+                      </template>
+                    </el-upload>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </el-scrollbar>
           </template>
           <template v-slot:footer>
             <div class="creategroup-modal-footer">
@@ -429,7 +443,8 @@ export default {
       try {
         data.createGroupReq.owner_id = data.userInfo.uuid;
         if (data.fileList.length > 0) {
-          data.createGroupReq.avatar = "/static/avatars/" + data.fileList[0].name;
+          data.createGroupReq.avatar =
+            "/static/avatars/" + data.fileList[0].name;
           console.log(data.createGroupReq.avatar);
           data.uploadRef.submit();
         }
@@ -603,7 +618,8 @@ export default {
           for (let i = 0; i < loadMyJoinedGroupRsp.data.data.length; i++) {
             if (!loadMyJoinedGroupRsp.data.data[i].avatar.startsWith("http")) {
               loadMyJoinedGroupRsp.data.data[i].avatar =
-                store.state.backendUrl + loadMyJoinedGroupRsp.data.data[i].avatar;
+                store.state.backendUrl +
+                loadMyJoinedGroupRsp.data.data[i].avatar;
             }
           }
         }
@@ -686,6 +702,12 @@ export default {
         if (data.newContactList == null) {
           ElMessage.warning("没有新的好友申请");
           return;
+        }
+        for (let i = 0; i < data.newContactList.length; i++) {
+          if (!data.newContactList[i].contact_avatar.startsWith("http")) {
+            data.newContactList[i].contact_avatar =
+              store.state.backendUrl + data.newContactList[i].contact_avatar;
+          }
         }
         data.isNewContactModalVisible = true;
         console.log(rsp);

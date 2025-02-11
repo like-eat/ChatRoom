@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"testing"
 )
 

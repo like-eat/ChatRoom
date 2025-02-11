@@ -425,7 +425,34 @@ export default {
     };
 
     const handleToChatGroup = async (group) => {
-      router.push("/chat/" + group.group_id);
+      try {
+        const req = {
+          send_id: data.userInfo.uuid,
+          receive_id: group.group_id,
+        };
+        const rsp = await axios.post(
+          store.state.backendUrl + "/session/checkOpenSessionAllowed",
+          req
+        );
+        if (rsp.data.code == 200) {
+          if (rsp.data.data == true) {
+            router.push("/chat/" + group.group_id);
+          } else {
+            ElMessage.warning(rsp.data.message);
+            console.error(rsp.data.message);
+          }
+        } else {
+          if (rsp.data.code == 400) {
+            ElMessage.warning(rsp.data.message);
+            console.error(rsp.data.message);
+          } else {
+            ElMessage.error(rsp.data.message);
+            console.error(rsp.data.message);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
     };
 
     const handleNewContactList = async () => {

@@ -4,7 +4,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	v1 "kama_chat_server/api/v1"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"kama_chat_server/pkg/ssl"
 )
 
@@ -15,9 +15,7 @@ func init() {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{"*"}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	corsConfig.AllowHeaders = []string{"Content-Type", "Authorization"}
-	corsConfig.ExposeHeaders = []string{"X-Custom-Header"}
-	corsConfig.AllowCredentials = true
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 	GE.Use(cors.New(corsConfig))
 	GE.Use(ssl.TlsHandler(config.GetConfig().MainConfig.Host, config.GetConfig().MainConfig.Port))
 	GE.Static("/static/avatars", config.GetConfig().StaticAvatarPath)

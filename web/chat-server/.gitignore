@@ -15,22 +15,4 @@ pnpm-debug.log*
 
 # Editor directories and files
 .idea
-<<<<<<< HEAD
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-=======
-.idea/*
 
-*.xml
-
-*_local.go
-*_local.toml
-
-vendor/*
-
-*.log
->>>>>>> a0bfd87644cada41deb41c635285bb834ec9bb1d

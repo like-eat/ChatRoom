@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/segmentio/kafka-go"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/model"

@@ -95,11 +95,11 @@ func DismissGroup(c *gin.Context) {
 		})
 		return
 	}
-	message, ret := gorm.GroupInfoService.DismissGroup(req.GroupId)
+	message, ret := gorm.GroupInfoService.DismissGroup(req.OwnerId, req.GroupId)
 	JsonBack(c, message, ret, nil)
 }
 
-// GetGroupInfo 获取聊天详情
+// GetGroupInfo 获取群聊详情
 func GetGroupInfo(c *gin.Context) {
 	var req request.GetGroupInfoRequest
 	if err := c.BindJSON(&req); err != nil {

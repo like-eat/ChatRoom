@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"kama_chat_server/internal/https_server"
 	"kama_chat_server/internal/service/chat"
 	"kama_chat_server/internal/service/kafka"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"kama_chat_server/internal/model"
 	"kama_chat_server/pkg/zlog"
 )

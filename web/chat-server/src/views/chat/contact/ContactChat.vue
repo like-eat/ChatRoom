@@ -126,7 +126,7 @@
                       </div></el-descriptions-item
                     >
 
-                    <el-descriptions-item label="生日" :span="2" :width="140"
+                    <el-descriptions-item label="生日" :span="1" :width="140"
                       >{{ contactInfo.contact_birthday }}
                     </el-descriptions-item>
                     <el-descriptions-item label="个性签名">
@@ -188,7 +188,7 @@
                     <el-descriptions-item label="群名称" :span="3">{{
                       contactInfo.contact_name
                     }}</el-descriptions-item>
-                    <el-descriptions-item label="群公告" :span="2">
+                    <el-descriptions-item label="群公告" :span="3">
                       <div style="height: 70px">
                         {{ contactInfo.contact_notice }}
                       </div>
@@ -1313,6 +1313,12 @@ export default {
             ElMessage.warning("没有新的加群申请");
             return;
           } else {
+            for (let i = 0; i < data.addGroupList.length; i++) {
+              if (!data.addGroupList[i].contact_avatar.startsWith("http")) {
+                data.addGroupList[i].contact_avatar =
+                  store.state.backendUrl + data.addGroupList[i].contact_avatar;
+              }
+            }
             data.isAddGroupModalVisible = true;
             console.log(rsp);
           }
@@ -1321,52 +1327,8 @@ export default {
         console.log(error);
       }
     };
-    const handleShowUserList = async () => {
-      try {
-        data.getUserListReq.owner_id = data.userInfo.uuid;
-        const getUserListRsp = await axios.post(
-          store.state.backendUrl + "/contact/getUserList",
-          data.getUserListReq
-        );
-        data.contactUserList = getUserListRsp.data.data;
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    const handleHideUserList = () => {
-      data.contactUserList = [];
-    };
 
-    const handleShowMyGroupList = async () => {
-      try {
-        data.loadMyGroupReq.owner_id = data.userInfo.uuid;
-        const loadMyGroupRsp = await axios.post(
-          store.state.backendUrl + "/group/loadMyGroup",
-          data.loadMyGroupReq
-        );
-        data.myGroupList = loadMyGroupRsp.data.data;
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    const handleHideMyGroupList = () => {
-      data.myGroupList = [];
-    };
-    const handleShowMyJoinedGroupList = async () => {
-      try {
-        data.loadMyJoinedGroupReq.owner_id = data.userInfo.uuid;
-        const loadMyJoinedGroupRsp = await axios.post(
-          store.state.backendUrl + "/contact/loadMyJoinedGroup",
-          data.loadMyJoinedGroupReq
-        );
-        data.myJoinedGroupList = loadMyJoinedGroupRsp.data.data;
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    const handleHideMyJoinedGroupList = () => {
-      data.myJoinedGroupList = [];
-    };
+    
 
     const handleToChatUser = async (user) => {
       router.push("/chat/" + user.user_id);
@@ -1450,6 +1412,7 @@ export default {
     const deleteSession = async () => {
       try {
         const req = {
+          owner_id: data.userInfo.uuid,
           session_id: data.sessionId,
         };
         const rsp = await axios.post(
@@ -1738,6 +1701,7 @@ export default {
     const handleDismissGroup = async () => {
       try {
         const req = {
+          owner_id: data.userInfo.uuid,
           group_id: data.contactInfo.contact_id,
         };
         const rsp = await axios.post(
@@ -1770,9 +1734,6 @@ export default {
 
     const handleAvatarUploadSuccess = () => {
       ElMessage.success("头像上传成功");
-      // sendAvatarMessage(
-      //   store.state.backendUrl + "/static/avatars/" + data.avatarList[0].name
-      // );
       data.avatarList = [];
     };
 
@@ -2316,12 +2277,6 @@ export default {
       quitGroupContactInfoModal,
       showAddGroupModal,
       quitAddGroupModal,
-      handleShowUserList,
-      handleHideUserList,
-      handleShowMyGroupList,
-      handleHideMyGroupList,
-      handleShowMyJoinedGroupList,
-      handleHideMyJoinedGroupList,
       handleToChatUser,
       handleToChatGroup,
       handleShowUserSessionList,

@@ -5,8 +5,8 @@ export default createStore({
     // web服务器地址
     // backendUrl: 'https://192.168.2.114:8000',
     // wsUrl: 'wss://192.168.2.114:8000',
-    backendUrl: 'https://127.0.0.1:8080',
-    wsUrl: 'wss://127.0.0.1:8080',
+    backendUrl: 'https://127.0.0.1:8000',
+    wsUrl: 'wss://127.0.0.1:8000',
     // 信令服务器地址
     // signalUrl: 'wss://127.0.0.1:8001',
     userInfo: (sessionStorage.getItem('userInfo') && JSON.parse(sessionStorage.getItem('userInfo'))) || {},

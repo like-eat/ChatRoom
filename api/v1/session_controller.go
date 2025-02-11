@@ -39,7 +39,7 @@ func GetUserSessionList(c *gin.Context) {
 	JsonBack(c, message, ret, sessionList)
 }
 
-// GetGroupSessionList 获取用户群聊列表
+// GetGroupSessionList 获取群聊会话列表
 func GetGroupSessionList(c *gin.Context) {
 	var getGroupListReq request.OwnlistRequest
 	if err := c.BindJSON(&getGroupListReq); err != nil {
@@ -65,7 +65,7 @@ func DeleteSession(c *gin.Context) {
 		})
 		return
 	}
-	message, ret := gorm.SessionService.DeleteSession(deleteSessionReq.SessionId)
+	message, ret := gorm.SessionService.DeleteSession(deleteSessionReq.OwnerId, deleteSessionReq.SessionId)
 	JsonBack(c, message, ret, nil)
 }
 

@@ -69,6 +69,9 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, "", -1
 	}
+	//if err := myredis.DelKeysWithPattern("group_session_list_" + req.SendId); err != nil {
+	//	zlog.Error(err.Error())
+	//}
 	return "会话创建成功", session.Uuid, 0
 }
 
@@ -126,13 +129,13 @@ func (s *sessionService) OpenSession(req request.OpenSessionRequest) (string, st
 					return s.CreateSession(createReq)
 				}
 			}
-			rspString, err := json.Marshal(session)
-			if err != nil {
-				zlog.Error(err.Error())
-			}
-			if err := myredis.SetKeyEx("session_"+req.SendId+"_"+req.ReceiveId+"_"+session.Uuid, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-				zlog.Error(err.Error())
-			}
+			//rspString, err := json.Marshal(session)
+			//if err != nil {
+			//	zlog.Error(err.Error())
+			//}
+			//if err := myredis.SetKeyEx("session_"+req.SendId+"_"+req.ReceiveId+"_"+session.Uuid, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+			//	zlog.Error(err.Error())
+			//}
 			return "会话创建成功", session.Uuid, 0
 		} else {
 			zlog.Error(err.Error())
@@ -211,13 +214,13 @@ func (s *sessionService) GetGroupSessionList(ownerId string) (string, []respond.
 					})
 				}
 			}
-			rspString, err := json.Marshal(sessionListRsp)
-			if err != nil {
-				zlog.Error(err.Error())
-			}
-			if err := myredis.SetKeyEx("group_session_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-				zlog.Error(err.Error())
-			}
+			//rspString, err := json.Marshal(sessionListRsp)
+			//if err != nil {
+			//	zlog.Error(err.Error())
+			//}
+			//if err := myredis.SetKeyEx("group_session_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+			//	zlog.Error(err.Error())
+			//}
 			return "获取成功", sessionListRsp, 0
 		} else {
 			zlog.Error(err.Error())
@@ -232,7 +235,7 @@ func (s *sessionService) GetGroupSessionList(ownerId string) (string, []respond.
 }
 
 // DeleteSession 删除会话
-func (s *sessionService) DeleteSession(sessionId string) (string, int) {
+func (s *sessionService) DeleteSession(ownerId, sessionId string) (string, int) {
 
 	var session model.Session
 	if res := dao.GormDB.Where("uuid = ?", sessionId).Find(&session); res.Error != nil {
@@ -245,8 +248,11 @@ func (s *sessionService) DeleteSession(sessionId string) (string, int) {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	if err := myredis.DelKeysWithSuffix(sessionId); err != nil {
-		zlog.Error(err.Error())
-	}
+	//if err := myredis.DelKeysWithSuffix(sessionId); err != nil {
+	//	zlog.Error(err.Error())
+	//}
+	//if err := myredis.DelKeysWithPattern("group_session_list_" + ownerId); err != nil {
+	//	zlog.Error(err.Error())
+	//}
 	return "删除成功", 0
 }

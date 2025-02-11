@@ -225,6 +225,7 @@ export default {
       data.fileList = [];
       data.cnt = 0;
       data.updateInfo.uuid = data.userInfo.uuid;
+      store.commit("setUserInfo", data.userInfo);
       try {
         const rsp = await axios.post(
           store.state.backendUrl + "/user/updateUserInfo",

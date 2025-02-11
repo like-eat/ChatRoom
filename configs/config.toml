@@ -1,7 +1,7 @@
 [mainConfig]
 appName = "your app name"
 host = "127.0.0.1"
-port = 8080
+port = 8000
 
 [mysqlConfig]
 host = "127.0.0.1"
@@ -26,6 +26,16 @@ templateCode = "SMS_154950909"
 logPath = "your log path"
 
 [kafkaConfig]
-messageMode = "channel" # 消息模式 channel or kafka
+messageMode = "channel"# 消息模式 channel or kafka
+hostPort = "127.0.0.1:9092" # "127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094" 多个kafka服务器
+loginTopic = "login"
+chatTopic = "chat_message"
+logoutTopic = "logout"
+partition = 0 # kafka partition
+timeout = 1 # 单位秒
+
+[staticSrcConfig]
+staticAvatarPath = "./static/avatars"
+staticFilePath = "./static/files"
 
 

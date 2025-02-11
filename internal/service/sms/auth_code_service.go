@@ -6,7 +6,7 @@ import (
 	dysmsapi20170525 "github.com/alibabacloud-go/dysmsapi-20170525/v4/client"
 	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
-	"kama_chat_server/config"
+	"kama_chat_server/internal/config"
 	"kama_chat_server/internal/service/redis"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
