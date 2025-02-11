@@ -68,13 +68,13 @@ func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUs
 					})
 				}
 			}
-			//rspString, err := json.Marshal(userListRsp)
-			//if err != nil {
-			//	zlog.Error(err.Error())
-			//}
-			//if err := myredis.SetKeyEx("contact_user_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-			//	zlog.Error(err.Error())
-			//}
+			rspString, err := json.Marshal(userListRsp)
+			if err != nil {
+				zlog.Error(err.Error())
+			}
+			if err := myredis.SetKeyEx("contact_user_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+				zlog.Error(err.Error())
+			}
 			return "获取用户列表成功", userListRsp, 0
 		} else {
 			zlog.Error(err.Error())
@@ -129,13 +129,13 @@ func (u *userContactService) LoadMyJoinedGroup(ownerId string) (string, []respon
 					Avatar:    group.Avatar,
 				})
 			}
-			//rspString, err := json.Marshal(groupListRsp)
-			//if err != nil {
-			//	zlog.Error(err.Error())
-			//}
-			//if err := myredis.SetKeyEx("my_joined_group_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-			//	zlog.Error(err.Error())
-			//}
+			rspString, err := json.Marshal(groupListRsp)
+			if err != nil {
+				zlog.Error(err.Error())
+			}
+			if err := myredis.SetKeyEx("my_joined_group_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+				zlog.Error(err.Error())
+			}
 			return "获取加入群成功", groupListRsp, 0
 		} else {
 			zlog.Error(err.Error())
@@ -240,9 +240,9 @@ func (u *userContactService) DeleteContact(ownerId, contactId string) (string, i
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	//if err := myredis.DelKeysWithPattern("contact_user_list_" + ownerId); err != nil {
-	//	zlog.Error(err.Error())
-	//}
+	if err := myredis.DelKeysWithPattern("contact_user_list_" + ownerId); err != nil {
+		zlog.Error(err.Error())
+	}
 	return "删除联系人成功", 0
 }
 
@@ -466,7 +466,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 			zlog.Error(res.Error.Error())
 			return constants.SYSTEM_ERROR, -1
 		}
-		if err := myredis.DelKeysWithPattern("my_joined_group_list_" + ownerId); err != nil {
+		if err := myredis.DelKeysWithPattern("contact_user_list_" + ownerId); err != nil {
 			zlog.Error(err.Error())
 		}
 		return "已添加该联系人", 0
