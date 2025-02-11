@@ -89,7 +89,7 @@ staticFilePath = "./static/files"
 
 通过goland来运行项目，你可以看到如下输出：
 
-![image-20250211114212775](C:\Users\HP\AppData\Roaming\Typora\typora-user-images\image-20250211114212775.png)
+![image-20250211114212775](docs/image/1.png)
 
 
 
@@ -139,7 +139,7 @@ yarn serve
 
 `yarn serve` 命令会调用 Vue CLI 的开发服务器，它会编译项目代码，并在本地启动一个开发服务器。启动成功后，你会在命令行中看到类似以下的输出：
 
-![image-20250211114114697](C:\Users\HP\AppData\Roaming\Typora\typora-user-images\image-20250211114114697.png)
+![image-20250211114114697](docs/image/2.)
 
 ### 停止项目
 
