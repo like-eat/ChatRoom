@@ -80,6 +80,7 @@ export default {
           ElMessage.error("请输入有效的手机号码。");
           return;
         }
+	console.log(store.state.backendUrl, store.state.wsUrl);
         const response = await axios.post(
           store.state.backendUrl + "/login",
           data.loginData

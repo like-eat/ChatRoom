@@ -209,7 +209,6 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 	//if err := chat.NewClientInit(c, newUser.Uuid); err != nil {
 	//	return "", err
 	//}
-	newUser.LastOnlineAt = time.Now()
 	registerRsp := &respond.RegisterRespond{
 		Uuid:      newUser.Uuid,
 		Telephone: newUser.Telephone,

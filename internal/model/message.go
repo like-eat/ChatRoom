@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -20,7 +21,7 @@ type Message struct {
 	FileSize   string    `gorm:"column:file_size;type:char(20);comment:文件大小"`
 	Status     int8      `gorm:"column:status;not null;comment:状态，0.未发送，1.已发送"`
 	CreatedAt  time.Time `gorm:"column:created_at;not null;comment:创建时间"`
-	SendAt     time.Time `gorm:"column:send_at;comment:发送时间"`
+	SendAt     sql.NullTime `gorm:"column:send_at;comment:发送时间"`
 	AVdata     string    `gorm:"column:av_data;comment:通话传递数据"`
 }
 
