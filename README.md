@@ -323,6 +323,9 @@ sudo systemctl enable kama_chat_backend
 echo "Deployment complete!"
 ```
 
+
+在Ubuntu22.04云服务器上执行该脚本，它就会自动部署相关的依赖，并把go后端和vue前端部署到对应的位置，之后的访问可以通过https://xxxxx:443去访问。如果在前端访问后端的时候报错“NetWork error”时，可能后端还没部署好，可以重启一下。
+
 # 项目结构
 
 ## 后端
@@ -474,7 +477,6 @@ web/chat-server/
 └── vue.config.js
 ```
 
-在Ubuntu22.04云服务器上执行该脚本，它就会自动部署相关的依赖，并把go后端和vue前端部署到对应的位置，之后的访问可以通过https://xxxxx:443去访问。如果在前端访问后端的时候报错“NetWork error”时，可能后端还没部署好，可以重启一下。
 
 # docs
 
