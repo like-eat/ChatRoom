@@ -1,6 +1,6 @@
 [mainConfig]
 appName = "your app name"
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8000
 
 [mysqlConfig]
@@ -13,7 +13,7 @@ databaseName = "your database name"
 [redisConfig]
 host = "127.0.0.1"
 port = 6379
-password = "123456"
+password = ""
 db = 0
 
 [authCodeConfig]
@@ -37,5 +37,3 @@ timeout = 1 # 单位秒
 [staticSrcConfig]
 staticAvatarPath = "./static/avatars"
 staticFilePath = "./static/files"
-
-
