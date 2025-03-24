@@ -1038,18 +1038,7 @@ export default {
       isAVContainerModalVisible: false,
       videoPlayer: null,
       rtcPeerConn: null,
-      ICE_CFG: {
-        iceServers: [
-          {
-            urls: "stun:stun.l.google.com:19302", // Google 的公共 STUN 服务器
-          },
-          {
-            urls: "turn:your_server_ip:3478", // 替换为你的 TURN 服务器地址
-            username: "your_username", // 替换为你的 TURN 服务器用户名
-	    credential: "your_password", // 替换为你的 TURN 服务器密码
-	  },
-        ],
-      },
+      ICE_CFG: {},
       localStream: null,
       remoteStream: null,
       remoteVideo: null,
