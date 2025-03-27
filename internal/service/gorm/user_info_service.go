@@ -11,7 +11,7 @@ import (
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
 	myredis "kama_chat_server/internal/service/redis"
-	"kama_chat_server/internal/service/sms/local"
+	"kama_chat_server/internal/service/sms"
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
@@ -140,8 +140,7 @@ func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respon
 
 // SendSmsCode 发送短信验证码 - 验证码登录
 func (u *userInfoService) SendSmsCode(telephone string) (string, int) {
-	// 如果是从github上拉下来的，默认没有local包，VerificationCode函数应该在sms包中
-	return local.VerificationCode(telephone)
+	return sms.VerificationCode(telephone)
 }
 
 // checkTelephoneExist 检查手机号是否存在

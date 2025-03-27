@@ -37,3 +37,6 @@ web/chat-server/src/assets/cert/*
 
 internal/service/kafka/start.bat
 
+*.sh
+
+*.ext
