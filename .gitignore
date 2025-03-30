@@ -31,8 +31,6 @@ static/avatars/*
 
 static/files/*
 
-pkg/ssl/*
-
 web/chat-server/src/assets/cert/*
 
 internal/service/kafka/start.bat
