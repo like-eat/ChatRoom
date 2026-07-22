@@ -1,18 +1,18 @@
 [mainConfig]
-appName = "your app name"
-host = "0.0.0.0"
+appName = "KamaChat"
+host = "127.0.0.1"
 port = 8000
 
 [mysqlConfig]
 host = "127.0.0.1"
-port = 3306
+port = 13306
 user = "root"
-password = "123456"
-databaseName = "your database name"
+password = "kama_chat"
+databaseName = "kama_chat"
 
 [redisConfig]
 host = "127.0.0.1"
-port = 6379
+port = 16379
 password = ""
 db = 0
 
@@ -21,12 +21,21 @@ accessKeyID = "your accessKeyID in alibaba cloud"
 accessKeySecret = "your accessKeySecret in alibaba cloud"
 signName = "阿里云短信测试"
 templateCode = "SMS_154950909"
+devMode = true
+devCode = "123456"
+
+[jwtConfig]
+# 仅用于本地开发。生产环境必须通过 KAMA_CHAT_JWT_SECRET 设置高熵随机密钥。
+secret = "kama-chat-local-dev-secret-change-before-production-2026"
+issuer = "kama-chat"
+audience = "kama-chat-web"
+expireHours = 24
 
 [logConfig]
-logPath = "your log path"
+logPath = "./logs/kama-chat.log"
 
 [kafkaConfig]
-messageMode = "channel"# 消息模式 channel or kafka
+messageMode = "channel" # 消息模式 channel or kafka
 hostPort = "127.0.0.1:9092" # "127.0.0.1:9092,127.0.0.1:9093,127.0.0.1:9094" 多个kafka服务器
 loginTopic = "login"
 chatTopic = "chat_message"

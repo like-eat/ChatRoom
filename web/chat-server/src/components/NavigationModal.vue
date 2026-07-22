@@ -116,7 +116,7 @@
 
 <script>
 import { useRouter } from "vue-router";
-import { useStore } from "vuex";
+import { useAppStore } from "@/store";
 import { ElMessage } from "element-plus";
 import { reactive, toRefs } from "vue";
 import axios from "axios";
@@ -124,9 +124,9 @@ export default {
   name: "NavigationModal",
   setup() {
     const router = useRouter();
-    const store = useStore();
+    const store = useAppStore();
     const data = reactive({
-      userInfo: store.state.userInfo,
+      userInfo: store.userInfo,
     });
 
     const handleToContactList = () => {
@@ -142,20 +142,23 @@ export default {
       router.push("/manager");
     };
     const logout = async () => {
-      store.commit("cleanUserInfo");
       const req = {
         owner_id: data.userInfo.uuid,
       };
-      const rsp = await axios.post(
-        store.state.backendUrl + "/user/wsLogout",
-        req
-      );
-      if (rsp.data.code == 200) {
+	  try {
+		const rsp = await axios.post(
+		  store.backendUrl + "/user/wsLogout",
+		  req
+		);
+		if (rsp.data.code == 200) {
+		  ElMessage.success(rsp.data.message);
+		} else {
+		  ElMessage.error(rsp.data.message);
+		}
+	  } finally {
+		store.clearAuth();
         router.push("/login");
-        ElMessage.success(rsp.data.message);
-      } else {
-        ElMessage.error(rsp.data.message);
-      }
+	  }
     };
     const handleToOwnInfo = () => {
       router.push("/chat/owninfo");

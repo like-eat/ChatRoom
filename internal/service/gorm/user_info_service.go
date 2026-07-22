@@ -10,6 +10,7 @@ import (
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/dto/respond"
 	"kama_chat_server/internal/model"
+	"kama_chat_server/internal/service/auth"
 	myredis "kama_chat_server/internal/service/redis"
 	"kama_chat_server/internal/service/sms"
 	"kama_chat_server/pkg/constants"
@@ -53,7 +54,6 @@ func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) int8 {
 
 // Login 登录
 func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond.LoginRespond, int) {
-	password := loginReq.Password
 	var user model.UserInfo
 	res := dao.GormDB.First(&user, "telephone = ?", loginReq.Telephone)
 	if res.Error != nil {
@@ -65,13 +65,42 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, nil, -1
 	}
-	if user.Password != password {
+	if user.Status != user_status_enum.NORMAL {
+		message := "该账号已被禁用，请联系管理员"
+		zlog.Info(message)
+		return message, nil, -2
+	}
+
+	passwordValid, needsUpgrade, err := auth.VerifyPassword(user.Password, loginReq.Password)
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+	if !passwordValid {
 		message := "密码不正确，请重试"
 		zlog.Error(message)
 		return message, nil, -2
 	}
+	if needsUpgrade {
+		hashedPassword, err := auth.HashPassword(loginReq.Password)
+		if err != nil {
+			zlog.Error(err.Error())
+			return constants.SYSTEM_ERROR, nil, -1
+		}
+		if err := dao.GormDB.Model(&model.UserInfo{}).Where("uuid = ?", user.Uuid).Update("password", hashedPassword).Error; err != nil {
+			zlog.Error(err.Error())
+			return constants.SYSTEM_ERROR, nil, -1
+		}
+	}
+
+	token, err := auth.GenerateToken(user.Uuid, user.IsAdmin)
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
 
 	loginRsp := &respond.LoginRespond{
+		Token:     token,
 		Uuid:      user.Uuid,
 		Telephone: user.Telephone,
 		Nickname:  user.Nickname,
@@ -102,6 +131,11 @@ func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respon
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, nil, -1
 	}
+	if user.Status != user_status_enum.NORMAL {
+		message := "该账号已被禁用，请联系管理员"
+		zlog.Info(message)
+		return message, nil, -2
+	}
 
 	key := "auth_code_" + req.Telephone
 	code, err := myredis.GetKey(key)
@@ -120,7 +154,14 @@ func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respon
 		}
 	}
 
+	token, err := auth.GenerateToken(user.Uuid, user.IsAdmin)
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+
 	loginRsp := &respond.LoginRespond{
+		Token:     token,
 		Uuid:      user.Uuid,
 		Telephone: user.Telephone,
 		Nickname:  user.Nickname,
@@ -186,7 +227,12 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 	var newUser model.UserInfo
 	newUser.Uuid = "U" + random.GetNowAndLenRandomString(11)
 	newUser.Telephone = registerReq.Telephone
-	newUser.Password = registerReq.Password
+	hashedPassword, err := auth.HashPassword(registerReq.Password)
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
+	newUser.Password = hashedPassword
 	newUser.Nickname = registerReq.Nickname
 	newUser.Avatar = "https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
 	newUser.CreatedAt = time.Now()
@@ -208,7 +254,13 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 	//if err := chat.NewClientInit(c, newUser.Uuid); err != nil {
 	//	return "", err
 	//}
+	token, err := auth.GenerateToken(newUser.Uuid, newUser.IsAdmin)
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
+	}
 	registerRsp := &respond.RegisterRespond{
+		Token:     token,
 		Uuid:      newUser.Uuid,
 		Telephone: newUser.Telephone,
 		Nickname:  newUser.Nickname,

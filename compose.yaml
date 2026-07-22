@@ -1,0 +1,39 @@
+name: kama-chat
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: kama-chat-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: kama_chat
+      MYSQL_DATABASE: kama_chat
+      TZ: Asia/Shanghai
+    ports:
+      - "13306:3306"
+    volumes:
+      - kama-chat-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pkama_chat"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.2.0
+    container_name: kama-chat-redis
+    restart: unless-stopped
+    ports:
+      - "16379:6379"
+    volumes:
+      - kama-chat-redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  kama-chat-mysql-data:
+  kama-chat-redis-data:

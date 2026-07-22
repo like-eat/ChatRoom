@@ -1,9 +1,6 @@
 .chat-wrap {
     height: 100vh;
-    background-image: url("@/assets/img/chat_server_background.jpg");
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
+    background-color: #f5f0e6;
 }
 
 .chat-window {
@@ -83,8 +80,13 @@
     display: flex;
     align-items: center;
     color: #4e4e4e;
-    width: 50%;
+    flex: 1;
+    min-width: 0;
     height: 100%;
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .chat-input {

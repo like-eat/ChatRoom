@@ -55,7 +55,7 @@
 
 <script>
 import { onMounted, reactive, toRefs } from 'vue';
-import { useStore } from 'vuex';
+import { useAppStore } from '@/store';
 import axios from 'axios';
 export default {
   name: "DeleteUserModal",
@@ -63,7 +63,7 @@ export default {
     isVisible: false,
   },
   setup() {
-    const store = useStore();
+    const store = useAppStore();
     const data = reactive({
       disableGroupTableData: [],
     });
@@ -75,7 +75,7 @@ export default {
     const getGroupInfoList = async () => {
       try {
         const rsp = await axios.post(
-          store.state.backendUrl + "/group/getGroupInfoList"
+          store.backendUrl + "/group/getGroupInfoList"
         );
         data.disableGroupTableData = rsp.data.data;
         console.log(rsp);
@@ -95,7 +95,7 @@ export default {
           uuid_list: data.uuidList,
           status: status,
         };
-        const rsp = await axios.post(store.state.backendUrl + "/group/setGroupsStatus", req);
+        const rsp = await axios.post(store.backendUrl + "/group/setGroupsStatus", req);
         console.log(rsp);
         getGroupInfoList();
       } catch (error) {

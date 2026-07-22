@@ -67,7 +67,7 @@ import { reactive, toRefs } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { useStore } from "vuex";
+import { useAppStore } from "@/store";
 export default {
   name: "smsLogin",
   setup() {
@@ -78,7 +78,7 @@ export default {
       },
     });
     const router = useRouter();
-    const store = useStore();
+    const store = useAppStore();
     const handleSmsLogin = async () => {
       try {
         if (!data.loginData.telephone || !data.loginData.sms_code) {
@@ -90,10 +90,9 @@ export default {
           return;
         }
         const response = await axios.post(
-          store.state.backendUrl + "/user/smsLogin",
+          store.backendUrl + "/user/smsLogin",
           data.loginData
         );
-        console.log(response);
         if (response.data.code == 200) {
           if (response.data.data.status == 1) {
             ElMessage.error("该账号已被封禁，请联系管理员。");
@@ -101,28 +100,14 @@ export default {
           }
           try {
             ElMessage.success(response.data.message);
+			store.setToken(response.data.data.token);
+			delete response.data.data.token;
             if (!response.data.data.avatar.startsWith("http")) {
               response.data.data.avatar =
-                store.state.backendUrl + response.data.data.avatar;
+                store.backendUrl + response.data.data.avatar;
             }
-            store.commit("setUserInfo", response.data.data);
-            // 准备创建websocket连接
-            const wsUrl =
-              store.state.wsUrl + "/wss?client_id=" + response.data.data.uuid;
-            console.log(wsUrl);
-            store.state.socket = new WebSocket(wsUrl);
-            store.state.socket.onopen = () => {
-              console.log("WebSocket连接已打开");
-            };
-            store.state.socket.onmessage = (message) => {
-              console.log("收到消息：", message.data);
-            };
-            store.state.socket.onclose = () => {
-              console.log("WebSocket连接已关闭");
-            };
-            store.state.socket.onerror = () => {
-              console.log("WebSocket连接发生错误");
-            };
+            store.setUserInfo(response.data.data);
+			store.connectSocket();
             router.push("/chat/sessionlist");
           } catch (error) {
             console.log(error);
@@ -158,7 +143,7 @@ export default {
           telephone: data.loginData.telephone,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/user/sendSmsCode",
+          store.backendUrl + "/user/sendSmsCode",
           req
         );
         console.log(rsp);
@@ -189,10 +174,7 @@ export default {
 <style>
 .login-wrap {
   height: 100vh;
-  background-image: url("@/assets/img/chat_server_background.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #f5f0e6;
 }
 
 .login-window {

@@ -943,7 +943,7 @@
 <script>
 import { reactive, toRefs, onMounted, ref, nextTick } from "vue";
 import { useRouter, onBeforeRouteUpdate } from "vue-router";
-import { useStore } from "vuex";
+import { useAppStore } from "@/store";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
 import SmallModal from "@/components/SmallModal.vue";
@@ -960,11 +960,11 @@ export default {
 
   setup() {
     const router = useRouter();
-    const store = useStore();
+    const store = useAppStore();
     const data = reactive({
       chatMessage: "",
       chatName: "",
-      userInfo: store.state.userInfo,
+      userInfo: store.userInfo,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -1019,12 +1019,12 @@ export default {
       scrollbarRef: null,
       addGroupList: [],
       uploadRef: null,
-      uploadPath: store.state.backendUrl + "/message/uploadFile",
+      uploadPath: store.backendUrl + "/message/uploadFile",
       fileList: [],
       uploadAvatarRef: null,
-      uploadAvatarPath: store.state.backendUrl + "/message/uploadAvatar",
+      uploadAvatarPath: store.backendUrl + "/message/uploadAvatar",
       avatarList: [],
-      backendUrl: store.state.backendUrl,
+      backendUrl: store.backendUrl,
       updateGroupInfo: {
         uuid: "",
         avatar: "",
@@ -1057,7 +1057,7 @@ export default {
         await getGroupMessageList();
       }
       console.log(data.sessionId);
-      store.state.socket.onmessage = (jsonMessage) => {
+      store.socket.onmessage = (jsonMessage) => {
         const message = JSON.parse(jsonMessage.data);
         if (message.type != 3) {
           if (
@@ -1148,7 +1148,7 @@ export default {
           await getGroupMessageList();
         }
         console.log(data.sessionId);
-        store.state.socket.onmessage = (jsonMessage) => {
+        store.socket.onmessage = (jsonMessage) => {
           const message = JSON.parse(jsonMessage.data);
           if (message.type != 3) {
             if (
@@ -1232,12 +1232,12 @@ export default {
       try {
         data.getContactInfoReq.contact_id = id;
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/getContactInfo",
+          store.backendUrl + "/contact/getContactInfo",
           data.getContactInfoReq
         );
         if (!rsp.data.data.contact_avatar.startsWith("http")) {
           rsp.data.data.contact_avatar =
-            store.state.backendUrl + rsp.data.data.contact_avatar;
+            store.backendUrl + rsp.data.data.contact_avatar;
         }
         data.contactInfo = rsp.data.data;
         console.log(data.contactInfo);
@@ -1252,7 +1252,7 @@ export default {
           receive_id: contactId,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/session/openSession",
+          store.backendUrl + "/session/openSession",
           req
         );
         data.sessionId = rsp.data.data;
@@ -1266,7 +1266,7 @@ export default {
       try {
         data.createGroupReq.owner_id = data.userInfo.uuid;
         const response = await axios.post(
-          store.state.backendUrl + "/group/createGroup",
+          store.backendUrl + "/group/createGroup",
           data.createGroupReq
         );
       } catch (error) {
@@ -1303,7 +1303,7 @@ export default {
           group_id: data.contactInfo.contact_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/getAddGroupList",
+          store.backendUrl + "/contact/getAddGroupList",
           req
         );
         if (rsp.data.code == 200) {
@@ -1316,7 +1316,7 @@ export default {
             for (let i = 0; i < data.addGroupList.length; i++) {
               if (!data.addGroupList[i].contact_avatar.startsWith("http")) {
                 data.addGroupList[i].contact_avatar =
-                  store.state.backendUrl + data.addGroupList[i].contact_avatar;
+                  store.backendUrl + data.addGroupList[i].contact_avatar;
               }
             }
             data.isAddGroupModalVisible = true;
@@ -1342,14 +1342,14 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const userSessionListRsp = await axios.post(
-          store.state.backendUrl + "/session/getUserSessionList",
+          store.backendUrl + "/session/getUserSessionList",
           data.ownListReq
         );
         if (userSessionListRsp.data.data) {
           for (let i = 0; i < userSessionListRsp.data.data.length; i++) {
             if (!userSessionListRsp.data.data[i].avatar.startsWith("http")) {
               userSessionListRsp.data.data[i].avatar =
-                store.state.backendUrl + userSessionListRsp.data.data[i].avatar;
+                store.backendUrl + userSessionListRsp.data.data[i].avatar;
             }
           }
         }
@@ -1365,14 +1365,14 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const groupSessionListRsp = await axios.post(
-          store.state.backendUrl + "/session/getGroupSessionList",
+          store.backendUrl + "/session/getGroupSessionList",
           data.ownListReq
         );
         if (groupSessionListRsp.data.data) {
           for (let i = 0; i < groupSessionListRsp.data.data.length; i++) {
             if (!groupSessionListRsp.data.data[i].avatar.startsWith("http")) {
               groupSessionListRsp.data.data[i].avatar =
-                store.state.backendUrl +
+                store.backendUrl +
                 groupSessionListRsp.data.data[i].avatar;
             }
           }
@@ -1416,7 +1416,7 @@ export default {
           session_id: data.sessionId,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/session/deleteSession",
+          store.backendUrl + "/session/deleteSession",
           req
         );
         console.log(rsp.data);
@@ -1456,7 +1456,7 @@ export default {
           contact_id: data.contactInfo.contact_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/deleteContact",
+          store.backendUrl + "/contact/deleteContact",
           req
         );
         console.log(rsp.data);
@@ -1496,7 +1496,7 @@ export default {
           contact_id: data.contactInfo.contact_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/blackContact",
+          store.backendUrl + "/contact/blackContact",
           req
         );
         console.log(rsp.data);
@@ -1519,7 +1519,7 @@ export default {
         file_name: "",
         file_type: "",
       };
-      store.state.socket.send(JSON.stringify(chatMessageRequest));
+      store.socket.send(JSON.stringify(chatMessageRequest));
       data.chatMessage = "";
       scrollToBottom();
     };
@@ -1539,7 +1539,7 @@ export default {
         file_type: data.fileList[0].type,
       };
       console.log(chatFileMessageRequest);
-      store.state.socket.send(JSON.stringify(chatFileMessageRequest));
+      store.socket.send(JSON.stringify(chatFileMessageRequest));
       scrollToBottom();
     };
 
@@ -1558,7 +1558,7 @@ export default {
         file_type: data.avatarList[0].type,
       };
       console.log(chatAvatarMessageRequest);
-      store.state.socket.send(JSON.stringify(chatAvatarMessageRequest));
+      store.socket.send(JSON.stringify(chatAvatarMessageRequest));
       scrollToBottom();
     };
 
@@ -1571,14 +1571,14 @@ export default {
         };
         console.log(req);
         const rsp = await axios.post(
-          store.state.backendUrl + "/message/getMessageList",
+          store.backendUrl + "/message/getMessageList",
           req
         );
         if (rsp.data.data) {
           for (let i = 0; i < rsp.data.data.length; i++) {
             if (!rsp.data.data[i].send_avatar.startsWith("http")) {
               rsp.data.data[i].send_avatar =
-                store.state.backendUrl + rsp.data.data[i].send_avatar;
+                store.backendUrl + rsp.data.data[i].send_avatar;
             }
           }
         }
@@ -1598,14 +1598,14 @@ export default {
         };
         console.log(req);
         const rsp = await axios.post(
-          store.state.backendUrl + "/message/getGroupMessageList",
+          store.backendUrl + "/message/getGroupMessageList",
           req
         );
         if (rsp.data.data) {
           for (let i = 0; i < rsp.data.data.length; i++) {
             if (!rsp.data.data[i].send_avatar.startsWith("http")) {
               rsp.data.data[i].send_avatar =
-                store.state.backendUrl + rsp.data.data[i].send_avatar;
+                store.backendUrl + rsp.data.data[i].send_avatar;
             }
           }
         }
@@ -1631,7 +1631,7 @@ export default {
           contact_id: contactId,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/passContactApply",
+          store.backendUrl + "/contact/passContactApply",
           req
         );
         console.log(rsp);
@@ -1655,7 +1655,7 @@ export default {
           contact_id: contactId,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/refuseContactApply",
+          store.backendUrl + "/contact/refuseContactApply",
           req
         );
         console.log(rsp);
@@ -1679,7 +1679,7 @@ export default {
           group_id: data.contactInfo.contact_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/group/leaveGroup",
+          store.backendUrl + "/group/leaveGroup",
           req
         );
         if (rsp.data.code == 200) {
@@ -1705,7 +1705,7 @@ export default {
           group_id: data.contactInfo.contact_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/group/dismissGroup",
+          store.backendUrl + "/group/dismissGroup",
           req
         );
         if (rsp.data.code == 200) {
@@ -1727,7 +1727,7 @@ export default {
     const handleUploadSuccess = () => {
       ElMessage.success("文件上传成功");
       sendFileMessage(
-        store.state.backendUrl + "/static/files/" + data.fileList[0].name
+        store.backendUrl + "/static/files/" + data.fileList[0].name
       );
       data.fileList = [];
     };
@@ -1769,7 +1769,7 @@ export default {
     const downloadFile = async (fileName) => {
       try {
         const rsp = await axios.get(
-          store.state.backendUrl + "/static/files/" + fileName,
+          store.backendUrl + "/static/files/" + fileName,
           {
             responseType: "blob",
           }
@@ -1818,7 +1818,7 @@ export default {
         }
         data.updateGroupInfo.uuid = data.contactInfo.contact_id;
         const rsp = await axios.post(
-          store.state.backendUrl + "/group/updateGroupInfo",
+          store.backendUrl + "/group/updateGroupInfo",
           data.updateGroupInfo
         );
         if (rsp.data.code == 200) {
@@ -1843,7 +1843,7 @@ export default {
       };
       try {
         const rsp = await axios.post(
-          store.state.backendUrl + "/group/getGroupMemberList",
+          store.backendUrl + "/group/getGroupMemberList",
           req
         );
         console.log(rsp);
@@ -1851,7 +1851,7 @@ export default {
           for (let i = 0; i < rsp.data.data.length; i++) {
             if (!rsp.data.data[i].avatar.startsWith("http")) {
               rsp.data.data[i].avatar =
-                store.state.backendUrl + rsp.data.data[i].avatar;
+                store.backendUrl + rsp.data.data[i].avatar;
             }
           }
           data.groupMemberList = rsp.data.data;
@@ -1889,7 +1889,7 @@ export default {
       console.log(data.contactInfo);
       try {
         const rsp = await axios.post(
-          store.state.backendUrl + "/group/removeGroupMembers",
+          store.backendUrl + "/group/removeGroupMembers",
           req
         );
         console.log(rsp);
@@ -1947,7 +1947,7 @@ export default {
             av_data: JSON.stringify(proxyCandidateMessage),
           };
           console.log(rtcMessageRequest);
-          store.state.socket.send(JSON.stringify(rtcMessageRequest));
+          store.socket.send(JSON.stringify(rtcMessageRequest));
         }
       };
       data.rtcPeerConn.oniceconnectionstatechange = (event) => {
@@ -2044,7 +2044,7 @@ export default {
             file_type: "",
             av_data: JSON.stringify(proxySdpMessage),
           };
-          store.state.socket.send(JSON.stringify(rtcMessageRequest));
+          store.socket.send(JSON.stringify(rtcMessageRequest));
         })
         .catch((err) => {
           console.log(
@@ -2080,7 +2080,7 @@ export default {
             file_type: "",
             av_data: JSON.stringify(proxySdpMessage),
           };
-          store.state.socket.send(JSON.stringify(rtcMessageRequest));
+          store.socket.send(JSON.stringify(rtcMessageRequest));
         })
         .catch((err) => {
           console.log(
@@ -2129,7 +2129,7 @@ export default {
           file_type: "",
           av_data: JSON.stringify(startCallMessage),
         };
-        store.state.socket.send(JSON.stringify(rtcMessageRequest));
+        store.socket.send(JSON.stringify(rtcMessageRequest));
       } else {
         var receiveCallMessage = {
           messageId: "PROXY",
@@ -2149,7 +2149,7 @@ export default {
           file_type: "",
           av_data: JSON.stringify(receiveCallMessage),
         };
-        store.state.socket.send(JSON.stringify(rtcMessageRequest));
+        store.socket.send(JSON.stringify(rtcMessageRequest));
         data.ableToReceiveOrRejectCall = false;
       }
     };
@@ -2186,7 +2186,7 @@ export default {
         file_type: "",
         av_data: JSON.stringify(proxyPeerLeaveMessage),
       };
-      store.state.socket.send(JSON.stringify(rtcMessageRequest));
+      store.socket.send(JSON.stringify(rtcMessageRequest));
     };
 
     const endCall = () => {
@@ -2263,7 +2263,7 @@ export default {
         file_type: "",
         av_data: JSON.stringify(rejectCallMessage),
       };
-      store.state.socket.send(JSON.stringify(rtcMessageRequest));
+      store.socket.send(JSON.stringify(rtcMessageRequest));
       data.ableToReceiveOrRejectCall = false;
     };
 

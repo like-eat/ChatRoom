@@ -51,7 +51,7 @@
 
 <script>
 import { onMounted, reactive, toRefs } from 'vue';
-import { useStore } from 'vuex';
+import { useAppStore } from '@/store';
 import axios from 'axios';
 export default {
   name: "DeleteUserModal",
@@ -59,7 +59,7 @@ export default {
     isVisible: false,
   },
   setup() {
-    const store = useStore();
+    const store = useAppStore();
     const data = reactive({
       deleteUserTableData: [],
     });
@@ -71,10 +71,10 @@ export default {
     const getUserList = async () => {
       try {
         const req = {
-          owner_id: store.state.userInfo.uuid,
+          owner_id: store.userInfo.uuid,
         }
         const rsp = await axios.post(
-          store.state.backendUrl + "/user/getUserInfoList", req
+          store.backendUrl + "/user/getUserInfoList", req
         );
         data.deleteUserTableData = rsp.data.data;
         console.log(rsp);
@@ -93,7 +93,7 @@ export default {
         const req = {
           uuid_list: data.uuidList,
         };
-        const rsp = await axios.post(store.state.backendUrl + "/user/deleteUsers", req);
+        const rsp = await axios.post(store.backendUrl + "/user/deleteUsers", req);
         console.log(rsp);
         getUserList();
       } catch (error) {

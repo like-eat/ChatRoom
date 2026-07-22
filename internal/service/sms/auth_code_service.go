@@ -38,11 +38,6 @@ func createClient() (result *dysmsapi20170525.Client, err error) {
 }
 
 func VerificationCode(telephone string) (string, int) {
-	client, err := createClient()
-	if err != nil {
-		zlog.Error(err.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
 	key := "auth_code_" + telephone
 	code, err := redis.GetKey(key)
 	if err != nil {
@@ -56,6 +51,26 @@ func VerificationCode(telephone string) (string, int) {
 		zlog.Info(message)
 		return message, -2
 	}
+
+	conf := config.GetConfig().AuthCodeConfig
+	if conf.DevMode {
+		code = conf.DevCode
+		if code == "" {
+			code = "123456"
+		}
+		if err := redis.SetKeyEx(key, code, time.Minute); err != nil {
+			zlog.Error(err.Error())
+			return constants.SYSTEM_ERROR, -1
+		}
+		return "本地开发验证码已生成，请使用 " + code, 0
+	}
+
+	client, err := createClient()
+	if err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, -1
+	}
+
 	// 验证码过期，重新生成
 	code = strconv.Itoa(random.GetRandomInt(6))
 	fmt.Println(code)
@@ -65,8 +80,8 @@ func VerificationCode(telephone string) (string, int) {
 		return constants.SYSTEM_ERROR, -1
 	}
 	sendSmsRequest := &dysmsapi20170525.SendSmsRequest{
-		SignName:      tea.String("阿里云短信测试"),
-		TemplateCode:  tea.String("SMS_154950909"), // 短信模板
+		SignName:      tea.String(conf.SignName),
+		TemplateCode:  tea.String(conf.TemplateCode),
 		PhoneNumbers:  tea.String(telephone),
 		TemplateParam: tea.String("{\"code\":\"" + code + "\"}"),
 	}

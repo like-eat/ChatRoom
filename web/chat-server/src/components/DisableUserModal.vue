@@ -65,7 +65,7 @@
 <script>
 import { ElTable } from "element-plus";
 import { onMounted, reactive, toRefs } from "vue";
-import { useStore } from "vuex";
+import { useAppStore } from "@/store";
 import axios from "axios";
 import { useRouter } from 'vue-router';
 export default {
@@ -74,7 +74,7 @@ export default {
     isVisible: false,
   },
   setup() {
-    const store = useStore();
+    const store = useAppStore();
     const router = useRouter();
     const data = reactive({
       disableUserTableData: [],
@@ -86,10 +86,10 @@ export default {
     const getUserList = async () => {
       try {
         const req = {
-          owner_id: store.state.userInfo.uuid,
+          owner_id: store.userInfo.uuid,
         }
         const rsp = await axios.post(
-          store.state.backendUrl + "/user/getUserInfoList", req
+          store.backendUrl + "/user/getUserInfoList", req
         );
         data.disableUserTableData = rsp.data.data;
         console.log(rsp);
@@ -109,7 +109,7 @@ export default {
           uuid_list: data.uuidList,
         }
         const rsp = await axios.post(
-          store.state.backendUrl + "/user/ableUsers", req);
+          store.backendUrl + "/user/ableUsers", req);
         console.log(rsp);
         // router.go(0);
         getUserList();
@@ -124,7 +124,7 @@ export default {
           uuid_list: data.uuidList,
         }
         const rsp = await axios.post(
-          store.state.backendUrl + "/user/disableUsers", req);
+          store.backendUrl + "/user/disableUsers", req);
         console.log(rsp);
         // router.go(0);
         getUserList();

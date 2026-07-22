@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/service/gorm"
@@ -21,7 +20,6 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
-	fmt.Println(registerReq)
 	message, userInfo, ret := gorm.UserInfoService.Register(registerReq)
 	JsonBack(c, message, ret, userInfo)
 }

@@ -27,6 +27,8 @@ type MessageBack struct {
 type Client struct {
 	Conn     *websocket.Conn
 	Uuid     string
+	Nickname string
+	Avatar   string
 	SendTo   chan []byte       // 给server端
 	SendBack chan *MessageBack // 给前端
 }
@@ -34,6 +36,7 @@ type Client struct {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  2048,
 	WriteBufferSize: 2048,
+	Subprotocols:    []string{"kama-chat"},
 	// 检查连接的Origin头
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -57,6 +60,17 @@ func (c *Client) Read() {
 			var message = request.ChatMessageRequest{}
 			if err := json.Unmarshal(jsonMessage, &message); err != nil {
 				zlog.Error(err.Error())
+				continue
+			}
+			// The authenticated WebSocket connection is the source of truth for
+			// sender identity. Never trust sender fields supplied by the browser.
+			message.SendId = c.Uuid
+			message.SendName = c.Nickname
+			message.SendAvatar = c.Avatar
+			jsonMessage, err = json.Marshal(message)
+			if err != nil {
+				zlog.Error(err.Error())
+				continue
 			}
 			log.Println("接受到消息为: ", jsonMessage)
 			if messageMode == "channel" {
@@ -109,15 +123,18 @@ func (c *Client) Write() {
 }
 
 // NewClientInit 当接受到前端有登录消息时，会调用该函数
-func NewClientInit(c *gin.Context, clientId string) {
+func NewClientInit(c *gin.Context, clientId, nickname, avatar string) {
 	kafkaConfig := config.GetConfig().KafkaConfig
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		zlog.Error(err.Error())
+		return
 	}
 	client := &Client{
 		Conn:     conn,
 		Uuid:     clientId,
+		Nickname: nickname,
+		Avatar:   avatar,
 		SendTo:   make(chan []byte, constants.CHANNEL_SIZE),
 		SendBack: make(chan *MessageBack, constants.CHANNEL_SIZE),
 	}

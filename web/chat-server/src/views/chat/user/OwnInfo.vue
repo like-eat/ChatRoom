@@ -128,7 +128,7 @@
 
 <script>
 import { reactive, toRefs, onMounted, ref } from "vue";
-import { useStore } from "vuex";
+import { useAppStore } from "@/store";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import Modal from "@/components/Modal.vue";
@@ -148,9 +148,9 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const store = useStore();
+    const store = useAppStore();
     const data = reactive({
-      userInfo: store.state.userInfo,
+      userInfo: store.userInfo,
       updateInfo: {
         uuid: "",
         nickname: "",
@@ -164,7 +164,7 @@ export default {
         owner_id: "",
       },
       uploadRef: null,
-      uploadPath: store.state.backendUrl + "/message/uploadAvatar",
+      uploadPath: store.backendUrl + "/message/uploadAvatar",
       fileList: [],
       cnt: 0,
     });
@@ -207,8 +207,8 @@ export default {
         try {
           data.updateInfo.avatar = "/static/avatars/" + data.fileList[0].name;
           console.log(data.updateInfo.avatar);
-          data.userInfo.avatar = store.state.backendUrl + data.updateInfo.avatar;
-          store.commit("setUserInfo", data.userInfo);
+          data.userInfo.avatar = store.backendUrl + data.updateInfo.avatar;
+          store.setUserInfo(data.userInfo);
           data.uploadRef.submit();
         } catch (error) {
           console.log(error);
@@ -225,10 +225,10 @@ export default {
       data.fileList = [];
       data.cnt = 0;
       data.updateInfo.uuid = data.userInfo.uuid;
-      store.commit("setUserInfo", data.userInfo);
+      store.setUserInfo(data.userInfo);
       try {
         const rsp = await axios.post(
-          store.state.backendUrl + "/user/updateUserInfo",
+          store.backendUrl + "/user/updateUserInfo",
           data.updateInfo
         );
         console.log(rsp);

@@ -1,6 +1,7 @@
 package respond
 
 type RegisterRespond struct {
+	Token     string `json:"token"`
 	Uuid      string `json:"uuid"`
 	Nickname  string `json:"nickname"`
 	Telephone string `json:"telephone"`

@@ -7,6 +7,7 @@ import (
 	"kama_chat_server/internal/config"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 )
 
@@ -22,7 +23,13 @@ func init() {
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
 	conf := config.GetConfig()
 	logPath = conf.LogPath
-	file, _ := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 644)
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		panic(err)
+	}
+	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
 	fileWriteSyncer := zapcore.AddSync(file)
 	core := zapcore.NewTee(
 		zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), zapcore.DebugLevel),

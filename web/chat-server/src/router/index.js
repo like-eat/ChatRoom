@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import store from '../store/index.js'
+import { pinia, useAppStore } from '../store/index.js'
 
 const routes = [
   {
@@ -54,7 +54,8 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  if (!store.state.userInfo.uuid) {
+  const store = useAppStore(pinia)
+  if (!store.userInfo.uuid || !store.token) {
     if (to.path === '/login' || to.path === '/register' || to.path === '/smsLogin') {
       next()
       return

@@ -245,7 +245,7 @@
 import { reactive, toRefs, onMounted, ref } from "vue";
 import { onBeforeRouteUpdate, useRouter } from "vue-router";
 import { ElMessageBox, ElMessage } from "element-plus";
-import { useStore } from "vuex";
+import { useAppStore } from "@/store";
 import axios from "axios";
 import Modal from "@/components/Modal.vue";
 import NavigationModal from "@/components/NavigationModal.vue";
@@ -258,11 +258,11 @@ export default {
 
   setup() {
     const router = useRouter();
-    const store = useStore();
+    const store = useAppStore();
     const data = reactive({
       chatMessage: "",
       chatName: "",
-      userInfo: store.state.userInfo,
+      userInfo: store.userInfo,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -293,14 +293,14 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const userSessionListRsp = await axios.post(
-          store.state.backendUrl + "/session/getUserSessionList",
+          store.backendUrl + "/session/getUserSessionList",
           data.ownListReq
         );
         if (userSessionListRsp.data.data) {
           for (let i = 0; i < userSessionListRsp.data.data.length; i++) {
             if (!userSessionListRsp.data.data[i].avatar.startsWith("http")) {
               userSessionListRsp.data.data[i].avatar =
-                store.state.backendUrl + userSessionListRsp.data.data[i].avatar;
+                store.backendUrl + userSessionListRsp.data.data[i].avatar;
             }
           }
         }
@@ -316,14 +316,14 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const groupSessionListRsp = await axios.post(
-          store.state.backendUrl + "/session/getGroupSessionList",
+          store.backendUrl + "/session/getGroupSessionList",
           data.ownListReq
         );
         if (groupSessionListRsp.data.data) {
           for (let i = 0; i < groupSessionListRsp.data.data.length; i++) {
             if (!groupSessionListRsp.data.data[i].avatar.startsWith("http")) {
               groupSessionListRsp.data.data[i].avatar =
-                store.state.backendUrl + groupSessionListRsp.data.data[i].avatar;
+                store.backendUrl + groupSessionListRsp.data.data[i].avatar;
             }
           }
         }

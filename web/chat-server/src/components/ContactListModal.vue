@@ -371,7 +371,7 @@
 <script>
 import { reactive, toRefs, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { useStore } from "vuex";
+import { useAppStore } from "@/store";
 import axios from "axios";
 import { ElMessage } from "element-plus";
 import Modal from "./Modal.vue";
@@ -387,11 +387,11 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const store = useStore();
+    const store = useAppStore();
     const data = reactive({
       chatMessage: "",
       chatName: "",
-      userInfo: store.state.userInfo,
+      userInfo: store.userInfo,
       contactSearch: "",
       createGroupReq: {
         owner_id: "",
@@ -417,7 +417,7 @@ export default {
       newContactList: [],
       applyContent: "",
       uploadRef: null,
-      uploadPath: store.state.backendUrl + "/message/uploadAvatar",
+      uploadPath: store.backendUrl + "/message/uploadAvatar",
       fileList: [],
       cnt: 0,
     });
@@ -449,7 +449,7 @@ export default {
           data.uploadRef.submit();
         }
         const response = await axios.post(
-          store.state.backendUrl + "/group/createGroup",
+          store.backendUrl + "/group/createGroup",
           data.createGroupReq
         );
       } catch (error) {
@@ -506,7 +506,7 @@ export default {
           group_id: data.applyContactReq.contact_id,
         };
         let rsp = await axios.post(
-          store.state.backendUrl + "/group/checkGroupAddMode",
+          store.backendUrl + "/group/checkGroupAddMode",
           req
         );
         if (rsp.data.code == 200) {
@@ -521,7 +521,7 @@ export default {
         }
         data.applyContactReq.owner_id = data.userInfo.uuid;
         rsp = await axios.post(
-          store.state.backendUrl + "/contact/applyContact",
+          store.backendUrl + "/contact/applyContact",
           data.applyContactReq
         );
         console.log(rsp);
@@ -544,7 +544,7 @@ export default {
       try {
         data.applyContactReq.owner_id = data.userInfo.uuid;
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/applyContact",
+          store.backendUrl + "/contact/applyContact",
           data.applyContactReq
         );
         console.log(rsp);
@@ -564,14 +564,14 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const getUserListRsp = await axios.post(
-          store.state.backendUrl + "/contact/getUserList",
+          store.backendUrl + "/contact/getUserList",
           data.ownListReq
         );
         if (getUserListRsp.data.data) {
           for (let i = 0; i < getUserListRsp.data.data.length; i++) {
             if (!getUserListRsp.data.data[i].avatar.startsWith("http")) {
               getUserListRsp.data.data[i].avatar =
-                store.state.backendUrl + getUserListRsp.data.data[i].avatar;
+                store.backendUrl + getUserListRsp.data.data[i].avatar;
             }
           }
         }
@@ -588,14 +588,14 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const loadMyGroupRsp = await axios.post(
-          store.state.backendUrl + "/group/loadMyGroup",
+          store.backendUrl + "/group/loadMyGroup",
           data.ownListReq
         );
         if (loadMyGroupRsp.data.data) {
           for (let i = 0; i < loadMyGroupRsp.data.data.length; i++) {
             if (!loadMyGroupRsp.data.data[i].avatar.startsWith("http")) {
               loadMyGroupRsp.data.data[i].avatar =
-                store.state.backendUrl + loadMyGroupRsp.data.data[i].avatar;
+                store.backendUrl + loadMyGroupRsp.data.data[i].avatar;
             }
           }
         }
@@ -611,14 +611,14 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const loadMyJoinedGroupRsp = await axios.post(
-          store.state.backendUrl + "/contact/loadMyJoinedGroup",
+          store.backendUrl + "/contact/loadMyJoinedGroup",
           data.ownListReq
         );
         if (loadMyJoinedGroupRsp.data.data) {
           for (let i = 0; i < loadMyJoinedGroupRsp.data.data.length; i++) {
             if (!loadMyJoinedGroupRsp.data.data[i].avatar.startsWith("http")) {
               loadMyJoinedGroupRsp.data.data[i].avatar =
-                store.state.backendUrl +
+                store.backendUrl +
                 loadMyJoinedGroupRsp.data.data[i].avatar;
             }
           }
@@ -639,7 +639,7 @@ export default {
           receive_id: user.user_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/session/checkOpenSessionAllowed",
+          store.backendUrl + "/session/checkOpenSessionAllowed",
           req
         );
         if (rsp.data.code == 200) {
@@ -666,7 +666,7 @@ export default {
           receive_id: group.group_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/session/checkOpenSessionAllowed",
+          store.backendUrl + "/session/checkOpenSessionAllowed",
           req
         );
         if (rsp.data.code == 200) {
@@ -694,7 +694,7 @@ export default {
       try {
         data.ownListReq.owner_id = data.userInfo.uuid;
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/getNewContactList",
+          store.backendUrl + "/contact/getNewContactList",
           data.ownListReq
         );
         console.log(rsp);
@@ -706,7 +706,7 @@ export default {
         for (let i = 0; i < data.newContactList.length; i++) {
           if (!data.newContactList[i].contact_avatar.startsWith("http")) {
             data.newContactList[i].contact_avatar =
-              store.state.backendUrl + data.newContactList[i].contact_avatar;
+              store.backendUrl + data.newContactList[i].contact_avatar;
           }
         }
         data.isNewContactModalVisible = true;
@@ -723,7 +723,7 @@ export default {
           contact_id: contactId,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/passContactApply",
+          store.backendUrl + "/contact/passContactApply",
           req
         );
         console.log(rsp);
@@ -746,7 +746,7 @@ export default {
           contact_id: data.userInfo.uuid,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/group/enterGroupDirectly",
+          store.backendUrl + "/group/enterGroupDirectly",
           req
         );
         console.log(rsp);
@@ -767,7 +767,7 @@ export default {
           contact_id: contactId,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/refuseContactApply",
+          store.backendUrl + "/contact/refuseContactApply",
           req
         );
         console.log(rsp);
@@ -795,7 +795,7 @@ export default {
           contact_id: contactId,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/blackApply",
+          store.backendUrl + "/contact/blackApply",
           req
         );
         if (rsp.data.code == 200) {
@@ -823,7 +823,7 @@ export default {
           contact_id: user.user_id,
         };
         const rsp = await axios.post(
-          store.state.backendUrl + "/contact/cancelBlackContact",
+          store.backendUrl + "/contact/cancelBlackContact",
           req
         );
         if (rsp.data.code == 200) {

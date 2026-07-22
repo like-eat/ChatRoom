@@ -1,5 +1,7 @@
 # 分布式部署的仿微信项目KamaChat
 
+> Windows 本地开发（Docker + Pinia）请参阅 [Windows 运行指南](docs/Windows运行指南.md)。
+
 > **本项目目前只在[知识星球](https://programmercarl.com/other/kstar.html)答疑并维护**。
 
 这次发布一个非常硬核的Go项目，分布式部署的仿微信项目：KamaChat

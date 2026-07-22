@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"github.com/BurntSushi/toml"
-	"log"
+	"os"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -32,6 +35,15 @@ type AuthCodeConfig struct {
 	AccessKeySecret string `toml:"accessKeySecret"`
 	SignName        string `toml:"signName"`
 	TemplateCode    string `toml:"templateCode"`
+	DevMode         bool   `toml:"devMode"`
+	DevCode         string `toml:"devCode"`
+}
+
+type JWTConfig struct {
+	Secret      string `toml:"secret"`
+	Issuer      string `toml:"issuer"`
+	Audience    string `toml:"audience"`
+	ExpireHours int    `toml:"expireHours"`
 }
 
 type LogConfig struct {
@@ -58,6 +70,7 @@ type Config struct {
 	MysqlConfig     `toml:"mysqlConfig"`
 	RedisConfig     `toml:"redisConfig"`
 	AuthCodeConfig  `toml:"authCodeConfig"`
+	JWTConfig       `toml:"jwtConfig"`
 	LogConfig       `toml:"logConfig"`
 	KafkaConfig     `toml:"kafkaConfig"`
 	StaticSrcConfig `toml:"staticSrcConfig"`
@@ -66,15 +79,24 @@ type Config struct {
 var config *Config
 
 func LoadConfig() error {
-	// 本地部署
-	// if _, err := toml.DecodeFile("F:\\go\\kama-chat-server\\configs\\config_local.toml", config); err != nil {
-	// 	log.Fatal(err.Error())
-	// 	return err
-	// }
-	// Ubuntu22.04云服务器部署
-	if _, err := toml.DecodeFile("/root/project/KamaChat/configs/config_local.toml", config); err != nil {
-		log.Fatal(err.Error())
-		return err
+	configPath := os.Getenv("KAMA_CHAT_CONFIG")
+	if configPath == "" {
+		configPath = "configs/config.toml"
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			_, sourceFile, _, ok := runtime.Caller(0)
+			if ok {
+				configPath = filepath.Join(filepath.Dir(sourceFile), "..", "..", "configs", "config.toml")
+			}
+		}
+	}
+	if _, err := toml.DecodeFile(configPath, config); err != nil {
+		return fmt.Errorf("load config %q: %w", configPath, err)
+	}
+	if secret := os.Getenv("KAMA_CHAT_JWT_SECRET"); secret != "" {
+		config.JWTConfig.Secret = secret
+	}
+	if config.JWTConfig.ExpireHours <= 0 {
+		config.JWTConfig.ExpireHours = 24
 	}
 	return nil
 }
@@ -82,7 +104,9 @@ func LoadConfig() error {
 func GetConfig() *Config {
 	if config == nil {
 		config = new(Config)
-		_ = LoadConfig()
+		if err := LoadConfig(); err != nil {
+			panic(err)
+		}
 	}
 	return config
 }
