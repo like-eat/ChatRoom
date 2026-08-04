@@ -137,7 +137,7 @@ func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respon
 		return message, nil, -2
 	}
 
-	key := "auth_code_" + req.Telephone
+	key := constants.CacheKeyAuthCode(req.Telephone)
 	code, err := myredis.GetKey(key)
 	if err != nil {
 		zlog.Error(err.Error())
@@ -147,11 +147,11 @@ func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respon
 		message := "验证码不正确，请重试"
 		zlog.Info(message)
 		return message, nil, -2
-	} else {
-		if err := myredis.DelKeyIfExists(key); err != nil {
-			zlog.Error(err.Error())
-			return constants.SYSTEM_ERROR, nil, -1
-		}
+	}
+	// 验证成功后删除验证码缓存
+	if err := myredis.DelKeyIfExists(key); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
 	}
 
 	token, err := auth.GenerateToken(user.Uuid, user.IsAdmin)
@@ -202,7 +202,7 @@ func (u *userInfoService) checkTelephoneExist(telephone string) (string, int) {
 
 // Register 注册，返回(message, register_respond_string, error)
 func (u *userInfoService) Register(registerReq request.RegisterRequest) (string, *respond.RegisterRespond, int) {
-	key := "auth_code_" + registerReq.Telephone
+	key := constants.CacheKeyAuthCode(registerReq.Telephone)
 	code, err := myredis.GetKey(key)
 	if err != nil {
 		zlog.Error(err.Error())
@@ -212,11 +212,11 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 		message := "验证码不正确，请重试"
 		zlog.Info(message)
 		return message, nil, -2
-	} else {
-		if err := myredis.DelKeyIfExists(key); err != nil {
-			zlog.Error(err.Error())
-			return constants.SYSTEM_ERROR, nil, -1
-		}
+	}
+	// 验证成功后删除验证码缓存
+	if err := myredis.DelKeyIfExists(key); err != nil {
+		zlog.Error(err.Error())
+		return constants.SYSTEM_ERROR, nil, -1
 	}
 	// 不用校验手机号，前端校验
 	// 判断电话是否已经被注册过了
@@ -306,9 +306,10 @@ func (u *userInfoService) UpdateUserInfo(updateReq request.UpdateUserInfoRequest
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	//if err := myredis.DelKeysWithPattern("user_info_" + updateReq.Uuid); err != nil {
-	//	zlog.Error(err.Error())
-	//}
+	// 更新 MySQL 后删除 Redis 缓存，下次读取时自动重建
+	if err := myredis.DelKeysWithPattern(constants.CacheKeyUserInfo(updateReq.Uuid)); err != nil {
+		zlog.Error(err.Error())
+	}
 	return "修改用户信息成功", 0
 }
 
@@ -356,10 +357,10 @@ func (u *userInfoService) AbleUsers(uuidList []string) (string, int) {
 			return constants.SYSTEM_ERROR, -1
 		}
 	}
-	// 删除所有"contact_user_list"开头的key
-	//if err := myredis.DelKeysWithPrefix("contact_user_list"); err != nil {
-	//	zlog.Error(err.Error())
-	//}
+	// 启用/禁用用户会影响联系人列表，删除所有联系人缓存
+	if err := myredis.ScanAndDelete(constants.PrefixContactUserList); err != nil {
+		zlog.Error(err.Error())
+	}
 	return "启用用户成功", 0
 }
 
@@ -393,10 +394,10 @@ func (u *userInfoService) DisableUsers(uuidList []string) (string, int) {
 			}
 		}
 	}
-	// 删除所有"contact_user_list"开头的key
-	//if err := myredis.DelKeysWithPrefix("contact_user_list"); err != nil {
-	//	zlog.Error(err.Error())
-	//}
+	// 禁用用户会影响联系人列表和会话，删除相关缓存
+	if err := myredis.ScanAndDelete(constants.PrefixContactUserList); err != nil {
+		zlog.Error(err.Error())
+	}
 	return "禁用用户成功", 0
 }
 
@@ -480,10 +481,10 @@ func (u *userInfoService) DeleteUsers(uuidList []string) (string, int) {
 		}
 
 	}
-	// 删除所有"contact_user_list"开头的key
-	//if err := myredis.DelKeysWithPrefix("contact_user_list"); err != nil {
-	//	zlog.Error(err.Error())
-	//}
+	// 删除用户会影响联系人列表，删除所有联系人缓存
+	if err := myredis.ScanAndDelete(constants.PrefixContactUserList); err != nil {
+		zlog.Error(err.Error())
+	}
 	return "删除用户成功", 0
 }
 
@@ -491,7 +492,7 @@ func (u *userInfoService) DeleteUsers(uuidList []string) (string, int) {
 func (u *userInfoService) GetUserInfo(uuid string) (string, *respond.GetUserInfoRespond, int) {
 	// redis
 	zlog.Info(uuid)
-	rspString, err := myredis.GetKeyNilIsErr("user_info_" + uuid)
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeyUserInfo(uuid))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			zlog.Info(err.Error())
@@ -513,13 +514,13 @@ func (u *userInfoService) GetUserInfo(uuid string) (string, *respond.GetUserInfo
 				IsAdmin:   user.IsAdmin,
 				Status:    user.Status,
 			}
-			//rspString, err := json.Marshal(rsp)
-			//if err != nil {
-			//	zlog.Error(err.Error())
-			//}
-			//if err := myredis.SetKeyEx("user_info_"+uuid, string(rspString), constants.REDIS_TIMEOUT*time.Minute); err != nil {
-			//	zlog.Error(err.Error())
-			//}
+			rspBytes, err := json.Marshal(rsp)
+			if err != nil {
+				zlog.Error(err.Error())
+			}
+			if err := myredis.SetKeyEx(constants.CacheKeyUserInfo(uuid), string(rspBytes), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+				zlog.Error(err.Error())
+			}
 			return "获取用户信息成功", &rsp, 0
 		} else {
 			zlog.Error(err.Error())

@@ -38,7 +38,7 @@ func createClient() (result *dysmsapi20170525.Client, err error) {
 }
 
 func VerificationCode(telephone string) (string, int) {
-	key := "auth_code_" + telephone
+	key := constants.CacheKeyAuthCode(telephone)
 	code, err := redis.GetKey(key)
 	if err != nil {
 		zlog.Error(err.Error())

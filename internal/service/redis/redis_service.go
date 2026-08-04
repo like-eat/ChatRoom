@@ -127,6 +127,28 @@ func DelKeyIfExists(key string) error {
 	return nil
 }
 
+// ScanAndDelete 使用 SCAN 命令批量删除匹配的 key（生产推荐，不会阻塞 Redis）
+func ScanAndDelete(pattern string) error {
+	var cursor uint64 = 0
+	for {
+		keys, nextCursor, err := redisClient.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return err
+		}
+		if len(keys) > 0 {
+			if _, err := redisClient.Del(ctx, keys...).Result(); err != nil {
+				return err
+			}
+		}
+		cursor = nextCursor
+		if cursor == 0 {
+			break
+		}
+	}
+	return nil
+}
+
+// DelKeysWithPattern 批量删除匹配 pattern 的 key（注意：使用 KEYS 命令，生产环境大数据量请用 ScanAndDelete）
 func DelKeysWithPattern(pattern string) error {
 	var keys []string
 	var err error

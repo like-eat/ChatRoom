@@ -31,7 +31,7 @@ var UserContactService = new(userContactService)
 // GetUserList 获取用户列表
 // 关于用户被禁用的问题，这里查到的是所有联系人，如果被禁用或被拉黑会以弹窗的形式提醒，无法打开会话框；如果被删除，是搜索不到该联系人的。
 func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUserListRespond, int) {
-	rspString, err := myredis.GetKeyNilIsErr("contact_user_list_" + ownerId)
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeyContactUserList(ownerId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 
@@ -72,7 +72,7 @@ func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUs
 			if err != nil {
 				zlog.Error(err.Error())
 			}
-			if err := myredis.SetKeyEx("contact_user_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+			if err := myredis.SetKeyEx(constants.CacheKeyContactUserList(ownerId), string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 				zlog.Error(err.Error())
 			}
 			return "获取用户列表成功", userListRsp, 0
@@ -89,7 +89,7 @@ func (u *userContactService) GetUserList(ownerId string) (string, []respond.MyUs
 
 // LoadMyJoinedGroup 获取我加入的群聊
 func (u *userContactService) LoadMyJoinedGroup(ownerId string) (string, []respond.LoadMyJoinedGroupRespond, int) {
-	rspString, err := myredis.GetKeyNilIsErr("my_joined_group_list_" + ownerId)
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeyMyJoinedGroupList(ownerId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			var contactList []model.UserContact
@@ -133,7 +133,7 @@ func (u *userContactService) LoadMyJoinedGroup(ownerId string) (string, []respon
 			if err != nil {
 				zlog.Error(err.Error())
 			}
-			if err := myredis.SetKeyEx("my_joined_group_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+			if err := myredis.SetKeyEx(constants.CacheKeyMyJoinedGroupList(ownerId), string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 				zlog.Error(err.Error())
 			}
 			return "获取加入群成功", groupListRsp, 0
@@ -240,7 +240,7 @@ func (u *userContactService) DeleteContact(ownerId, contactId string) (string, i
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	if err := myredis.DelKeysWithPattern("contact_user_list_" + ownerId); err != nil {
+	if err := myredis.DelKeysWithPattern(constants.CacheKeyContactUserList(ownerId)); err != nil {
 		zlog.Error(err.Error())
 	}
 	return "删除联系人成功", 0
@@ -466,7 +466,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 			zlog.Error(res.Error.Error())
 			return constants.SYSTEM_ERROR, -1
 		}
-		if err := myredis.DelKeysWithPattern("contact_user_list_" + ownerId); err != nil {
+		if err := myredis.DelKeysWithPattern(constants.CacheKeyContactUserList(ownerId)); err != nil {
 			zlog.Error(err.Error())
 		}
 		return "已添加该联系人", 0
@@ -509,7 +509,7 @@ func (u *userContactService) PassContactApply(ownerId string, contactId string) 
 			zlog.Error(res.Error.Error())
 			return constants.SYSTEM_ERROR, -1
 		}
-		if err := myredis.DelKeysWithPattern("my_joined_group_list_" + ownerId); err != nil {
+		if err := myredis.DelKeysWithPattern(constants.CacheKeyMyJoinedGroupList(ownerId)); err != nil {
 			zlog.Error(err.Error())
 		}
 		return "已通过加群申请", 0

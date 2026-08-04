@@ -163,7 +163,7 @@ func (s *Server) Start() {
 
 						// redis
 						var rspString string
-						rspString, err = myredis.GetKeyNilIsErr("message_list_" + message.SendId + "_" + message.ReceiveId)
+						rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyMessageList(message.SendId, message.ReceiveId))
 						if err == nil {
 							var rsp []respond.GetMessageListRespond
 							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
@@ -174,7 +174,7 @@ func (s *Server) Start() {
 							if err != nil {
 								zlog.Error(err.Error())
 							}
-							if err := myredis.SetKeyEx("message_list_"+message.SendId+"_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+							if err := myredis.SetKeyEx(constants.CacheKeyMessageList(message.SendId, message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 								zlog.Error(err.Error())
 							}
 						} else {
@@ -229,7 +229,7 @@ func (s *Server) Start() {
 
 						// redis
 						var rspString string
-						rspString, err = myredis.GetKeyNilIsErr("group_messagelist_" + message.ReceiveId)
+						rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyGroupMessageList(message.ReceiveId))
 						if err == nil {
 							var rsp []respond.GetGroupMessageListRespond
 							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
@@ -240,7 +240,7 @@ func (s *Server) Start() {
 							if err != nil {
 								zlog.Error(err.Error())
 							}
-							if err := myredis.SetKeyEx("group_messagelist_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+							if err := myredis.SetKeyEx(constants.CacheKeyGroupMessageList(message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 								zlog.Error(err.Error())
 							}
 						} else {
@@ -314,7 +314,7 @@ func (s *Server) Start() {
 
 						// redis
 						var rspString string
-						rspString, err = myredis.GetKeyNilIsErr("message_list_" + message.SendId + "_" + message.ReceiveId)
+						rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyMessageList(message.SendId, message.ReceiveId))
 						if err == nil {
 							var rsp []respond.GetMessageListRespond
 							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
@@ -325,7 +325,7 @@ func (s *Server) Start() {
 							if err != nil {
 								zlog.Error(err.Error())
 							}
-							if err := myredis.SetKeyEx("message_list_"+message.SendId+"_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+							if err := myredis.SetKeyEx(constants.CacheKeyMessageList(message.SendId, message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 								zlog.Error(err.Error())
 							}
 						} else {
@@ -379,7 +379,7 @@ func (s *Server) Start() {
 
 						// redis
 						var rspString string
-						rspString, err = myredis.GetKeyNilIsErr("group_messagelist_" + message.ReceiveId)
+						rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyGroupMessageList(message.ReceiveId))
 						if err == nil {
 							var rsp []respond.GetGroupMessageListRespond
 							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
@@ -390,7 +390,7 @@ func (s *Server) Start() {
 							if err != nil {
 								zlog.Error(err.Error())
 							}
-							if err := myredis.SetKeyEx("group_messagelist_"+message.ReceiveId, string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+							if err := myredis.SetKeyEx(constants.CacheKeyGroupMessageList(message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 								zlog.Error(err.Error())
 							}
 						} else {

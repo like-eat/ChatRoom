@@ -16,6 +16,7 @@ import (
 	"kama_chat_server/pkg/zlog"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type messageService struct {
@@ -25,7 +26,7 @@ var MessageService = new(messageService)
 
 // GetMessageList 获取聊天记录
 func (m *messageService) GetMessageList(userOneId, userTwoId string) (string, []respond.GetMessageListRespond, int) {
-	rspString, err := myredis.GetKeyNilIsErr("message_list_" + userOneId + "_" + userTwoId)
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeyMessageList(userOneId, userTwoId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			zlog.Info(err.Error())
@@ -51,13 +52,13 @@ func (m *messageService) GetMessageList(userOneId, userTwoId string) (string, []
 					CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
 				})
 			}
-			//rspString, err := json.Marshal(rspList)
-			//if err != nil {
-			//	zlog.Error(err.Error())
-			//}
-			//if err := myredis.SetKeyEx("message_list_"+userOneId+"_"+userTwoId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-			//	zlog.Error(err.Error())
-			//}
+			rspBytes, err := json.Marshal(rspList)
+			if err != nil {
+				zlog.Error(err.Error())
+			}
+			if err := myredis.SetKeyEx(constants.CacheKeyMessageList(userOneId, userTwoId), string(rspBytes), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+				zlog.Error(err.Error())
+			}
 			return "获取聊天记录成功", rspList, 0
 		} else {
 			zlog.Error(err.Error())
@@ -73,7 +74,7 @@ func (m *messageService) GetMessageList(userOneId, userTwoId string) (string, []
 
 // GetGroupMessageList 获取群聊消息记录
 func (m *messageService) GetGroupMessageList(groupId string) (string, []respond.GetGroupMessageListRespond, int) {
-	rspString, err := myredis.GetKeyNilIsErr("group_messagelist_" + groupId)
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeyGroupMessageList(groupId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			var messageList []model.Message
@@ -98,13 +99,13 @@ func (m *messageService) GetGroupMessageList(groupId string) (string, []respond.
 				}
 				rspList = append(rspList, rsp)
 			}
-			//rspString, err := json.Marshal(rspList)
-			//if err != nil {
-			//	zlog.Error(err.Error())
-			//}
-			//if err := myredis.SetKeyEx("group_messagelist_"+groupId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-			//	zlog.Error(err.Error())
-			//}
+			rspBytes, err := json.Marshal(rspList)
+			if err != nil {
+				zlog.Error(err.Error())
+			}
+			if err := myredis.SetKeyEx(constants.CacheKeyGroupMessageList(groupId), string(rspBytes), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+				zlog.Error(err.Error())
+			}
 			return "获取聊天记录成功", rspList, 0
 		} else {
 			zlog.Error(err.Error())

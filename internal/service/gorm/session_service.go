@@ -69,10 +69,10 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, "", -1
 	}
-	if err := myredis.DelKeysWithPattern("group_session_list_" + req.SendId); err != nil {
+	if err := myredis.DelKeysWithPattern(constants.CacheKeyGroupSessionList(req.SendId)); err != nil {
 		zlog.Error(err.Error())
 	}
-	if err := myredis.DelKeysWithPattern("session_list_" + req.SendId); err != nil {
+	if err := myredis.DelKeysWithPattern(constants.CacheKeySessionList(req.SendId)); err != nil {
 		zlog.Error(err.Error())
 	}
 	return "会话创建成功", session.Uuid, 0
@@ -118,7 +118,7 @@ func (s *sessionService) CheckOpenSessionAllowed(sendId, receiveId string) (stri
 
 // OpenSession 打开会话
 func (s *sessionService) OpenSession(req request.OpenSessionRequest) (string, string, int) {
-	rspString, err := myredis.GetKeyWithPrefixNilIsErr("session_" + req.SendId + "_" + req.ReceiveId)
+	rspString, err := myredis.GetKeyWithPrefixNilIsErr(constants.CacheKeySession(req.SendId, req.ReceiveId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			var session model.Session
@@ -132,13 +132,13 @@ func (s *sessionService) OpenSession(req request.OpenSessionRequest) (string, st
 					return s.CreateSession(createReq)
 				}
 			}
-			//rspString, err := json.Marshal(session)
-			//if err != nil {
-			//	zlog.Error(err.Error())
-			//}
-			//if err := myredis.SetKeyEx("session_"+req.SendId+"_"+req.ReceiveId+"_"+session.Uuid, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-			//	zlog.Error(err.Error())
-			//}
+			rspBytes, err := json.Marshal(session)
+			if err != nil {
+				zlog.Error(err.Error())
+			}
+			if err := myredis.SetKeyEx(constants.CacheKeySession(req.SendId, req.ReceiveId), string(rspBytes), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+				zlog.Error(err.Error())
+			}
 			return "会话创建成功", session.Uuid, 0
 		} else {
 			zlog.Error(err.Error())
@@ -154,7 +154,7 @@ func (s *sessionService) OpenSession(req request.OpenSessionRequest) (string, st
 
 // GetUserSessionList 获取用户会话列表
 func (s *sessionService) GetUserSessionList(ownerId string) (string, []respond.UserSessionListRespond, int) {
-	rspString, err := myredis.GetKeyNilIsErr("session_list_" + ownerId)
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeySessionList(ownerId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			var sessionList []model.Session
@@ -182,7 +182,7 @@ func (s *sessionService) GetUserSessionList(ownerId string) (string, []respond.U
 			if err != nil {
 				zlog.Error(err.Error())
 			}
-			if err := myredis.SetKeyEx("session_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+			if err := myredis.SetKeyEx(constants.CacheKeySessionList(ownerId), string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 				zlog.Error(err.Error())
 			}
 			return "获取成功", sessionListRsp, 0
@@ -200,7 +200,7 @@ func (s *sessionService) GetUserSessionList(ownerId string) (string, []respond.U
 
 // GetGroupSessionList 获取群聊会话列表
 func (s *sessionService) GetGroupSessionList(ownerId string) (string, []respond.GroupSessionListRespond, int) {
-	rspString, err := myredis.GetKeyNilIsErr("group_session_list_" + ownerId)
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeyGroupSessionList(ownerId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			var sessionList []model.Session
@@ -228,7 +228,7 @@ func (s *sessionService) GetGroupSessionList(ownerId string) (string, []respond.
 			if err != nil {
 				zlog.Error(err.Error())
 			}
-			if err := myredis.SetKeyEx("group_session_list_"+ownerId, string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
+			if err := myredis.SetKeyEx(constants.CacheKeyGroupSessionList(ownerId), string(rspString), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 				zlog.Error(err.Error())
 			}
 			return "获取成功", sessionListRsp, 0
@@ -258,13 +258,11 @@ func (s *sessionService) DeleteSession(ownerId, sessionId string) (string, int) 
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
-	//if err := myredis.DelKeysWithSuffix(sessionId); err != nil {
-	//	zlog.Error(err.Error())
-	//}
-	if err := myredis.DelKeysWithPattern("group_session_list_" + ownerId); err != nil {
+	// 更新 MySQL 后删除会话相关缓存
+	if err := myredis.DelKeysWithPattern(constants.CacheKeyGroupSessionList(ownerId)); err != nil {
 		zlog.Error(err.Error())
 	}
-	if err := myredis.DelKeysWithPattern("session_list_" + ownerId); err != nil {
+	if err := myredis.DelKeysWithPattern(constants.CacheKeySessionList(ownerId)); err != nil {
 		zlog.Error(err.Error())
 	}
 	return "删除成功", 0
