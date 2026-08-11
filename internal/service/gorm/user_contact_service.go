@@ -166,7 +166,6 @@ func (u *userContactService) GetContactInfo(contactId string) (string, respond.G
 				ContactName:      group.Name,
 				ContactAvatar:    group.Avatar,
 				ContactNotice:    group.Notice,
-				ContactAddMode:   group.AddMode,
 				ContactMembers:   group.Members,
 				ContactMemberCnt: group.MemberCnt,
 				ContactOwnerId:   group.OwnerId,
@@ -284,10 +283,6 @@ func (u *userContactService) ApplyContact(req request.ApplyContactRequest) (stri
 				zlog.Error(res.Error.Error())
 				return constants.SYSTEM_ERROR, -1
 			}
-		}
-		// 如果存在申请记录，先看看有没有被拉黑
-		if contactApply.Status == contact_apply_status_enum.BLACK {
-			return "对方已将你拉黑", -2
 		}
 		contactApply.LastApplyAt = time.Now()
 		contactApply.Status = contact_apply_status_enum.PENDING
@@ -535,82 +530,4 @@ func (u *userContactService) RefuseContactApply(ownerId string, contactId string
 		return "已拒绝该加群申请", 0
 	}
 
-}
-
-// BlackContact 拉黑联系人
-func (u *userContactService) BlackContact(ownerId string, contactId string) (string, int) {
-	// 拉黑
-	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", ownerId, contactId).Updates(map[string]interface{}{
-		"status":    contact_status_enum.BLACK,
-		"update_at": time.Now(),
-	}); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	// 被拉黑
-	if res := dao.GormDB.Model(&model.UserContact{}).Where("user_id = ? AND contact_id = ?", contactId, ownerId).Updates(map[string]interface{}{
-		"status":    contact_status_enum.BE_BLACK,
-		"update_at": time.Now(),
-	}); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	// 删除会话
-	var deletedAt gorm.DeletedAt
-	deletedAt.Time = time.Now()
-	deletedAt.Valid = true
-	if res := dao.GormDB.Model(&model.Session{}).Where("send_id = ? AND receive_id = ?", ownerId, contactId).Update("deleted_at", deletedAt); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	return "已拉黑该联系人", 0
-}
-
-// CancelBlackContact 取消拉黑联系人
-func (u *userContactService) CancelBlackContact(ownerId string, contactId string) (string, int) {
-	// 因为前端的设定，这里需要判断一下ownerId和contactId是不是有拉黑和被拉黑的状态
-	var blackContact model.UserContact
-	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", ownerId, contactId).First(&blackContact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	if blackContact.Status != contact_status_enum.BLACK {
-		return "未拉黑该联系人，无需解除拉黑", -2
-	}
-	var beBlackContact model.UserContact
-	if res := dao.GormDB.Where("user_id = ? AND contact_id = ?", contactId, ownerId).First(&beBlackContact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	if beBlackContact.Status != contact_status_enum.BE_BLACK {
-		return "该联系人未被拉黑，无需解除拉黑", -2
-	}
-
-	// 取消拉黑
-	blackContact.Status = contact_status_enum.NORMAL
-	beBlackContact.Status = contact_status_enum.NORMAL
-	if res := dao.GormDB.Save(&blackContact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	if res := dao.GormDB.Save(&beBlackContact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	return "已解除拉黑该联系人", 0
-}
-
-// BlackApply 拉黑申请
-func (u *userContactService) BlackApply(ownerId string, contactId string) (string, int) {
-	var contactApply model.ContactApply
-	if res := dao.GormDB.Where("contact_id = ? AND user_id = ?", ownerId, contactId).First(&contactApply); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	contactApply.Status = contact_apply_status_enum.BLACK
-	if res := dao.GormDB.Save(&contactApply); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, -1
-	}
-	return "已拉黑该申请", 0
 }

@@ -58,27 +58,6 @@
         >
           <el-input type="password" v-model="registerData.password" />
         </el-form-item>
-        <el-form-item
-          prop="sms_code"
-          label="验证码"
-          :rules="[
-            {
-              required: true,
-              message: '此项为必填项',
-              trigger: 'blur',
-            },
-          ]"
-        >
-          <el-input v-model="registerData.sms_code" style="max-width: 200px">
-            <template #append>
-              <el-button
-                @click="sendSmsCode"
-                style="background-color: rgb(229, 132, 132); color: #ffffff"
-                >点击发送</el-button
-              >
-            </template>
-          </el-input>
-        </el-form-item>
       </el-form>
       <div class="register-button-container">
         <el-button type="primary" class="register-btn" @click="handleRegister"
@@ -86,9 +65,6 @@
         >
       </div>
       <div class="go-login-button-container">
-        <button class="go-sms-login-btn" @click="handleSmsLogin">
-          验证码登录
-        </button>
         <button class="go-password-login-btn" @click="handleLogin">
           密码登录
         </button>
@@ -111,7 +87,6 @@ export default {
         telephone: "",
         password: "",
         nickname: "",
-        sms_code: "",
       },
     });
     const router = useRouter();
@@ -121,8 +96,7 @@ export default {
         if (
           !data.registerData.nickname ||
           !data.registerData.telephone ||
-          !data.registerData.password ||
-          !data.registerData.sms_code
+          !data.registerData.password
         ) {
           ElMessage.error("请填写完整注册信息。");
           return;
@@ -173,47 +147,11 @@ export default {
       router.push("/login");
     };
 
-    const handleSmsLogin = () => {
-      router.push("/smsLogin");
-    };
-
-    const sendSmsCode = async () => {
-      if (
-        !data.registerData.telephone ||
-        !data.registerData.nickname ||
-        !data.registerData.password
-      ) {
-        ElMessage.error("请填写完整注册信息。");
-        return;
-      }
-      if (!checkTelephoneValid()) {
-        ElMessage.error("请输入有效的手机号码。");
-        return;
-      }
-      const req = {
-        telephone: data.registerData.telephone,
-      };
-      const rsp = await axios.post(
-        store.backendUrl + "/user/sendSmsCode",
-        req
-      );
-      console.log(rsp);
-      if (rsp.data.code == 200) {
-        ElMessage.success(rsp.data.message);
-      } else if (rsp.data.code == 400) {
-        ElMessage.warning(rsp.data.message);
-      } else {
-        ElMessage.error(rsp.data.message);
-      }
-    };
-
     return {
       ...toRefs(data),
       router,
       handleRegister,
       handleLogin,
-      handleSmsLogin,
-      sendSmsCode,
     };
   },
 };
@@ -266,7 +204,6 @@ export default {
   margin-top: 10px;
 }
 
-.go-sms-login-btn,
 .go-password-login-btn {
   background-color: rgba(255, 255, 255, 0);
   border: none;

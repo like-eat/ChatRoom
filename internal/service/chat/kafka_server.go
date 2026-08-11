@@ -87,12 +87,8 @@ func (k *KafkaServer) Start() {
 					SendName:   chatMessageReq.SendName,
 					SendAvatar: chatMessageReq.SendAvatar,
 					ReceiveId:  chatMessageReq.ReceiveId,
-					FileSize:   "0B",
-					FileType:   "",
-					FileName:   "",
 					Status:     message_status_enum.Unsent,
 					CreatedAt:  time.Now(),
-					AVdata:     "",
 				}
 				// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
 				message.SendAvatar = normalizePath(message.SendAvatar)
@@ -111,9 +107,6 @@ func (k *KafkaServer) Start() {
 						Type:       message.Type,
 						Content:    message.Content,
 						Url:        message.Url,
-						FileSize:   message.FileSize,
-						FileName:   message.FileName,
-						FileType:   message.FileType,
 						CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
 					}
 					jsonMessage, err := json.Marshal(messageRsp)
@@ -169,9 +162,6 @@ func (k *KafkaServer) Start() {
 						Type:       message.Type,
 						Content:    message.Content,
 						Url:        message.Url,
-						FileSize:   message.FileSize,
-						FileName:   message.FileName,
-						FileType:   message.FileType,
 						CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
 					}
 					jsonMessage, err := json.Marshal(messageRsp)
@@ -225,227 +215,6 @@ func (k *KafkaServer) Start() {
 							zlog.Error(err.Error())
 						}
 					}
-				}
-			} else if chatMessageReq.Type == message_type_enum.File {
-				// 存message
-				message := model.Message{
-					Uuid:       fmt.Sprintf("M%s", random.GetNowAndLenRandomString(11)),
-					SessionId:  chatMessageReq.SessionId,
-					Type:       chatMessageReq.Type,
-					Content:    "",
-					Url:        chatMessageReq.Url,
-					SendId:     chatMessageReq.SendId,
-					SendName:   chatMessageReq.SendName,
-					SendAvatar: chatMessageReq.SendAvatar,
-					ReceiveId:  chatMessageReq.ReceiveId,
-					FileSize:   chatMessageReq.FileSize,
-					FileType:   chatMessageReq.FileType,
-					FileName:   chatMessageReq.FileName,
-					Status:     message_status_enum.Unsent,
-					CreatedAt:  time.Now(),
-					AVdata:     "",
-				}
-				// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
-				message.SendAvatar = normalizePath(message.SendAvatar)
-				if res := dao.GormDB.Create(&message); res.Error != nil {
-					zlog.Error(res.Error.Error())
-				}
-				if message.ReceiveId[0] == 'U' { // 发送给User
-					// 如果能找到ReceiveId，说明在线，可以发送，否则存表后跳过
-					// 因为在线的时候是通过websocket更新消息记录的，离线后通过存表，登录时只调用一次数据库操作
-					// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
-					messageRsp := respond.GetMessageListRespond{
-						SendId:     message.SendId,
-						SendName:   message.SendName,
-						SendAvatar: chatMessageReq.SendAvatar,
-						ReceiveId:  message.ReceiveId,
-						Type:       message.Type,
-						Content:    message.Content,
-						Url:        message.Url,
-						FileSize:   message.FileSize,
-						FileName:   message.FileName,
-						FileType:   message.FileType,
-						CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
-					}
-					jsonMessage, err := json.Marshal(messageRsp)
-					if err != nil {
-						zlog.Error(err.Error())
-					}
-					log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
-					var messageBack = &MessageBack{
-						Message: jsonMessage,
-						Uuid:    message.Uuid,
-					}
-					k.mutex.Lock()
-					if receiveClient, ok := k.Clients[message.ReceiveId]; ok {
-						//messageBack.Message = jsonMessage
-						//messageBack.Uuid = message.Uuid
-						receiveClient.SendBack <- messageBack // 向client.Send发送
-					}
-					// 因为send_id肯定在线，所以这里在后端进行在线回显message，其实优化的话前端可以直接回显
-					// 问题在于前后端的req和rsp结构不同，前端存储message的messageList不能存req，只能存rsp
-					// 所以这里后端进行回显，前端不回显
-					sendClient := k.Clients[message.SendId]
-					sendClient.SendBack <- messageBack
-					k.mutex.Unlock()
-
-					// redis
-					var rspString string
-					rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyMessageList(message.SendId, message.ReceiveId))
-					if err == nil {
-						var rsp []respond.GetMessageListRespond
-						if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
-							zlog.Error(err.Error())
-						}
-						rsp = append(rsp, messageRsp)
-						rspByte, err := json.Marshal(rsp)
-						if err != nil {
-							zlog.Error(err.Error())
-						}
-						if err := myredis.SetKeyEx(constants.CacheKeyMessageList(message.SendId, message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-							zlog.Error(err.Error())
-						}
-					} else {
-						if !errors.Is(err, redis.Nil) {
-							zlog.Error(err.Error())
-						}
-					}
-				} else {
-					messageRsp := respond.GetGroupMessageListRespond{
-						SendId:     message.SendId,
-						SendName:   message.SendName,
-						SendAvatar: chatMessageReq.SendAvatar,
-						ReceiveId:  message.ReceiveId,
-						Type:       message.Type,
-						Content:    message.Content,
-						Url:        message.Url,
-						FileSize:   message.FileSize,
-						FileName:   message.FileName,
-						FileType:   message.FileType,
-						CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
-					}
-					jsonMessage, err := json.Marshal(messageRsp)
-					if err != nil {
-						zlog.Error(err.Error())
-					}
-					log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
-					var messageBack = &MessageBack{
-						Message: jsonMessage,
-						Uuid:    message.Uuid,
-					}
-					var group model.GroupInfo
-					if res := dao.GormDB.Where("uuid = ?", message.ReceiveId).First(&group); res.Error != nil {
-						zlog.Error(res.Error.Error())
-					}
-					var members []string
-					if err := json.Unmarshal(group.Members, &members); err != nil {
-						zlog.Error(err.Error())
-					}
-					k.mutex.Lock()
-					for _, member := range members {
-						if member != message.SendId {
-							if receiveClient, ok := k.Clients[member]; ok {
-								receiveClient.SendBack <- messageBack
-							}
-						} else {
-							sendClient := k.Clients[message.SendId]
-							sendClient.SendBack <- messageBack
-						}
-					}
-					k.mutex.Unlock()
-
-					// redis
-					var rspString string
-					rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyGroupMessageList(message.ReceiveId))
-					if err == nil {
-						var rsp []respond.GetGroupMessageListRespond
-						if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
-							zlog.Error(err.Error())
-						}
-						rsp = append(rsp, messageRsp)
-						rspByte, err := json.Marshal(rsp)
-						if err != nil {
-							zlog.Error(err.Error())
-						}
-						if err := myredis.SetKeyEx(constants.CacheKeyGroupMessageList(message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
-							zlog.Error(err.Error())
-						}
-					} else {
-						if !errors.Is(err, redis.Nil) {
-							zlog.Error(err.Error())
-						}
-					}
-				}
-			} else if chatMessageReq.Type == message_type_enum.AudioOrVideo {
-				var avData request.AVData
-				if err := json.Unmarshal([]byte(chatMessageReq.AVdata), &avData); err != nil {
-					zlog.Error(err.Error())
-				}
-				//log.Println(avData)
-				message := model.Message{
-					Uuid:       fmt.Sprintf("M%s", random.GetNowAndLenRandomString(11)),
-					SessionId:  chatMessageReq.SessionId,
-					Type:       chatMessageReq.Type,
-					Content:    "",
-					Url:        "",
-					SendId:     chatMessageReq.SendId,
-					SendName:   chatMessageReq.SendName,
-					SendAvatar: chatMessageReq.SendAvatar,
-					ReceiveId:  chatMessageReq.ReceiveId,
-					FileSize:   "",
-					FileType:   "",
-					FileName:   "",
-					Status:     message_status_enum.Unsent,
-					CreatedAt:  time.Now(),
-					AVdata:     chatMessageReq.AVdata,
-				}
-				if avData.MessageId == "PROXY" && (avData.Type == "start_call" || avData.Type == "receive_call" || avData.Type == "reject_call") {
-					// 存message
-					// 对SendAvatar去除前面/static之前的所有内容，防止ip前缀引入
-					message.SendAvatar = normalizePath(message.SendAvatar)
-					if res := dao.GormDB.Create(&message); res.Error != nil {
-						zlog.Error(res.Error.Error())
-					}
-				}
-
-				if chatMessageReq.ReceiveId[0] == 'U' { // 发送给User
-					// 如果能找到ReceiveId，说明在线，可以发送，否则存表后跳过
-					// 因为在线的时候是通过websocket更新消息记录的，离线后通过存表，登录时只调用一次数据库操作
-					// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
-					messageRsp := respond.AVMessageRespond{
-						SendId:     message.SendId,
-						SendName:   message.SendName,
-						SendAvatar: message.SendAvatar,
-						ReceiveId:  message.ReceiveId,
-						Type:       message.Type,
-						Content:    message.Content,
-						Url:        message.Url,
-						FileSize:   message.FileSize,
-						FileName:   message.FileName,
-						FileType:   message.FileType,
-						CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
-						AVdata:     message.AVdata,
-					}
-					jsonMessage, err := json.Marshal(messageRsp)
-					if err != nil {
-						zlog.Error(err.Error())
-					}
-					// log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
-					log.Println("返回的消息为：", messageRsp)
-					var messageBack = &MessageBack{
-						Message: jsonMessage,
-						Uuid:    message.Uuid,
-					}
-					k.mutex.Lock()
-					if receiveClient, ok := k.Clients[message.ReceiveId]; ok {
-						//messageBack.Message = jsonMessage
-						//messageBack.Uuid = message.Uuid
-						receiveClient.SendBack <- messageBack // 向client.Send发送
-					}
-					// 通话这不能回显，发回去的话就会出现两个start_call。
-					//sendClient := s.Clients[message.SendId]
-					//sendClient.SendBack <- messageBack
-					k.mutex.Unlock()
 				}
 			}
 		}

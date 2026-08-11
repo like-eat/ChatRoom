@@ -12,7 +12,6 @@ import (
 	"kama_chat_server/internal/model"
 	myredis "kama_chat_server/internal/service/redis"
 	"kama_chat_server/pkg/constants"
-	"kama_chat_server/pkg/enum/contact/contact_status_enum"
 	"kama_chat_server/pkg/enum/group_info/group_status_enum"
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
@@ -80,16 +79,6 @@ func (s *sessionService) CreateSession(req request.CreateSessionRequest) (string
 
 // CheckOpenSessionAllowed 检查是否允许发起会话
 func (s *sessionService) CheckOpenSessionAllowed(sendId, receiveId string) (string, bool, int) {
-	var contact model.UserContact
-	if res := dao.GormDB.Where("user_id = ? and contact_id = ?", sendId, receiveId).First(&contact); res.Error != nil {
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, false, -1
-	}
-	if contact.Status == contact_status_enum.BE_BLACK {
-		return "已被对方拉黑，无法发起会话", false, -2
-	} else if contact.Status == contact_status_enum.BLACK {
-		return "已拉黑对方，先解除拉黑状态才能发起会话", false, -2
-	}
 	if receiveId[0] == 'U' {
 		var user model.UserInfo
 		if res := dao.GormDB.Where("uuid = ?", receiveId).First(&user); res.Error != nil {

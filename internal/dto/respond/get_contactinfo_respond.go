@@ -15,5 +15,4 @@ type GetContactInfoRespond struct {
 	ContactMembers   json.RawMessage `json:"contact_members"`
 	ContactMemberCnt int             `json:"contact_member_cnt"`
 	ContactOwnerId   string          `json:"contact_owner_id"`
-	ContactAddMode   int8            `json:"contact_add_mode"`
 }

@@ -16,14 +16,6 @@ port = 16379
 password = ""
 db = 0
 
-[authCodeConfig]
-accessKeyID = "your accessKeyID in alibaba cloud"
-accessKeySecret = "your accessKeySecret in alibaba cloud"
-signName = "阿里云短信测试"
-templateCode = "SMS_154950909"
-devMode = true
-devCode = "123456"
-
 [jwtConfig]
 # 仅用于本地开发。生产环境必须通过 KAMA_CHAT_JWT_SECRET 设置高熵随机密钥。
 secret = "kama-chat-local-dev-secret-change-before-production-2026"
@@ -45,4 +37,3 @@ timeout = 1 # 单位秒
 
 [staticSrcConfig]
 staticAvatarPath = "./static/avatars"
-staticFilePath = "./static/files"

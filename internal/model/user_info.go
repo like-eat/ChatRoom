@@ -2,10 +2,12 @@ package model
 
 import (
 	"database/sql"
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
+// 用户的信息，资料
 type UserInfo struct {
 	Id            int64          `gorm:"column:id;primaryKey;comment:自增id"`
 	Uuid          string         `gorm:"column:uuid;uniqueIndex;type:char(20);comment:用户唯一id"`

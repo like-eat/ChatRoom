@@ -10,13 +10,6 @@ package constants
 
 import "fmt"
 
-// ──────────────────── 短信验证码 ────────────────────
-// TTL: 5 分钟 (由 sms 服务控制)
-
-func CacheKeyAuthCode(telephone string) string {
-	return fmt.Sprintf("auth_code:%s", telephone)
-}
-
 // ════════════════ 用户信息 ════════════════
 
 func CacheKeyUserInfo(uuid string) string {

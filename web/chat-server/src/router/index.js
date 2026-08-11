@@ -12,11 +12,6 @@ const routes = [
     component: () => import('../views/access/Login.vue')
   },
   {
-    path: '/smsLogin',
-    name: 'smsLogin',
-    component: () => import('../views/access/SmsLogin.vue')
-  },
-  {
     path: '/register',
     name: 'Register',
     component: () => import('../views/access/Register.vue')
@@ -56,7 +51,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const store = useAppStore(pinia)
   if (!store.userInfo.uuid || !store.token) {
-    if (to.path === '/login' || to.path === '/register' || to.path === '/smsLogin') {
+    if (to.path === '/login' || to.path === '/register') {
       next()
       return
     }

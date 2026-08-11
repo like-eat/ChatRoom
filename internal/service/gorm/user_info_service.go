@@ -12,7 +12,6 @@ import (
 	"kama_chat_server/internal/model"
 	"kama_chat_server/internal/service/auth"
 	myredis "kama_chat_server/internal/service/redis"
-	"kama_chat_server/internal/service/sms"
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
@@ -118,72 +117,6 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 	return "登陆成功", loginRsp, 0
 }
 
-// SmsLogin 验证码登录
-func (u *userInfoService) SmsLogin(req request.SmsLoginRequest) (string, *respond.LoginRespond, int) {
-	var user model.UserInfo
-	res := dao.GormDB.First(&user, "telephone = ?", req.Telephone)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			message := "用户不存在，请注册"
-			zlog.Error(message)
-			return message, nil, -2
-		}
-		zlog.Error(res.Error.Error())
-		return constants.SYSTEM_ERROR, nil, -1
-	}
-	if user.Status != user_status_enum.NORMAL {
-		message := "该账号已被禁用，请联系管理员"
-		zlog.Info(message)
-		return message, nil, -2
-	}
-
-	key := constants.CacheKeyAuthCode(req.Telephone)
-	code, err := myredis.GetKey(key)
-	if err != nil {
-		zlog.Error(err.Error())
-		return constants.SYSTEM_ERROR, nil, -1
-	}
-	if code != req.SmsCode {
-		message := "验证码不正确，请重试"
-		zlog.Info(message)
-		return message, nil, -2
-	}
-	// 验证成功后删除验证码缓存
-	if err := myredis.DelKeyIfExists(key); err != nil {
-		zlog.Error(err.Error())
-		return constants.SYSTEM_ERROR, nil, -1
-	}
-
-	token, err := auth.GenerateToken(user.Uuid, user.IsAdmin)
-	if err != nil {
-		zlog.Error(err.Error())
-		return constants.SYSTEM_ERROR, nil, -1
-	}
-
-	loginRsp := &respond.LoginRespond{
-		Token:     token,
-		Uuid:      user.Uuid,
-		Telephone: user.Telephone,
-		Nickname:  user.Nickname,
-		Email:     user.Email,
-		Avatar:    user.Avatar,
-		Gender:    user.Gender,
-		Birthday:  user.Birthday,
-		Signature: user.Signature,
-		IsAdmin:   user.IsAdmin,
-		Status:    user.Status,
-	}
-	year, month, day := user.CreatedAt.Date()
-	loginRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
-
-	return "登陆成功", loginRsp, 0
-}
-
-// SendSmsCode 发送短信验证码 - 验证码登录
-func (u *userInfoService) SendSmsCode(telephone string) (string, int) {
-	return sms.VerificationCode(telephone)
-}
-
 // checkTelephoneExist 检查手机号是否存在
 func (u *userInfoService) checkTelephoneExist(telephone string) (string, int) {
 	var user model.UserInfo
@@ -202,22 +135,6 @@ func (u *userInfoService) checkTelephoneExist(telephone string) (string, int) {
 
 // Register 注册，返回(message, register_respond_string, error)
 func (u *userInfoService) Register(registerReq request.RegisterRequest) (string, *respond.RegisterRespond, int) {
-	key := constants.CacheKeyAuthCode(registerReq.Telephone)
-	code, err := myredis.GetKey(key)
-	if err != nil {
-		zlog.Error(err.Error())
-		return constants.SYSTEM_ERROR, nil, -1
-	}
-	if code != registerReq.SmsCode {
-		message := "验证码不正确，请重试"
-		zlog.Info(message)
-		return message, nil, -2
-	}
-	// 验证成功后删除验证码缓存
-	if err := myredis.DelKeyIfExists(key); err != nil {
-		zlog.Error(err.Error())
-		return constants.SYSTEM_ERROR, nil, -1
-	}
 	// 不用校验手机号，前端校验
 	// 判断电话是否已经被注册过了
 	message, ret := u.checkTelephoneExist(registerReq.Telephone)
@@ -238,13 +155,6 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 	newUser.CreatedAt = time.Now()
 	newUser.IsAdmin = u.checkUserIsAdminOrNot(newUser)
 	newUser.Status = user_status_enum.NORMAL
-	// 手机号验证，最后一步才调用api，省钱hhh
-	//err := sms.VerificationCode(registerReq.Telephone)
-	//if err != nil {
-	//	zlog.Error(err.Error())
-	//	return "", err
-	//}
-
 	res := dao.GormDB.Create(&newUser)
 	if res.Error != nil {
 		zlog.Error(res.Error.Error())

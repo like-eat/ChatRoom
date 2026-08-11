@@ -11,5 +11,4 @@ func TestInit(t *testing.T) {
 	fmt.Println(conf.MainConfig)
 	fmt.Println(conf.MysqlConfig)
 	fmt.Println(conf.RedisConfig)
-	fmt.Println(conf.AuthCodeConfig)
 }

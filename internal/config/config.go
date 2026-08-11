@@ -30,15 +30,6 @@ type RedisConfig struct {
 	Db       int    `toml:"db"`
 }
 
-type AuthCodeConfig struct {
-	AccessKeyID     string `toml:"accessKeyID"`
-	AccessKeySecret string `toml:"accessKeySecret"`
-	SignName        string `toml:"signName"`
-	TemplateCode    string `toml:"templateCode"`
-	DevMode         bool   `toml:"devMode"`
-	DevCode         string `toml:"devCode"`
-}
-
 type JWTConfig struct {
 	Secret      string `toml:"secret"`
 	Issuer      string `toml:"issuer"`
@@ -62,14 +53,12 @@ type KafkaConfig struct {
 
 type StaticSrcConfig struct {
 	StaticAvatarPath string `toml:"staticAvatarPath"`
-	StaticFilePath   string `toml:"staticFilePath"`
 }
 
 type Config struct {
 	MainConfig      `toml:"mainConfig"`
 	MysqlConfig     `toml:"mysqlConfig"`
 	RedisConfig     `toml:"redisConfig"`
-	AuthCodeConfig  `toml:"authCodeConfig"`
 	JWTConfig       `toml:"jwtConfig"`
 	LogConfig       `toml:"logConfig"`
 	KafkaConfig     `toml:"kafkaConfig"`

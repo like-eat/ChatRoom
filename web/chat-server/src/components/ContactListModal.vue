@@ -101,11 +101,6 @@
                           >
                             拒绝
                           </el-dropdown-item>
-                          <el-dropdown-item
-                            @click="handleBlack(newContact.contact_id)"
-                          >
-                            拉黑
-                          </el-dropdown-item>
                         </el-dropdown-menu>
                       </template>
                     </el-dropdown>
@@ -236,22 +231,6 @@
                       placeholder="选填"
                     />
                   </el-form-item>
-                  <el-form-item
-                    prop="add_mode"
-                    label="加群方式"
-                    :rules="[
-                      {
-                        required: true,
-                        message: 'Please select activity resource',
-                        trigger: 'change',
-                      },
-                    ]"
-                  >
-                    <el-radio-group v-model="createGroupReq.add_mode">
-                      <el-radio :value="0">直接加入</el-radio>
-                      <el-radio :value="1">群主审核</el-radio>
-                    </el-radio-group>
-                  </el-form-item>
                   <el-form-item prop="avatar" label="群头像">
                     <el-upload
                       v-model:file-list="fileList"
@@ -302,24 +281,10 @@
             @click="handleToChatUser(user)"
             class="contactlist-user-menu-item"
           >
-            <el-dropdown
-              trigger="contextmenu"
-              class="contactlist-dropdown"
-              placement="right"
-            >
               <div class="contactlist-user-item">
                 <img :src="user.avatar" class="contactlist-user-avatar" />
                 {{ user.user_name }}
               </div>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item @click="handleCancelBlack(user)"
-                    >解除拉黑</el-dropdown-item
-                  >
-                  <!-- 其他菜单项 -->
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
           </el-menu-item>
         </el-menu>
 
@@ -397,7 +362,6 @@ export default {
         owner_id: "",
         name: "",
         notice: "",
-        add_mode: null,
         avatar: "",
       },
       isCreateGroupModalVisible: false,
@@ -467,10 +431,6 @@ export default {
         ElMessage("请输入群聊名称");
         return;
       }
-      if (data.createGroupReq.add_mode == null) {
-        ElMessage("请选择加群方式");
-        return;
-      }
       data.isCreateGroupModalVisible = false;
       handleCreateGroup();
     };
@@ -502,25 +462,8 @@ export default {
     };
     const handleApplyGroup = async () => {
       try {
-        let req = {
-          group_id: data.applyContactReq.contact_id,
-        };
-        let rsp = await axios.post(
-          store.backendUrl + "/group/checkGroupAddMode",
-          req
-        );
-        if (rsp.data.code == 200) {
-          if (rsp.data.data == 0) {
-            // 直接加入
-            handleEnterDirectly(data.applyContactReq.contact_id);
-            return;
-          }
-        } else {
-          ElMessage.error("申请失败");
-          return;
-        }
         data.applyContactReq.owner_id = data.userInfo.uuid;
-        rsp = await axios.post(
+        const rsp = await axios.post(
           store.backendUrl + "/contact/applyContact",
           data.applyContactReq
         );
@@ -739,27 +682,6 @@ export default {
         console.error(error);
       }
     };
-    const handleEnterDirectly = async (groupId) => {
-      try {
-        const req = {
-          owner_id: groupId,
-          contact_id: data.userInfo.uuid,
-        };
-        const rsp = await axios.post(
-          store.backendUrl + "/group/enterGroupDirectly",
-          req
-        );
-        console.log(rsp);
-        if (rsp.data.code == 200) {
-          ElMessage.success(rsp.data.message);
-          data.isApplyContactModalVisible = false;
-        } else {
-          ElMessage.error(rsp.data.message);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
     const handleReject = async (contactId) => {
       try {
         const req = {
@@ -788,60 +710,6 @@ export default {
         console.error(error);
       }
     };
-    const handleBlack = async (contactId) => {
-      try {
-        const req = {
-          owner_id: data.userInfo.uuid,
-          contact_id: contactId,
-        };
-        const rsp = await axios.post(
-          store.backendUrl + "/contact/blackApply",
-          req
-        );
-        if (rsp.data.code == 200) {
-          ElMessage.success(rsp.data.message);
-          console.log(rsp.data.message);
-          data.newContactList = data.newContactList.filter(
-            (c) => c.contact_id !== contactId
-          );
-        } else if (rsp.data.code == 400) {
-          ElMessage.warning(rsp.data.message);
-          console.log(rsp.data.message);
-        } else if (rsp.data.code == 500) {
-          ElMessage.error(rsp.data.message);
-          console.log(rsp.data.message);
-        }
-      } catch (error) {
-        ElMessage.error(error);
-        console.error(error);
-      }
-    };
-    const handleCancelBlack = async (user) => {
-      try {
-        const req = {
-          owner_id: data.userInfo.uuid,
-          contact_id: user.user_id,
-        };
-        const rsp = await axios.post(
-          store.backendUrl + "/contact/cancelBlackContact",
-          req
-        );
-        if (rsp.data.code == 200) {
-          ElMessage.success(rsp.data.message);
-          console.log(rsp.data.message);
-        } else if (rsp.data.code == 400) {
-          ElMessage.warning(rsp.data.message);
-          console.log(rsp.data.message);
-        } else if (rsp.data.code == 500) {
-          ElMessage.error(rsp.data.message);
-          console.log(rsp.data.message);
-        }
-      } catch (error) {
-        ElMessage.error(error);
-        console.error(error);
-      }
-    };
-
     return {
       ...toRefs(data),
       router,
@@ -865,8 +733,6 @@ export default {
       handleNewContactList,
       handleAgree,
       handleReject,
-      handleCancelBlack,
-      handleBlack,
       handleUploadSuccess,
       beforeFileUpload,
     };

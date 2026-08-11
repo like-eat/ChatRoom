@@ -21,17 +21,11 @@ func init() {
 	if err := os.MkdirAll(config.GetConfig().StaticAvatarPath, 0755); err != nil {
 		panic(err)
 	}
-	if err := os.MkdirAll(config.GetConfig().StaticFilePath, 0755); err != nil {
-		panic(err)
-	}
 	GE.Static("/static/avatars", config.GetConfig().StaticAvatarPath)
-	GE.Static("/static/files", config.GetConfig().StaticFilePath)
 
 	// Public authentication endpoints.
 	GE.POST("/login", v1.Login)
 	GE.POST("/register", v1.Register)
-	GE.POST("/user/sendSmsCode", v1.SendSmsCode)
-	GE.POST("/user/smsLogin", v1.SmsLogin)
 
 	authorized := GE.Group("/")
 	authorized.Use(middleware.AuthRequired())
@@ -41,8 +35,6 @@ func init() {
 		authorized.POST("user/wsLogout", v1.WsLogout)
 		authorized.POST("group/createGroup", v1.CreateGroup)
 		authorized.POST("group/loadMyGroup", v1.LoadMyGroup)
-		authorized.POST("group/checkGroupAddMode", v1.CheckGroupAddMode)
-		authorized.POST("group/enterGroupDirectly", v1.EnterGroupDirectly)
 		authorized.POST("group/leaveGroup", v1.LeaveGroup)
 		authorized.POST("group/dismissGroup", v1.DismissGroup)
 		authorized.POST("group/getGroupInfo", v1.GetGroupInfo)
@@ -61,16 +53,11 @@ func init() {
 		authorized.POST("contact/applyContact", v1.ApplyContact)
 		authorized.POST("contact/getNewContactList", v1.GetNewContactList)
 		authorized.POST("contact/passContactApply", v1.PassContactApply)
-		authorized.POST("contact/blackContact", v1.BlackContact)
-		authorized.POST("contact/cancelBlackContact", v1.CancelBlackContact)
 		authorized.POST("contact/getAddGroupList", v1.GetAddGroupList)
 		authorized.POST("contact/refuseContactApply", v1.RefuseContactApply)
-		authorized.POST("contact/blackApply", v1.BlackApply)
 		authorized.POST("message/getMessageList", v1.GetMessageList)
 		authorized.POST("message/getGroupMessageList", v1.GetGroupMessageList)
 		authorized.POST("message/uploadAvatar", v1.UploadAvatar)
-		authorized.POST("message/uploadFile", v1.UploadFile)
-		authorized.POST("chatroom/getCurContactListInChatRoom", v1.GetCurContactListInChatRoom)
 	}
 
 	admin := GE.Group("/")

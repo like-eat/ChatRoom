@@ -47,7 +47,6 @@
 
       <div class="go-register-button-container">
         <button class="go-register-btn" @click="handleRegister">注册</button>
-        <button class="go-sms-btn" @click="handleSmsLogin">验证码登录</button>
       </div>
     </div>
   </div>
@@ -117,16 +116,12 @@ export default {
     const handleRegister = () => {
       router.push("/register");
     };
-    const handleSmsLogin = () => {
-      router.push("/smsLogin");
-    };
 
     return {
       ...toRefs(data),
       router,
       handleLogin,
       handleRegister,
-      handleSmsLogin,
     };
   },
 };
@@ -176,8 +171,7 @@ export default {
   margin-top: 10px;
 }
 
-.go-register-btn,
-.go-sms-btn {
+.go-register-btn {
   background-color: rgba(255, 255, 255, 0);
   border: none;
   cursor: pointer;

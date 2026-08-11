@@ -8,8 +8,5 @@ type GetGroupMessageListRespond struct {
 	Type       int8   `json:"type"`
 	Content    string `json:"content"`
 	Url        string `json:"url"`
-	FileType   string `json:"file_type"`
-	FileName   string `json:"file_name"`
-	FileSize   string `json:"file_size"`
 	CreatedAt  string `json:"created_at"` // 先用CreatedAt排序，后面考虑改成SentAt
 }
