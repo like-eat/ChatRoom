@@ -38,3 +38,5 @@ internal/service/kafka/start.bat
 *.sh
 
 *.ext
+
+.claude/
