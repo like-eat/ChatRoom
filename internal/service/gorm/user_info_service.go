@@ -16,36 +16,17 @@ import (
 	"kama_chat_server/pkg/enum/user_info/user_status_enum"
 	"kama_chat_server/pkg/util/random"
 	"kama_chat_server/pkg/zlog"
-	"regexp"
 	"time"
 )
 
+// DAO层决定怎么访问数据——连接、查询
+// DTO层决定数据长什么样子
 type userInfoService struct {
 }
 
 var UserInfoService = new(userInfoService)
 
 // dao层加不了校验，在service层加
-// checkTelephoneValid 检验电话是否有效
-func (u *userInfoService) checkTelephoneValid(telephone string) bool {
-	pattern := `^1([38][0-9]|14[579]|5[^4]|16[6]|7[1-35-8]|9[189])\d{8}$`
-	match, err := regexp.MatchString(pattern, telephone)
-	if err != nil {
-		zlog.Error(err.Error())
-	}
-	return match
-}
-
-// checkEmailValid 校验邮箱是否有效
-func (u *userInfoService) checkEmailValid(email string) bool {
-	pattern := `^[^\s@]+@[^\s@]+\.[^\s@]+$`
-	match, err := regexp.MatchString(pattern, email)
-	if err != nil {
-		zlog.Error(err.Error())
-	}
-	return match
-}
-
 // checkUserIsAdminOrNot 检验用户是否为管理员
 func (u *userInfoService) checkUserIsAdminOrNot(user model.UserInfo) int8 {
 	return user.IsAdmin
@@ -70,6 +51,7 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 		return message, nil, -2
 	}
 
+	// 获得密码，验证密码
 	passwordValid, needsUpgrade, err := auth.VerifyPassword(user.Password, loginReq.Password)
 	if err != nil {
 		zlog.Error(err.Error())
@@ -80,6 +62,7 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 		zlog.Error(message)
 		return message, nil, -2
 	}
+	// 需不需要升级存储格式
 	if needsUpgrade {
 		hashedPassword, err := auth.HashPassword(loginReq.Password)
 		if err != nil {
@@ -98,6 +81,7 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 		return constants.SYSTEM_ERROR, nil, -1
 	}
 
+	// 把查到的用户数据转换成DTO，创建结构体
 	loginRsp := &respond.LoginRespond{
 		Token:     token,
 		Uuid:      user.Uuid,
@@ -111,6 +95,7 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 		IsAdmin:   user.IsAdmin,
 		Status:    user.Status,
 	}
+	// 日期单独格式化
 	year, month, day := user.CreatedAt.Date()
 	loginRsp.CreatedAt = fmt.Sprintf("%d.%d.%d", year, month, day)
 
@@ -121,6 +106,7 @@ func (u *userInfoService) Login(loginReq request.LoginRequest) (string, *respond
 func (u *userInfoService) checkTelephoneExist(telephone string) (string, int) {
 	var user model.UserInfo
 	// gorm默认排除软删除，所以翻译过来的select语句是SELECT * FROM `user_info` WHERE telephone = '18089596095' AND `user_info`.`deleted_at` IS NULL ORDER BY `user_info`.`id` LIMIT 1
+	// where往查询里面塞条件
 	if res := dao.GormDB.Where("telephone = ?", telephone).First(&user); res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			zlog.Info("该电话不存在，可以注册")
@@ -141,20 +127,25 @@ func (u *userInfoService) Register(registerReq request.RegisterRequest) (string,
 	if ret != 0 {
 		return message, nil, ret
 	}
+
 	var newUser model.UserInfo
 	newUser.Uuid = "U" + random.GetNowAndLenRandomString(11)
 	newUser.Telephone = registerReq.Telephone
+	// 哈希bcrypt，从明文单向生成哈希
+	// 后续每次登录的时候都是把明文变成哈希，只要盐和明文是一样的，哈希就是一样的
 	hashedPassword, err := auth.HashPassword(registerReq.Password)
 	if err != nil {
 		zlog.Error(err.Error())
 		return constants.SYSTEM_ERROR, nil, -1
 	}
+
 	newUser.Password = hashedPassword
 	newUser.Nickname = registerReq.Nickname
 	newUser.Avatar = "https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
 	newUser.CreatedAt = time.Now()
 	newUser.IsAdmin = u.checkUserIsAdminOrNot(newUser)
 	newUser.Status = user_status_enum.NORMAL
+
 	res := dao.GormDB.Create(&newUser)
 	if res.Error != nil {
 		zlog.Error(res.Error.Error())
@@ -242,6 +233,7 @@ func (u *userInfoService) GetUserInfoList(ownerId string) (string, []respond.Get
 			Status:    user.Status,
 			IsAdmin:   user.IsAdmin,
 		}
+		// 判断用户有没有被软删除
 		if user.DeletedAt.Valid {
 			rp.IsDeleted = true
 		} else {
@@ -260,6 +252,7 @@ func (u *userInfoService) AbleUsers(uuidList []string) (string, int) {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
+
 	for _, user := range users {
 		user.Status = user_status_enum.NORMAL
 		if res := dao.GormDB.Save(&user); res.Error != nil {
@@ -268,6 +261,7 @@ func (u *userInfoService) AbleUsers(uuidList []string) (string, int) {
 		}
 	}
 	// 启用/禁用用户会影响联系人列表，删除所有联系人缓存
+	// 因为你启用了这个用户但是不知道谁是他的好友，索性把联系人缓存都删除
 	if err := myredis.ScanAndDelete(constants.PrefixContactUserList); err != nil {
 		zlog.Error(err.Error())
 	}
@@ -293,6 +287,7 @@ func (u *userInfoService) DisableUsers(uuidList []string) (string, int) {
 			zlog.Error(res.Error.Error())
 			return constants.SYSTEM_ERROR, -1
 		}
+		// 禁用用户的时候会把所有跟他相关的会话也软删除掉
 		for _, session := range sessionList {
 			var deletedAt gorm.DeletedAt
 			deletedAt.Time = time.Now()
@@ -319,6 +314,8 @@ func (u *userInfoService) DeleteUsers(uuidList []string) (string, int) {
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
+
+	// 删除用户会把相关对话，相关联系人，相关申请一起软删除
 	for _, user := range users {
 		user.DeletedAt.Valid = true
 		user.DeletedAt.Time = time.Now()
@@ -402,6 +399,7 @@ func (u *userInfoService) DeleteUsers(uuidList []string) (string, int) {
 func (u *userInfoService) GetUserInfo(uuid string) (string, *respond.GetUserInfoRespond, int) {
 	// redis
 	zlog.Info(uuid)
+	// 走Redis缓存，读多写少的才值得缓存
 	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeyUserInfo(uuid))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -451,6 +449,7 @@ func (u *userInfoService) SetAdmin(uuidList []string, isAdmin int8) (string, int
 		zlog.Error(res.Error.Error())
 		return constants.SYSTEM_ERROR, -1
 	}
+	// 把这些users设置成管理员并保存到库中
 	for _, user := range users {
 		user.IsAdmin = isAdmin
 		if res := dao.GormDB.Save(&user); res.Error != nil {

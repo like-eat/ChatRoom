@@ -124,12 +124,15 @@ func (c *Client) Write() {
 
 // NewClientInit 当接受到前端有登录消息时，会调用该函数
 func NewClientInit(c *gin.Context, clientId, nickname, avatar string) {
+	// 读取配置决定消息走哪条路
 	kafkaConfig := config.GetConfig().KafkaConfig
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		zlog.Error(err.Error())
 		return
 	}
+
+	// 造一个Client对象，含两条缓冲带的通道
 	client := &Client{
 		Conn:     conn,
 		Uuid:     clientId,
@@ -138,21 +141,30 @@ func NewClientInit(c *gin.Context, clientId, nickname, avatar string) {
 		SendTo:   make(chan []byte, constants.CHANNEL_SIZE),
 		SendBack: make(chan *MessageBack, constants.CHANNEL_SIZE),
 	}
+
+	// 选择消息走哪条路
 	if kafkaConfig.MessageMode == "channel" {
 		ChatServer.SendClientToLogin(client)
 	} else {
 		KafkaChatServer.SendClientToLogin(client)
 	}
-	go client.Read()
-	go client.Write()
+
+
+	go client.Read() // 等前端发来的消息
+	go client.Write() // 等服务器发来消息
 	zlog.Info("ws连接成功")
 }
 
 // ClientLogout 当接受到前端有登出消息时，会调用该函数
 func ClientLogout(clientId string) (string, int) {
+	// 读取配置
 	kafkaConfig := config.GetConfig().KafkaConfig
+	// 获得是哪个client要退出（读共享 map 前必须加锁，防止并发读写 panic）
+	ChatServer.mutex.Lock()
 	client := ChatServer.Clients[clientId]
+	ChatServer.mutex.Unlock()
 	if client != nil {
+		// channel和kafka都有自己的退出方案
 		if kafkaConfig.MessageMode == "channel" {
 			ChatServer.SendClientToLogout(client)
 		} else {
@@ -162,6 +174,8 @@ func ClientLogout(clientId string) (string, int) {
 			zlog.Error(err.Error())
 			return constants.SYSTEM_ERROR, -1
 		}
+
+		// 告诉所有等待这个通道的人，以后不会有人发消息了
 		close(client.SendTo)
 		close(client.SendBack)
 	}

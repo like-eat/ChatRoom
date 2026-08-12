@@ -25,6 +25,7 @@ import (
 type Server struct {
 	Clients  map[string]*Client
 	mutex    *sync.Mutex
+	// 每个通道只走一种消息
 	Transmit chan []byte  // 转发通道
 	Login    chan *Client // 登录通道
 	Logout   chan *Client // 退出登录通道
@@ -45,6 +46,7 @@ func init() {
 }
 
 // 将https://127.0.0.1:8000/static/xxx 转为 /static/xxx
+// 把完整URL改成相对路径
 func normalizePath(path string) string {
 	// 查找 "/static/" 的位置
 	if path == "https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" {
@@ -54,6 +56,8 @@ func normalizePath(path string) string {
 	if staticIndex < 0 {
 		log.Println(path)
 		zlog.Error("路径不合法")
+		// 无法标准化（路径里没有 /static/），原样返回，避免 path[-1:] 触发 panic
+		return path
 	}
 	// 返回从 "/static/" 开始的部分
 	return path[staticIndex:]
@@ -62,14 +66,18 @@ func normalizePath(path string) string {
 // Start 启动函数，Server端用主进程起，Client端可以用协程起
 func (s *Server) Start() {
 	defer func() {
+		// 最后一定关闭这三个通道
 		close(s.Transmit)
 		close(s.Logout)
 		close(s.Login)
 	}()
 	for {
+		// 看哪个channel有消息就处理哪一个
 		select {
+		// 从登陆通道拿数据
 		case client := <-s.Login:
 			{
+				// 因为map是多协程共享的
 				s.mutex.Lock()
 				s.Clients[client.Uuid] = client
 				s.mutex.Unlock()
@@ -79,7 +87,8 @@ func (s *Server) Start() {
 					zlog.Error(err.Error())
 				}
 			}
-
+		
+		// 从退出通道拿数据
 		case client := <-s.Logout:
 			{
 				s.mutex.Lock()
@@ -90,7 +99,8 @@ func (s *Server) Start() {
 					zlog.Error(err.Error())
 				}
 			}
-
+		
+		// 从缓存中拿数据
 		case data := <-s.Transmit:
 			{
 				var chatMessageReq request.ChatMessageRequest
@@ -118,10 +128,10 @@ func (s *Server) Start() {
 					if res := dao.GormDB.Create(&message); res.Error != nil {
 						zlog.Error(res.Error.Error())
 					}
+
+					// 单聊——只发给一个user
 					if message.ReceiveId[0] == 'U' { // 发送给User
-						// 如果能找到ReceiveId，说明在线，可以发送，否则存表后跳过
-						// 因为在线的时候是通过websocket更新消息记录的，离线后通过存表，登录时只调用一次数据库操作
-						// 切换chat对象后，前端的messageList也会改变，获取messageList从第二次就是从redis中获取
+						// 转换成DTO
 						messageRsp := respond.GetMessageListRespond{
 							SendId:     message.SendId,
 							SendName:   message.SendName,
@@ -132,41 +142,48 @@ func (s *Server) Start() {
 							Url:        message.Url,
 							CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
 						}
+						// 转换成前端要展示的内容
 						jsonMessage, err := json.Marshal(messageRsp)
 						if err != nil {
 							zlog.Error(err.Error())
 						}
 						log.Println("返回的消息为：", messageRsp, "序列化后为：", jsonMessage)
+						
 						var messageBack = &MessageBack{
 							Message: jsonMessage,
 							Uuid:    message.Uuid,
 						}
 						s.mutex.Lock()
+						// 寻找接收者
 						if receiveClient, ok := s.Clients[message.ReceiveId]; ok {
-							//messageBack.Message = jsonMessage
-							//messageBack.Uuid = message.Uuid
+							// 把消息传递过去
 							receiveClient.SendBack <- messageBack // 向client.Send发送
 						}
-						// 因为send_id肯定在线，所以这里在后端进行在线回显message，其实优化的话前端可以直接回显
-						// 问题在于前后端的req和rsp结构不同，前端存储message的messageList不能存req，只能存rsp
-						// 所以这里后端进行回显，前端不回显
+
+						// 把消息原路返回给发送者
 						sendClient := s.Clients[message.SendId]
 						sendClient.SendBack <- messageBack
 						s.mutex.Unlock()
 
 						// redis
 						var rspString string
+						// 把目前A和B之间的消息列表从redis中读取出来(sendid和ReceiveId)
 						rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyMessageList(message.SendId, message.ReceiveId))
 						if err == nil {
 							var rsp []respond.GetMessageListRespond
+							// 反序列化数组
 							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
 								zlog.Error(err.Error())
 							}
+							// 把新消息追加到数组末尾
 							rsp = append(rsp, messageRsp)
+							// 再把新数组序列化
 							rspByte, err := json.Marshal(rsp)
 							if err != nil {
 								zlog.Error(err.Error())
 							}
+
+							// 把更新后的消息写会redis，并且重置过期时间
 							if err := myredis.SetKeyEx(constants.CacheKeyMessageList(message.SendId, message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 								zlog.Error(err.Error())
 							}
@@ -177,6 +194,7 @@ func (s *Server) Start() {
 						}
 
 					} else if message.ReceiveId[0] == 'G' { // 发送给Group
+						// DTO
 						messageRsp := respond.GetGroupMessageListRespond{
 							SendId:     message.SendId,
 							SendName:   message.SendName,
@@ -187,6 +205,7 @@ func (s *Server) Start() {
 							Url:        message.Url,
 							CreatedAt:  message.CreatedAt.Format("2006-01-02 15:04:05"),
 						}
+						// 转换成前端展示的内容
 						jsonMessage, err := json.Marshal(messageRsp)
 						if err != nil {
 							zlog.Error(err.Error())
@@ -196,15 +215,20 @@ func (s *Server) Start() {
 							Message: jsonMessage,
 							Uuid:    message.Uuid,
 						}
+
+
 						var group model.GroupInfo
+						// 从数据库查出群聊
 						if res := dao.GormDB.Where("uuid = ?", message.ReceiveId).First(&group); res.Error != nil {
 							zlog.Error(res.Error.Error())
 						}
 						var members []string
+						// 从数据库查出群聊成员
 						if err := json.Unmarshal(group.Members, &members); err != nil {
 							zlog.Error(err.Error())
 						}
 						s.mutex.Lock()
+						// 把消息推给每个成员
 						for _, member := range members {
 							if member != message.SendId {
 								if receiveClient, ok := s.Clients[member]; ok {
@@ -222,14 +246,18 @@ func (s *Server) Start() {
 						rspString, err = myredis.GetKeyNilIsErr(constants.CacheKeyGroupMessageList(message.ReceiveId))
 						if err == nil {
 							var rsp []respond.GetGroupMessageListRespond
+							// 把消息反序列化
 							if err := json.Unmarshal([]byte(rspString), &rsp); err != nil {
 								zlog.Error(err.Error())
 							}
+							// 把最新的消息添加回数组末尾
 							rsp = append(rsp, messageRsp)
+							// 把消息序列化
 							rspByte, err := json.Marshal(rsp)
 							if err != nil {
 								zlog.Error(err.Error())
 							}
+							// 把更新后的消息写会redis，并且重置过期时间
 							if err := myredis.SetKeyEx(constants.CacheKeyGroupMessageList(message.ReceiveId), string(rspByte), time.Minute*constants.REDIS_TIMEOUT); err != nil {
 								zlog.Error(err.Error())
 							}

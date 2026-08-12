@@ -9,17 +9,21 @@ import (
 	"net/http"
 )
 
+// 三步走 1.收参数 2.调用业务逻辑 3.返回结果
+
 // Register 注册
 func Register(c *gin.Context) {
 	var registerReq request.RegisterRequest
 	if err := c.BindJSON(&registerReq); err != nil {
 		zlog.Error(err.Error())
+
 		c.JSON(http.StatusOK, gin.H{
 			"code":    500,
 			"message": constants.SYSTEM_ERROR,
 		})
 		return
 	}
+	// 调用service
 	message, userInfo, ret := gorm.UserInfoService.Register(registerReq)
 	JsonBack(c, message, ret, userInfo)
 }
@@ -27,6 +31,7 @@ func Register(c *gin.Context) {
 // Login 登录
 func Login(c *gin.Context) {
 	var loginReq request.LoginRequest
+	// 接收参数
 	if err := c.BindJSON(&loginReq); err != nil {
 		zlog.Error(err.Error())
 		c.JSON(http.StatusOK, gin.H{
