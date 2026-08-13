@@ -672,7 +672,7 @@
 </template>
 
 <script>
-import { reactive, toRefs, onMounted, ref, nextTick } from "vue";
+import { reactive, toRefs, onMounted, onUnmounted, ref, nextTick } from "vue";
 import { useRouter, onBeforeRouteUpdate } from "vue-router";
 import { useAppStore } from "@/store";
 import axios from "axios";
@@ -832,6 +832,11 @@ export default {
       } catch (error) {
         console.error(error);
       }
+    });
+    // 组件卸载时把全局 socket.onmessage 恢复为空，避免上一个聊天页的闭包悬空，
+    // 在收到消息时访问已被 Vue 置空的 data.innerRef（scrollHeight 报 null 崩溃的根因）
+    onUnmounted(() => {
+      store.socket.onmessage = null;
     });
     const getChatContactInfo = async (id) => {
       try {
@@ -1142,8 +1147,11 @@ export default {
 
     const scrollToBottom = () => {
       nextTick(() => {
+        // 防御：组件可能正处于卸载/切换过渡期，模板 ref 尚未绑定或已被置空
+        if (!data.innerRef || !data.scrollbarRef) {
+          return;
+        }
         const scrollHeight = data.innerRef.scrollHeight;
-        console.log(scrollHeight);
         data.scrollbarRef.setScrollTop(scrollHeight);
       });
     };
