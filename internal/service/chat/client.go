@@ -3,9 +3,6 @@ package chat
 import (
 	"context"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"github.com/segmentio/kafka-go"
 	"kama_chat_server/internal/config"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
@@ -17,6 +14,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/segmentio/kafka-go"
 )
 
 type MessageBack struct {
@@ -33,6 +34,7 @@ type Client struct {
 	SendBack chan *MessageBack // 给前端
 }
 
+// http升级成websocket的升级器
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  2048,
 	WriteBufferSize: 2048,
@@ -48,6 +50,7 @@ var ctx = context.Background()
 var messageMode = config.GetConfig().KafkaConfig.MessageMode
 
 // 读取websocket消息并发送给send通道
+// 从websocket读消息，发送到channel或者kafka
 func (c *Client) Read() {
 	zlog.Info("ws read goroutine start")
 	for {
@@ -57,6 +60,7 @@ func (c *Client) Read() {
 			zlog.Error(err.Error())
 			return // 直接断开websocket
 		} else {
+			// 解析json消息
 			var message = request.ChatMessageRequest{}
 			if err := json.Unmarshal(jsonMessage, &message); err != nil {
 				zlog.Error(err.Error())
@@ -73,13 +77,17 @@ func (c *Client) Read() {
 				continue
 			}
 			log.Println("接受到消息为: ", jsonMessage)
+
+			// 判断把消息发到哪里
 			if messageMode == "channel" {
 				// 如果server的转发channel没满，先把sendto中的给transmit
+				// 这里使用自家邮箱和总邮箱来处理冲突流量
+				// 如果总邮箱和自家邮箱都没满，就先往总邮箱投
 				for len(ChatServer.Transmit) < constants.CHANNEL_SIZE && len(c.SendTo) > 0 {
 					sendToMessage := <-c.SendTo
 					ChatServer.SendMessageToTransmit(sendToMessage)
 				}
-				// 如果server没满，sendto空了，直接给server的transmit
+				// Transmit是总邮箱，SendTo是自家邮箱
 				if len(ChatServer.Transmit) < constants.CHANNEL_SIZE {
 					ChatServer.SendMessageToTransmit(jsonMessage)
 				} else if len(c.SendTo) < constants.CHANNEL_SIZE {
@@ -104,18 +112,18 @@ func (c *Client) Read() {
 	}
 }
 
-// 从send通道读取消息发送给websocket
+// 从channel读数据往websocket里面写数据推送到前端
 func (c *Client) Write() {
 	zlog.Info("ws write goroutine start")
 	for messageBack := range c.SendBack { // 阻塞状态
-		// 通过 WebSocket 发送消息
+		// 把消息发给前端
 		err := c.Conn.WriteMessage(websocket.TextMessage, messageBack.Message)
 		if err != nil {
 			zlog.Error(err.Error())
 			return // 直接断开websocket
 		}
 		// log.Println("已发送消息：", messageBack.Message)
-		// 说明顺利发送，修改状态为已发送
+		// 说明顺利发送，修改消息的状态为已发送
 		if res := dao.GormDB.Model(&model.Message{}).Where("uuid = ?", messageBack.Uuid).Update("status", message_status_enum.Sent); res.Error != nil {
 			zlog.Error(res.Error.Error())
 		}

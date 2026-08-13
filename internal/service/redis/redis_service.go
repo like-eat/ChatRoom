@@ -2,17 +2,17 @@ package redis
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"github.com/go-redis/redis/v8"
 	"kama_chat_server/internal/config"
-	"kama_chat_server/pkg/zlog"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 var redisClient *redis.Client
+
+// 上下文
 var ctx = context.Background()
 
 func init() {
@@ -30,7 +30,11 @@ func init() {
 	})
 }
 
+// 存一个带过期时间的键值对，主要负责查到数据库后把数据塞入redis
 func SetKeyEx(key string, value string, timeout time.Duration) error {
+	// key是存哪个键值对
+	// value是存哪个值
+	// timeout是过期时间
 	err := redisClient.Set(ctx, key, value, timeout).Err()
 	if err != nil {
 		return err
@@ -38,18 +42,7 @@ func SetKeyEx(key string, value string, timeout time.Duration) error {
 	return nil
 }
 
-func GetKey(key string) (string, error) {
-	value, err := redisClient.Get(ctx, key).Result()
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			zlog.Info("该key不存在")
-			return "", nil
-		}
-		return "", err
-	}
-	return value, nil
-}
-
+// 如果key不存在则返回错误
 func GetKeyNilIsErr(key string) (string, error) {
 	value, err := redisClient.Get(ctx, key).Result()
 	if err != nil {
@@ -58,76 +51,8 @@ func GetKeyNilIsErr(key string) (string, error) {
 	return value, nil
 }
 
-func GetKeyWithPrefixNilIsErr(prefix string) (string, error) {
-	var keys []string
-	var err error
-
-	for {
-		// 使用 Keys 命令迭代匹配的键
-		keys, err = redisClient.Keys(ctx, prefix+"*").Result()
-		if err != nil {
-			return "", err
-		}
-
-		if len(keys) == 0 {
-			zlog.Info("没有找到相关前缀key")
-			return "", redis.Nil
-		}
-
-		if len(keys) == 1 {
-			zlog.Info(fmt.Sprintln("成功找到了相关前缀key", keys))
-			return keys[0], nil
-		} else {
-			zlog.Error("找到了数量大于1的key，查找异常")
-			return "", errors.New("找到了数量大于1的key，查找异常")
-		}
-	}
-
-}
-
-func GetKeyWithSuffixNilIsErr(suffix string) (string, error) {
-	var keys []string
-	var err error
-
-	for {
-		// 使用 Keys 命令迭代匹配的键
-		keys, err = redisClient.Keys(ctx, "*"+suffix).Result()
-		if err != nil {
-			return "", err
-		}
-
-		if len(keys) == 0 {
-			zlog.Info("没有找到相关后缀key")
-			return "", redis.Nil
-		}
-
-		if len(keys) == 1 {
-			zlog.Info(fmt.Sprintln("成功找到了相关后缀key", keys))
-			return keys[0], nil
-		} else {
-			zlog.Error("找到了数量大于1的key，查找异常")
-			return "", errors.New("找到了数量大于1的key，查找异常")
-		}
-	}
-
-}
-
-func DelKeyIfExists(key string) error {
-	exists, err := redisClient.Exists(ctx, key).Result()
-	if err != nil {
-		return err
-	}
-	if exists == 1 { // 键存在
-		delErr := redisClient.Del(ctx, key).Err()
-		if delErr != nil {
-			return delErr
-		}
-	}
-	// 无论键是否存在，都不返回错误
-	return nil
-}
-
 // ScanAndDelete 使用 SCAN 命令批量删除匹配的 key（生产推荐，不会阻塞 Redis）
+// 一次只取一部分，删完再取下一批，不会阻塞redis
 func ScanAndDelete(pattern string) error {
 	var cursor uint64 = 0
 	for {
@@ -148,7 +73,7 @@ func ScanAndDelete(pattern string) error {
 	return nil
 }
 
-// DelKeysWithPattern 批量删除匹配 pattern 的 key（注意：使用 KEYS 命令，生产环境大数据量请用 ScanAndDelete）
+// 全量扫描，直到全部删除完成
 func DelKeysWithPattern(pattern string) error {
 	var keys []string
 	var err error
@@ -179,68 +104,7 @@ func DelKeysWithPattern(pattern string) error {
 	return nil
 }
 
-func DelKeysWithPrefix(prefix string) error {
-	//var cursor uint64 = 0
-	var keys []string
-	var err error
-
-	for {
-		// 使用 Keys 命令迭代匹配的键
-		keys, err = redisClient.Keys(ctx, prefix+"*").Result()
-		if err != nil {
-			return err
-		}
-
-		// 如果没有更多的键，则跳出循环
-		if len(keys) == 0 {
-			log.Println("没有找到相关前缀key")
-			break
-		}
-
-		// 删除找到的键
-		if len(keys) > 0 {
-			_, err = redisClient.Del(ctx, keys...).Result()
-			if err != nil {
-				return err
-			}
-			log.Println("成功删除相关前缀key", keys)
-		}
-	}
-
-	return nil
-}
-
-func DelKeysWithSuffix(suffix string) error {
-	//var cursor uint64 = 0
-	var keys []string
-	var err error
-
-	for {
-		// 使用 Keys 命令迭代匹配的键
-		keys, err = redisClient.Keys(ctx, "*"+suffix).Result()
-		if err != nil {
-			return err
-		}
-
-		// 如果没有更多的键，则跳出循环
-		if len(keys) == 0 {
-			log.Println("没有找到相关后缀key")
-			break
-		}
-
-		// 删除找到的键
-		if len(keys) > 0 {
-			_, err = redisClient.Del(ctx, keys...).Result()
-			if err != nil {
-				return err
-			}
-			log.Println("成功删除相关后缀key", keys)
-		}
-	}
-
-	return nil
-}
-
+// 删除所有key
 func DeleteAllRedisKeys() error {
 	var cursor uint64 = 0
 	for {

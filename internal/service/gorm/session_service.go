@@ -107,7 +107,7 @@ func (s *sessionService) CheckOpenSessionAllowed(sendId, receiveId string) (stri
 
 // OpenSession 打开会话
 func (s *sessionService) OpenSession(req request.OpenSessionRequest) (string, string, int) {
-	rspString, err := myredis.GetKeyWithPrefixNilIsErr(constants.CacheKeySession(req.SendId, req.ReceiveId))
+	rspString, err := myredis.GetKeyNilIsErr(constants.CacheKeySession(req.SendId, req.ReceiveId))
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			var session model.Session

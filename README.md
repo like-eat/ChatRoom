@@ -9,14 +9,14 @@
 | 后端 | Go 1.20 + Gin + GORM + Gorilla WebSocket |
 | 数据库 | MySQL 8 + Redis |
 | 消息队列 | Go Channel（默认）/ Kafka（可选切换） |
-| 前端 | Vue 3 + Pinia + Element Plus + WebRTC |
+| 前端 | Vue 3 + Pinia + Element Plus |
 | 部署 | Docker Compose |
 
 ## 功能
 
-- 密码注册/登录、短信验证码登录、JWT 鉴权
-- 单聊、群聊、文件消息、音视频通话（WebRTC 信令）
-- 好友申请/审批/拉黑/删除、群创建/成员管理/解散
+- 密码注册/登录、JWT 鉴权
+- 单聊、群聊、文本消息
+- 好友申请/审批/删除、群创建/成员管理/解散
 - 后台管理：用户和群启用/禁用/删除、管理员设置
 - Channel 与 Kafka 双模式消息转发
 
@@ -49,8 +49,6 @@ npm.cmd run serve
 # 前端地址：http://127.0.0.1:8080
 ```
 
-本地验证码：`123456`
-
 ### 停止
 
 ```powershell
@@ -68,7 +66,7 @@ internal/
   ├── dao/          GORM 初始化
   ├── dto/          请求/响应 DTO
   ├── model/        数据模型
-  ├── service/      业务逻辑 + 聊天服务 + Redis + Kafka + 短信
+  ├── service/      业务逻辑 + 聊天服务 + Redis + Kafka
   ├── middleware/    JWT 鉴权中间件
   └── https_server/  路由注册
 pkg/                工具包（日志、枚举、常量）
@@ -86,7 +84,6 @@ docs/               文档
 |---|---|
 | `mysqlConfig` | MySQL 连接（默认 127.0.0.1:13306） |
 | `redisConfig` | Redis 连接（默认 127.0.0.1:16379） |
-| `authCodeConfig.devMode` | `true` 时验证码固定 `123456` |
 | `kafkaConfig.messageMode` | `channel`（默认）/ `kafka` |
 | `jwtConfig.expireHours` | Token 有效期 |
 

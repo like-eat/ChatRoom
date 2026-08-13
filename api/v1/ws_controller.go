@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"kama_chat_server/internal/dao"
 	"kama_chat_server/internal/dto/request"
 	"kama_chat_server/internal/model"
@@ -11,17 +9,29 @@ import (
 	"kama_chat_server/pkg/constants"
 	"kama_chat_server/pkg/zlog"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
+
+// go中没有单独编写WebSocket，因此要用第三方库
+// wesocket.Upgrader把http升级成WebSocket
+
+// 走REST API是一问一答
+// 走WebSocket是持续连接，因此要用长连接
 
 // WsLogin wss登录 Get
 func WsLogin(c *gin.Context) {
 	var tokenString string
+	// 把token从请求里拿出来
 	for _, protocol := range websocket.Subprotocols(c.Request) {
 		if protocol != "kama-chat" {
 			tokenString = protocol
 			break
 		}
 	}
+
+	// 验证token是否有效
 	claims, err := auth.ParseToken(tokenString)
 	if err != nil {
 		zlog.Error(err.Error())
@@ -32,6 +42,7 @@ func WsLogin(c *gin.Context) {
 		return
 	}
 
+	// 查询用户是否还在数据库中
 	var user model.UserInfo
 	if err := dao.GormDB.Select("uuid", "nickname", "avatar", "status").Where("uuid = ? AND status = 0", claims.Subject).First(&user).Error; err != nil {
 		zlog.Error(err.Error())
@@ -41,6 +52,8 @@ func WsLogin(c *gin.Context) {
 		})
 		return
 	}
+
+	// 创建一个客户端实例
 	chat.NewClientInit(c, user.Uuid, user.Nickname, user.Avatar)
 }
 
@@ -55,6 +68,7 @@ func WsLogout(c *gin.Context) {
 		})
 		return
 	}
+	// 这个才是关键，真正的退出逻辑
 	message, ret := chat.ClientLogout(req.OwnerId)
 	JsonBack(c, message, ret, nil)
 }
