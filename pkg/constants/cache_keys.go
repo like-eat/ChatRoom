@@ -56,8 +56,14 @@ func CacheKeySession(sendId, receiveId string) string {
 
 // ════════════════ 消息记录 ════════════════
 
+// 注意：key 必须把两个 user id 按固定顺序（字典序）拼接，
+// 否则"发送者:接收者"和"我:对方"会形成两个不同 key，
+// 导致缓存里只存了单方向消息，刷新历史时对端消息丢失。
 func CacheKeyMessageList(userOneId, userTwoId string) string {
-	return fmt.Sprintf("message_list:%s:%s", userOneId, userTwoId)
+	if userOneId < userTwoId {
+		return fmt.Sprintf("message_list:%s:%s", userOneId, userTwoId)
+	}
+	return fmt.Sprintf("message_list:%s:%s", userTwoId, userOneId)
 }
 
 func CacheKeyGroupMessageList(groupId string) string {
